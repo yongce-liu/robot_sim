@@ -1,0 +1,21 @@
+# Hydra configuration for Unitree H1 humanoid
+# Usage: python scripts/run_sim.py robot=h1
+
+robot:
+  type: h1
+  initial_position: [0.0, 0.0, 0.98]
+  initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  
+  # H1 physical parameters
+  mass: 47.0  # kg
+  height: 1.8  # m
+  
+control:
+  type: pd
+  kp: 200.0
+  kd: 20.0
+  
+  # Joint limits will be defined per joint
+  joint_limits:
+    # TODO: Add H1 specific joint limits
+    pass

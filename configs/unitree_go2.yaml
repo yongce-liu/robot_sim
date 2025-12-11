@@ -1,0 +1,31 @@
+# Unitree Go2 specific configuration
+
+simulation:
+  backend: isaac
+  timestep: 0.001
+  num_steps: 10000
+
+robot:
+  type: go2
+  initial_position: [0.0, 0.0, 0.32]
+  initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  
+  # Go2 specific parameters
+  mass: 15.0  # kg
+  height: 0.32  # m
+
+control:
+  type: pd
+  kp: 120.0
+  kd: 12.0
+  
+  # Joint limits
+  joint_limits:
+    hip: [-1.047, 1.047]  # ±60 degrees
+    thigh: [-2.697, 2.697]  # ±154.5 degrees
+    calf: [-2.818, -0.524]  # -161.5 to -30 degrees
+
+visualization:
+  enabled: true
+  camera_distance: 3.0
+  camera_height: 1.5

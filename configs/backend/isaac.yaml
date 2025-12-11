@@ -1,0 +1,15 @@
+# Hydra configuration for Isaac Lab backend
+# Usage: python scripts/run_sim.py backend=isaac
+
+backend: isaac
+
+simulation:
+  backend: isaac
+  timestep: 0.01
+  num_steps: 10000
+  physics_engine: physx
+  
+  # Isaac Lab specific settings
+  device: cuda:0
+  num_envs: 1
+  enable_viewport: true

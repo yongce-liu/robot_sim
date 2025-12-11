@@ -1,0 +1,15 @@
+# Hydra configuration for MuJoCo backend
+# Usage: python scripts/run_sim.py backend=mujoco
+
+backend: mujoco
+
+simulation:
+  backend: mujoco
+  timestep: 0.002
+  num_steps: 5000
+  physics_engine: mujoco
+  
+  # MuJoCo specific settings
+  integrator: RK4
+  iterations: 50
+  tolerance: 1e-10

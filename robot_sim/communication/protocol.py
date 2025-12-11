@@ -1,6 +1,6 @@
 """Communication protocol implementations."""
 
-from typing import Any
+any
 
 
 class CommunicationProtocol:
@@ -10,11 +10,11 @@ class CommunicationProtocol:
         """Initialize communication protocol."""
         pass
 
-    def send(self, data: Any) -> None:
+    def send(self, data: any) -> None:
         """Send data through the communication channel."""
         raise NotImplementedError
 
-    def receive(self) -> Any:
+    def receive(self) -> any:
         """Receive data from the communication channel."""
         raise NotImplementedError
 

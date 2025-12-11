@@ -1,7 +1,5 @@
 """Tests for robot presets."""
 
-import pytest
-
 
 class TestUnitreePresets:
     """Test Unitree robot presets."""

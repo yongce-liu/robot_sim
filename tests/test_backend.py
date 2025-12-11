@@ -1,7 +1,5 @@
 """Tests for backend implementations."""
 
-import pytest
-
 
 class TestMuJoCoBackend:
     """Test MuJoCo backend."""

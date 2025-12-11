@@ -1,7 +1,8 @@
 """Scene building utilities for quick environment setup."""
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+
+any, dict, list
 
 import numpy as np
 
@@ -9,27 +10,27 @@ import numpy as np
 @dataclass
 class Object:
     """Scene object definition."""
-    
+
     name: str
     type: str  # "box", "sphere", "cylinder", "plane", "mesh"
     position: np.ndarray  # [3]
     orientation: np.ndarray  # [4] quaternion
-    size: Optional[np.ndarray] = None  # Dimensions
+    size: np.ndarray | None = None  # Dimensions
     mass: float = 1.0
-    color: Optional[Tuple[float, float, float]] = None
-    mesh_path: Optional[str] = None
+    color: tuple[float, float, float] | None = None
+    mesh_path: str | None = None
     friction: float = 0.5
     restitution: float = 0.0
 
 
 class SceneBuilder:
     """Utility for building simulation scenes quickly."""
-    
+
     def __init__(self) -> None:
         """Initialize scene builder."""
-        self.objects: List[Object] = []
+        self.objects: list[Object] = []
         self.robot = None
-    
+
     def add_ground_plane(
         self,
         size: float = 100.0,
@@ -37,99 +38,105 @@ class SceneBuilder:
         friction: float = 1.0,
     ) -> "SceneBuilder":
         """Add ground plane to scene.
-        
+
         Args:
             size: Plane size
             height: Height of plane
             friction: Friction coefficient
-            
+
         Returns:
             Self for chaining
         """
-        self.objects.append(Object(
-            name="ground",
-            type="plane",
-            position=np.array([0, 0, height]),
-            orientation=np.array([0, 0, 0, 1]),
-            size=np.array([size, size, 0.01]),
-            mass=0.0,  # Static
-            friction=friction,
-        ))
+        self.objects.append(
+            Object(
+                name="ground",
+                type="plane",
+                position=np.array([0, 0, height]),
+                orientation=np.array([0, 0, 0, 1]),
+                size=np.array([size, size, 0.01]),
+                mass=0.0,  # Static
+                friction=friction,
+            )
+        )
         return self
-    
+
     def add_box(
         self,
         name: str,
-        position: Tuple[float, float, float],
-        size: Tuple[float, float, float],
+        position: tuple[float, float, float],
+        size: tuple[float, float, float],
         mass: float = 1.0,
-        color: Optional[Tuple[float, float, float]] = None,
+        color: tuple[float, float, float] | None = None,
     ) -> "SceneBuilder":
         """Add box to scene.
-        
+
         Args:
             name: Object name
             position: Position (x, y, z)
             size: Box dimensions (width, depth, height)
             mass: Mass in kg
             color: RGB color (0-1 range)
-            
+
         Returns:
             Self for chaining
         """
-        self.objects.append(Object(
-            name=name,
-            type="box",
-            position=np.array(position),
-            orientation=np.array([0, 0, 0, 1]),
-            size=np.array(size),
-            mass=mass,
-            color=color,
-        ))
+        self.objects.append(
+            Object(
+                name=name,
+                type="box",
+                position=np.array(position),
+                orientation=np.array([0, 0, 0, 1]),
+                size=np.array(size),
+                mass=mass,
+                color=color,
+            )
+        )
         return self
-    
+
     def add_sphere(
         self,
         name: str,
-        position: Tuple[float, float, float],
+        position: tuple[float, float, float],
         radius: float,
         mass: float = 1.0,
-        color: Optional[Tuple[float, float, float]] = None,
+        color: tuple[float, float, float] | None = None,
     ) -> "SceneBuilder":
         """Add sphere to scene.
-        
+
         Args:
             name: Object name
             position: Position (x, y, z)
             radius: Sphere radius
             mass: Mass in kg
             color: RGB color (0-1 range)
-            
+
         Returns:
             Self for chaining
         """
-        self.objects.append(Object(
-            name=name,
-            type="sphere",
-            position=np.array(position),
-            orientation=np.array([0, 0, 0, 1]),
-            size=np.array([radius, radius, radius]),
-            mass=mass,
-            color=color,
-        ))
+        self.objects.append(
+            Object(
+                name=name,
+                type="sphere",
+                position=np.array(position),
+                orientation=np.array([0, 0, 0, 1]),
+                size=np.array([radius, radius, radius]),
+                mass=mass,
+                color=color,
+            )
+        )
         return self
-    
+
     def add_obstacle_course(
         self,
         num_obstacles: int = 5,
         spacing: float = 2.0,
     ) -> "SceneBuilder":
         """Add simple obstacle course.
-        
+
         Args:
             num_obstacles: Number of obstacles
             spacing: Spacing between obstacles
-            
+
         Returns:
             Self for chaining
         """
@@ -144,7 +151,7 @@ class SceneBuilder:
                 color=(0.8, 0.3, 0.3),
             )
         return self
-    
+
     def add_stairs(
         self,
         num_steps: int = 5,
@@ -153,13 +160,13 @@ class SceneBuilder:
         step_width: float = 1.0,
     ) -> "SceneBuilder":
         """Add stairs to scene.
-        
+
         Args:
             num_steps: Number of steps
             step_height: Height of each step
             step_depth: Depth of each step
             step_width: Width of steps
-            
+
         Returns:
             Self for chaining
         """
@@ -172,22 +179,22 @@ class SceneBuilder:
                 color=(0.6, 0.6, 0.6),
             )
         return self
-    
-    def add_robot(self, robot_config: Dict[str, Any]) -> "SceneBuilder":
+
+    def add_robot(self, robot_config: dict[str, any]) -> "SceneBuilder":
         """Add robot to scene.
-        
+
         Args:
             robot_config: Robot configuration dictionary
-            
+
         Returns:
             Self for chaining
         """
         self.robot = robot_config
         return self
-    
-    def build(self) -> Dict[str, Any]:
+
+    def build(self) -> dict[str, any]:
         """Build and return scene configuration.
-        
+
         Returns:
             Scene configuration dictionary
         """
@@ -209,8 +216,8 @@ class SceneBuilder:
             ],
             "robot": self.robot,
         }
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, any]:
         """Alias for build()."""
         return self.build()
 
@@ -223,17 +230,9 @@ def create_empty_scene() -> SceneBuilder:
 
 def create_obstacle_scene() -> SceneBuilder:
     """Create scene with obstacles."""
-    return (
-        SceneBuilder()
-        .add_ground_plane()
-        .add_obstacle_course(num_obstacles=5)
-    )
+    return SceneBuilder().add_ground_plane().add_obstacle_course(num_obstacles=5)
 
 
 def create_stairs_scene() -> SceneBuilder:
     """Create scene with stairs."""
-    return (
-        SceneBuilder()
-        .add_ground_plane()
-        .add_stairs(num_steps=5)
-    )
+    return SceneBuilder().add_ground_plane().add_stairs(num_steps=5)

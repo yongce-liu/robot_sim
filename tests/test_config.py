@@ -1,9 +1,5 @@
 """Tests for configuration system."""
 
-from pathlib import Path
-
-import pytest
-
 
 class TestConfigLoader:
     """Test configuration loader."""

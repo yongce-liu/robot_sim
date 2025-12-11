@@ -1,8 +1,6 @@
 """Robot controller implementations."""
 
-from typing import Any
-
-import numpy as np
+any
 
 
 class BaseController:
@@ -12,7 +10,7 @@ class BaseController:
         """Initialize controller."""
         pass
 
-    def compute(self, state: Any, target: Any) -> Any:
+    def compute(self, state: any, target: any) -> any:
         """Compute control output."""
         raise NotImplementedError
 
@@ -26,7 +24,7 @@ class PDController(BaseController):
 
     def __init__(self, kp: float = 1.0, kd: float = 0.1) -> None:
         """Initialize PD controller.
-        
+
         Args:
             kp: Proportional gain
             kd: Derivative gain
@@ -35,6 +33,6 @@ class PDController(BaseController):
         self.kp = kp
         self.kd = kd
 
-    def compute(self, state: Any, target: Any) -> Any:
+    def compute(self, state: any, target: any) -> any:
         """Compute PD control output."""
         raise NotImplementedError

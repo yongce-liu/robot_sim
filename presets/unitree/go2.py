@@ -1,6 +1,6 @@
 """Unitree Go2 robot configuration."""
 
-from typing import Any, Dict
+any, dict
 
 
 class Go2Config:
@@ -10,6 +10,6 @@ class Go2Config:
         """Initialize Go2 configuration."""
         pass
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, any]:
         """Get robot configuration dictionary."""
         raise NotImplementedError

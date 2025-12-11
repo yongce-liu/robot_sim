@@ -1,6 +1,6 @@
 """Isaac Lab backend implementation."""
 
-from typing import Any, Dict, Optional
+any, dict
 
 import numpy as np
 from omegaconf import DictConfig
@@ -11,9 +11,9 @@ from robot_sim.backend.base import BaseBackend
 class IsaacBackend(BaseBackend):
     """Isaac Lab simulation backend."""
 
-    def __init__(self, config: Optional[DictConfig] = None) -> None:
+    def __init__(self, config: DictConfig | None = None) -> None:
         """Initialize Isaac Lab backend.
-        
+
         Args:
             config: Configuration for Isaac Lab
         """
@@ -26,43 +26,35 @@ class IsaacBackend(BaseBackend):
         # TODO: Initialize Isaac Lab environment
         # from omni.isaac.lab.app import AppLauncher
         # from omni.isaac.lab.envs import ManagerBasedRLEnv
-        
+
         self._is_initialized = True
         self._step_count = 0
         print(f"[{self.backend_name}] Setup complete")
 
-    def step(self) -> Dict[str, Any]:
+    def step(self) -> dict[str, any]:
         """Step the simulation forward by one timestep.
-        
+
         Returns:
-            Dict containing simulation state
+            dict containing simulation state
         """
         if not self._is_initialized:
             raise RuntimeError("Backend not initialized. Call setup() first.")
-        
+
         # TODO: Step Isaac Lab simulation
         self._step_count += 1
-        
-        return {
-            "observation": self.get_observation(),
-            "reward": 0.0,
-            "done": False,
-            "info": {"step": self._step_count}
-        }
 
-    def reset(self) -> Dict[str, Any]:
+        return {"observation": self.get_observation(), "reward": 0.0, "done": False, "info": {"step": self._step_count}}
+
+    def reset(self) -> dict[str, any]:
         """Reset the simulation to initial state.
-        
+
         Returns:
-            Dict containing initial state
+            dict containing initial state
         """
         # TODO: Reset Isaac Lab simulation
         self._step_count = 0
-        
-        return {
-            "observation": self.get_observation(),
-            "info": {"step": self._step_count}
-        }
+
+        return {"observation": self.get_observation(), "info": {"step": self._step_count}}
 
     def close(self) -> None:
         """Close the simulation and cleanup resources."""
@@ -70,11 +62,11 @@ class IsaacBackend(BaseBackend):
         self._is_initialized = False
         print(f"[{self.backend_name}] Closed")
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, any]:
         """Get current simulation state.
-        
+
         Returns:
-            Dict containing current state
+            dict containing current state
         """
         # TODO: Get state from Isaac Lab
         return {
@@ -84,18 +76,18 @@ class IsaacBackend(BaseBackend):
             "base_orientation": np.array([0, 0, 0, 1]),
         }
 
-    def set_state(self, state: Dict[str, Any]) -> None:
+    def set_state(self, state: dict[str, any]) -> None:
         """Set simulation state.
-        
+
         Args:
-            state: Dict containing state to set
+            state: dict containing state to set
         """
         # TODO: Set state in Isaac Lab
         pass
 
     def apply_action(self, action: np.ndarray) -> None:
         """Apply control action to the robot.
-        
+
         Args:
             action: Control action (joint torques)
         """
@@ -104,7 +96,7 @@ class IsaacBackend(BaseBackend):
 
     def get_observation(self) -> np.ndarray:
         """Get observation from the simulation.
-        
+
         Returns:
             Observation array
         """

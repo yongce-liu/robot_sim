@@ -1,7 +1,8 @@
 """Base backend interface for all simulators."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+
+any
 
 import numpy as np
 from omegaconf import DictConfig
@@ -9,14 +10,14 @@ from omegaconf import DictConfig
 
 class BaseBackend(ABC):
     """Abstract base class for all simulation backends.
-    
+
     This provides a unified interface for different simulators (Isaac Lab, MuJoCo, etc.)
     allowing easy switching between backends and supporting multi-simulator scenarios.
     """
 
-    def __init__(self, config: Optional[DictConfig] = None) -> None:
+    def __init__(self, config: DictConfig | None = None) -> None:
         """Initialize the backend.
-        
+
         Args:
             config: Configuration for the backend
         """
@@ -24,30 +25,35 @@ class BaseBackend(ABC):
         self._is_initialized = False
         self._step_count = 0
 
+    @classmethod
+    def name(cls) -> str:
+        """Get the name of the backend."""
+        return cls.__name__
+
     @abstractmethod
     def setup(self) -> None:
         """Setup the simulation environment.
-        
+
         This should initialize all necessary components for the simulation,
         including loading models, creating scenes, etc.
         """
         pass
 
     @abstractmethod
-    def step(self) -> Dict[str, Any]:
+    def step(self) -> dict[str, any]:
         """Step the simulation forward by one timestep.
-        
+
         Returns:
-            Dict containing simulation state information (observations, rewards, etc.)
+            dict containing simulation state information (observations, rewards, etc.)
         """
         pass
 
     @abstractmethod
-    def reset(self) -> Dict[str, Any]:
+    def reset(self) -> dict[str, any]:
         """Reset the simulation to initial state.
-        
+
         Returns:
-            Dict containing initial state information
+            dict containing initial state information
         """
         pass
 
@@ -57,27 +63,27 @@ class BaseBackend(ABC):
         pass
 
     @abstractmethod
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, any]:
         """Get current simulation state.
-        
+
         Returns:
-            Dict containing current state (joint positions, velocities, etc.)
+            dict containing current state (joint positions, velocities, etc.)
         """
         pass
 
     @abstractmethod
-    def set_state(self, state: Dict[str, Any]) -> None:
+    def set_state(self, state: dict[str, any]) -> None:
         """Set simulation state.
-        
+
         Args:
-            state: Dict containing state to set
+            state: dict containing state to set
         """
         pass
 
     @abstractmethod
     def apply_action(self, action: np.ndarray) -> None:
         """Apply control action to the robot.
-        
+
         Args:
             action: Control action (joint positions, velocities, or torques)
         """
@@ -86,7 +92,7 @@ class BaseBackend(ABC):
     @abstractmethod
     def get_observation(self) -> np.ndarray:
         """Get observation from the simulation.
-        
+
         Returns:
             Observation array (proprioceptive and/or exteroceptive data)
         """

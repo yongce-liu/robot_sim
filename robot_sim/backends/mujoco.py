@@ -1,19 +1,35 @@
 """MuJoCo backend implementation."""
 
-from typing import Any, Dict, Optional
+any
 
 import numpy as np
 from omegaconf import DictConfig
 
-from robot_sim.backend.base import BaseBackend
+from robot_sim.backends.base import BaseBackend
 
 
 class MuJoCoBackend(BaseBackend):
     """MuJoCo simulation backend."""
 
-    def __init__(self, config: Optional[DictConfig] = None) -> None:
+    _instance = None
+
+    @classmethod
+    def get_instance(cls, config: DictConfig | None = None) -> "MuJoCoBackend":
+        """Get the singleton instance of MuJoCoBackend.
+
+        Args:
+            config: Configuration for MuJoCo backend
+
+        Returns:
+            MuJoCoBackend instance
+        """
+        if cls._instance is None:
+            cls._instance = cls(config)
+        return cls._instance
+
+    def __init__(self, config: DictConfig | None = None) -> None:
         """Initialize MuJoCo backend.
-        
+
         Args:
             config: Configuration for MuJoCo
         """
@@ -27,45 +43,37 @@ class MuJoCoBackend(BaseBackend):
         # import mujoco
         # self.model = mujoco.MjModel.from_xml_path(model_path)
         # self.data = mujoco.MjData(self.model)
-        
+
         self._is_initialized = True
         self._step_count = 0
         print(f"[{self.backend_name}] Setup complete")
 
-    def step(self) -> Dict[str, Any]:
+    def step(self) -> dict[str, any]:
         """Step the simulation forward by one timestep.
-        
+
         Returns:
-            Dict containing simulation state
+            dict containing simulation state
         """
         if not self._is_initialized:
             raise RuntimeError("Backend not initialized. Call setup() first.")
-        
+
         # TODO: Step MuJoCo simulation
         # mujoco.mj_step(self.model, self.data)
         self._step_count += 1
-        
-        return {
-            "observation": self.get_observation(),
-            "reward": 0.0,
-            "done": False,
-            "info": {"step": self._step_count}
-        }
 
-    def reset(self) -> Dict[str, Any]:
+        return {"observation": self.get_observation(), "reward": 0.0, "done": False, "info": {"step": self._step_count}}
+
+    def reset(self) -> dict[str, any]:
         """Reset the simulation to initial state.
-        
+
         Returns:
-            Dict containing initial state
+            dict containing initial state
         """
         # TODO: Reset MuJoCo simulation
         # mujoco.mj_resetData(self.model, self.data)
         self._step_count = 0
-        
-        return {
-            "observation": self.get_observation(),
-            "info": {"step": self._step_count}
-        }
+
+        return {"observation": self.get_observation(), "info": {"step": self._step_count}}
 
     def close(self) -> None:
         """Close the simulation and cleanup resources."""
@@ -75,11 +83,11 @@ class MuJoCoBackend(BaseBackend):
         self._is_initialized = False
         print(f"[{self.backend_name}] Closed")
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, any]:
         """Get current simulation state.
-        
+
         Returns:
-            Dict containing current state
+            dict containing current state
         """
         # TODO: Get state from MuJoCo
         return {
@@ -89,18 +97,18 @@ class MuJoCoBackend(BaseBackend):
             "base_orientation": np.array([0, 0, 0, 1]),
         }
 
-    def set_state(self, state: Dict[str, Any]) -> None:
+    def set_state(self, state: dict[str, any]) -> None:
         """Set simulation state.
-        
+
         Args:
-            state: Dict containing state to set
+            state: dict containing state to set
         """
         # TODO: Set state in MuJoCo
         pass
 
     def apply_action(self, action: np.ndarray) -> None:
         """Apply control action to the robot.
-        
+
         Args:
             action: Control action (joint positions or torques)
         """
@@ -109,7 +117,7 @@ class MuJoCoBackend(BaseBackend):
 
     def get_observation(self) -> np.ndarray:
         """Get observation from the simulation.
-        
+
         Returns:
             Observation array
         """

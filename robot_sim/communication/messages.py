@@ -2,7 +2,8 @@
 
 import json
 import pickle
-from typing import Any, Dict, Optional, Union
+
+any, dict
 
 import numpy as np
 
@@ -14,7 +15,7 @@ except ImportError:
 
 class ZMQProtocol:
     """ZMQ-based communication protocol for robot-model interaction.
-    
+
     Supports both REQ-REP (request-reply) and PUB-SUB (publish-subscribe) patterns.
     """
 
@@ -27,7 +28,7 @@ class ZMQProtocol:
         serialization: str = "json",
     ) -> None:
         """Initialize ZMQ protocol.
-        
+
         Args:
             port: Port number for communication
             host: Host address
@@ -37,13 +38,13 @@ class ZMQProtocol:
         """
         if zmq is None:
             raise ImportError("pyzmq is not installed. Install with: pip install pyzmq")
-        
+
         self.port = port
         self.host = host
         self.mode = mode
         self.pattern = pattern
         self.serialization = serialization
-        
+
         self.context = zmq.Context()
         self.socket = None
         self._setup_socket()
@@ -51,17 +52,17 @@ class ZMQProtocol:
     def _setup_socket(self) -> None:
         """Setup ZMQ socket based on mode and pattern."""
         address = f"tcp://{self.host}:{self.port}"
-        
+
         if self.pattern == "req_rep":
             if self.mode == "server":
                 self.socket = self.context.socket(zmq.REP)
                 self.socket.bind(address)
-                print(f"[ZMQ Server] Listening on {address}")
+                print(f"[ZMQ Server] listening on {address}")
             else:
                 self.socket = self.context.socket(zmq.REQ)
                 self.socket.connect(address)
                 print(f"[ZMQ Client] Connected to {address}")
-        
+
         elif self.pattern == "pub_sub":
             if self.mode == "server":
                 self.socket = self.context.socket(zmq.PUB)
@@ -72,38 +73,38 @@ class ZMQProtocol:
                 self.socket.connect(address)
                 self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
                 print(f"[ZMQ Subscriber] Subscribed to {address}")
-        
+
         else:
             raise ValueError(f"Unknown pattern: {self.pattern}")
 
-    def send(self, data: Dict[str, Any]) -> None:
+    def send(self, data: dict[str, any]) -> None:
         """Send data through ZMQ.
-        
+
         Args:
-            data: Dictionary containing data to send
+            data: dictionary containing data to send
         """
         serialized = self._serialize(data)
         self.socket.send(serialized)
 
-    def receive(self, timeout: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def receive(self, timeout: int | None = None) -> dict[str, any] | None:
         """Receive data from ZMQ.
-        
+
         Args:
             timeout: Timeout in milliseconds (None for blocking)
-            
+
         Returns:
             Received data dictionary or None if timeout
         """
         if timeout is not None:
             self.socket.setsockopt(zmq.RCVTIMEO, timeout)
-        
+
         try:
             message = self.socket.recv()
             return self._deserialize(message)
         except zmq.Again:
             return None
 
-    def _serialize(self, data: Dict[str, Any]) -> bytes:
+    def _serialize(self, data: dict[str, any]) -> bytes:
         """Serialize data for transmission."""
         if self.serialization == "json":
             # Convert numpy arrays to lists for JSON
@@ -114,7 +115,7 @@ class ZMQProtocol:
         else:
             raise ValueError(f"Unknown serialization: {self.serialization}")
 
-    def _deserialize(self, data: bytes) -> Dict[str, Any]:
+    def _deserialize(self, data: bytes) -> dict[str, any]:
         """Deserialize received data."""
         if self.serialization == "json":
             return json.loads(data.decode("utf-8"))
@@ -123,7 +124,7 @@ class ZMQProtocol:
         else:
             raise ValueError(f"Unknown serialization: {self.serialization}")
 
-    def _convert_numpy_to_list(self, data: Any) -> Any:
+    def _convert_numpy_to_list(self, data: any) -> any:
         """Recursively convert numpy arrays to lists for JSON."""
         if isinstance(data, np.ndarray):
             return data.tolist()

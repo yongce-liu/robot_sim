@@ -2,8 +2,9 @@
 
 import hydra
 from omegaconf import DictConfig
-from robot_sim.backend.isaac import IsaacBackend
 from robot_sim.presets.unitree.go2 import Go2Config
+
+from robot_sim.backends.isaac import IsaacBackend
 
 
 @hydra.main(version_base=None, config_path="../configs", config_name="unitree_go2")

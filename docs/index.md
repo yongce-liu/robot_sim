@@ -30,7 +30,7 @@ uv pip install -e ".[dev]"
 ### Basic Simulation
 
 ```python
-from robot_sim.backend.mujoco import MuJoCoBackend
+from robot_sim.backends.mujoco import MuJoCoBackend
 
 backend = MuJoCoBackend()
 backend.setup()
@@ -44,7 +44,7 @@ backend.close()
 ### Using Robot Presets
 
 ```python
-from robot_sim.backend.isaac import IsaacBackend
+from robot_sim.backends.isaac import IsaacBackend
 from robot_sim.presets.unitree.go2 import Go2Config
 
 robot_config = Go2Config()

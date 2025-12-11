@@ -2,7 +2,8 @@
 
 import hydra
 from omegaconf import DictConfig
-from robot_sim.backend.mujoco import MuJoCoBackend
+
+from robot_sim.backends.mujoco import MuJoCoBackend
 
 
 @hydra.main(version_base=None, config_path="../configs", config_name="default")

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from omegaconf import OmegaConf
 
-from robot_sim.backend import BaseBackend, IsaacBackend, MuJoCoBackend, SimulationManager, create_backend
+from robot_sim.backends import BaseBackend, IsaacBackend, MuJoCoBackend, SimulationManager, create_backend
 
 
 class TestBaseBackend:

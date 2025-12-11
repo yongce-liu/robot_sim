@@ -2,7 +2,8 @@
 
 import hydra
 from omegaconf import DictConfig
-from robot_sim.backend import SimulationManager
+
+from robot_sim.backends import SimulationManager
 
 
 @hydra.main(version_base=None, config_path="../configs", config_name="default")

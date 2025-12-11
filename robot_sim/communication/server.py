@@ -3,7 +3,7 @@
 import hydra
 from omegaconf import DictConfig
 
-from robot_sim.backend import SimulationManager
+from robot_sim.backends import SimulationManager
 from robot_sim.server.sim_server import SimulationServer
 from robot_sim.utils.sensors import IMU, Camera, SensorManager
 

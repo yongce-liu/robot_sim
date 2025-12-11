@@ -3,11 +3,6 @@
 # Default configuration for robot simulation using Hydra
 # Override with: python scripts/run_sim.py backend=isaac robot=h1
 
-defaults:
-  - backend: mujoco
-  - robot: go2
-  - _self_
-
 # Hydra runtime configuration
 hydra:
   run:
@@ -18,22 +13,36 @@ hydra:
   job:
     chdir: false
 
-simulation:
-  backend: mujoco  # or isaac
-  timestep: 0.001
-  num_steps: 1000
-  
-robot:
-  type: go2  # or h1
-  initial_position: [0.0, 0.0, 0.5]
-  initial_orientation: [0.0, 0.0, 0.0, 1.0]  # quaternion [x, y, z, w]
+backends:
+  - mujoco
+  # - isaac
 
-control:
-  type: pd
-  kp: 100.0
-  kd: 10.0
+# simulator settings
+sim:
+  dt: 0.002
+  render_interval: 10
+  gravity: [0.0, 0.0, -9.81]
+  headless: false
+  device: "cpu"
 
-visualization:
-  enabled: true
-  camera_distance: 2.0
-  camera_height: 1.0
+scence:
+  objects:
+    - name: cube
+      initial_position: [0.5, 0.0, 0.5]
+      initial_orientation: [0.0, 0.0, 0.0, 1.0]
+    - name: sphere
+      initial_position: [0.0, 0.5, 0.5]
+      initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  robots:
+    - name: g1
+      model_path: "models/robots/g1.urdf"
+      initial_position: [0.0, 0.0, 0.0]
+      initial_orientation: [0.0, 0.0, 0.0, 1.0]
+      joints:
+        - name: joint1
+          control_type: position
+          stiffness: 100.0
+          damping: 1.0
+          velocity_limit: 5.0
+          torque_limit: 10.0
+          position_limit: [-1.57, 1.57]

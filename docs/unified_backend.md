@@ -48,7 +48,7 @@ python scripts/run_sim.py backend=isaac robot=h1
 Code example:
 
 ```python
-from robot_sim.backend import SimulationManager
+from robot_sim.backends import SimulationManager
 
 # Create manager
 manager = SimulationManager(cfg)
@@ -82,7 +82,7 @@ python example/joint_simulation.py --config-name=joint_sim
 Code example:
 
 ```python
-from robot_sim.backend import SimulationManager
+from robot_sim.backends import SimulationManager
 
 # Create manager
 manager = SimulationManager(cfg)
@@ -125,7 +125,7 @@ manager.synchronize_states(source="mujoco")
 ### 4. Using Factory Function
 
 ```python
-from robot_sim.backend import create_backend
+from robot_sim.backends import create_backend
 
 # Directly create backend
 backend = create_backend("mujoco", config)
@@ -153,7 +153,7 @@ Add support for new simulators:
 4. Create corresponding configuration file
 
 ```python
-from robot_sim.backend.base import BaseBackend
+from robot_sim.backends.base import BaseBackend
 
 class NewBackend(BaseBackend):
     def setup(self) -> None:

@@ -1,10 +1,10 @@
 """Backend implementations for different simulators."""
 
-from robot_sim.backend.base import BaseBackend
-from robot_sim.backend.factory import create_backend
-from robot_sim.backend.isaac import IsaacBackend
-from robot_sim.backend.manager import SimulationManager
-from robot_sim.backend.mujoco import MuJoCoBackend
+from robot_sim.backends.base import BaseBackend
+from robot_sim.backends.factory import create_backend
+from robot_sim.backends.isaac import IsaacBackend
+from robot_sim.backends.manager import SimulationManager
+from robot_sim.backends.mujoco import MuJoCoBackend
 
 __all__ = [
     "BaseBackend",

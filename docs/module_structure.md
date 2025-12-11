@@ -148,7 +148,7 @@ sensors/
 
 | 旧路径 | 新路径 |
 |--------|--------|
-| `robot_sim.backend` | `robot_sim.backends` |
+| `robot_sim.backends` | `robot_sim.backends` |
 | `robot_sim.comm` | `robot_sim.communication` |
 | `robot_sim.control` | `robot_sim.controllers` |
 | `robot_sim.utils.scene_builder` | `robot_sim.scenes` |
@@ -158,7 +158,7 @@ sensors/
 
 **旧代码**:
 ```python
-from robot_sim.backend import SimulationManager
+from robot_sim.backends import SimulationManager
 from robot_sim.utils.sensors import Camera
 from robot_sim.utils.scene_builder import SceneBuilder
 ```

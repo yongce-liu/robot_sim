@@ -1,11 +1,11 @@
 """Test communication between server and client."""
 
 from omegaconf import OmegaConf
-
-from robot_sim.backend import SimulationManager
 from robot_sim.client.model_client import ModelClient
 from robot_sim.server.sim_server import SimulationServer
 from robot_sim.utils.comm import ControlCommand, RobotState
+
+from robot_sim.backends import SimulationManager
 
 
 def run_server(num_steps: int = 10):
@@ -37,7 +37,6 @@ class TestCommunication:
     def test_message_serialization(self):
         """Test message serialization."""
         import numpy as np
-
         from robot_sim.utils.comm.messages import SimulationMessage
 
         robot_state = RobotState(

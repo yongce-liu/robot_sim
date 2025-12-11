@@ -2,10 +2,9 @@
 
 from abc import ABC, abstractmethod
 
-any
-
 import numpy as np
-from omegaconf import DictConfig
+
+from robot_sim.configs.simulator import SimulatorConfig
 
 
 class BaseBackend(ABC):
@@ -15,13 +14,14 @@ class BaseBackend(ABC):
     allowing easy switching between backends and supporting multi-simulator scenarios.
     """
 
-    def __init__(self, config: DictConfig | None = None) -> None:
+    def __init__(self, config: SimulatorConfig) -> None:
         """Initialize the backend.
 
         Args:
             config: Configuration for the backend
         """
-        self.config = config
+        self._config = config
+
         self._is_initialized = False
         self._step_count = 0
 

@@ -8,18 +8,14 @@ __version__ = "0.1.0"
 
 # Import main components for easy access
 from robot_sim.backends import SimulationManager
-from robot_sim.communication import ModelClient
-from robot_sim.config import load_config
 from robot_sim.scenes import SceneBuilder
 from robot_sim.sensors import IMU, Camera, ContactSensor, SensorManager
 
 __all__ = [
     "SimulationManager",
-    "ModelClient",
     "SceneBuilder",
     "Camera",
     "IMU",
     "ContactSensor",
     "SensorManager",
-    "load_config",
 ]

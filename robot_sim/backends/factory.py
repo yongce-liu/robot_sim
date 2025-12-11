@@ -2,9 +2,9 @@
 
 from omegaconf import DictConfig
 
-from robot_sim.backend.base import BaseBackend
-from robot_sim.backend.isaac import IsaacBackend
-from robot_sim.backend.mujoco import MuJoCoBackend
+from robot_sim.backends.base import BaseBackend
+from robot_sim.backends.isaac import IsaacBackend
+from robot_sim.backends.mujoco import MuJoCoBackend
 
 
 def create_backend(backend_type: str, config: DictConfig | None = None) -> BaseBackend:

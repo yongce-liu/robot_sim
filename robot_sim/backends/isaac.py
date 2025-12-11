@@ -5,7 +5,7 @@ any, dict
 import numpy as np
 from omegaconf import DictConfig
 
-from robot_sim.backend.base import BaseBackend
+from robot_sim.backends.base import BaseBackend
 
 
 class IsaacBackend(BaseBackend):

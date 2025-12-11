@@ -1,0 +1,26 @@
+from dataclasses import MISSING, field
+from enum import Enum
+
+from robot_sim.configs.base import configclass
+
+
+class BuiltinObjectType(Enum):
+    """Enumeration of available object types in the simulation."""
+
+    CUBE = "cube"
+    SPHERE = "sphere"
+    CYLINDER = "cylinder"
+
+
+@configclass
+class ObjectConfig:
+    name: str = MISSING
+    """Name of the object."""
+    model_path: str | None = None
+    """Path to the object's model file. If None, we can create it using the provided api from the simulator."""
+    initial_position: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    """Initial position of the object in the simulation."""
+    initial_orientation: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 1.0])
+    """Initial orientation of the object as a quaternion, [x,y,z,w]"""
+    properties: dict[str, any] = field(default_factory=dict)
+    """Additional properties specific to the object."""

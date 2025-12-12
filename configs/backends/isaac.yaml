@@ -1,0 +1,12 @@
+# @package _global_
+# Isaac Sim backend configuration
+
+backend: isaac
+
+# simulator settings
+sim:
+  dt: 0.002
+  render_interval: 10
+  gravity: [0.0, 0.0, -9.81]
+  headless: false
+  device: "cuda:0"  # Isaac typically uses GPU

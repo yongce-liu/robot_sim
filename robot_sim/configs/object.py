@@ -25,3 +25,11 @@ class ObjectConfig:
     """Initial orientation of the object as a quaternion, [x,y,z,w]"""
     properties: dict[str, Any] = field(default_factory=dict)
     """Additional properties specific to the object."""
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.initial_position, list) or len(self.initial_position) != 3:
+            raise ValueError("initial_position must be a list of three floats.")
+        if not isinstance(self.initial_orientation, list) or len(self.initial_orientation) != 4:
+            raise ValueError("initial_orientation must be a list of four floats representing a quaternion.")
+        if self.model_path is None:
+            assert BuiltinObjectType(self.name)

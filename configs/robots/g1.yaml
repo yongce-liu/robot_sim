@@ -1,0 +1,14 @@
+# @package scene.robots
+
+- name: g1
+  model_path: "models/robots/g1.urdf"
+  initial_position: [0.0, 0.0, 0.0]
+  initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  joints:
+    - name: joint1
+      control_type: position
+      stiffness: 100.0
+      damping: 1.0
+      velocity_limit: 5.0
+      torque_limit: 10.0
+      position_limit: [-1.57, 1.57]

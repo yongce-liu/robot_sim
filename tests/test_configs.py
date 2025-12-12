@@ -1,18 +1,23 @@
-from pathlib import Path
+from omegaconf import DictConfig
 
 from robot_sim.configs import SimulatorConfig
 
 from .conftest import assert_class_type
 
 
-def test_load_config(default_config_path: Path) -> None:
-    """Load the default simulator configuration from YAML."""
+def test_load_config_with_hydra(hydra_config: DictConfig) -> None:
+    """Load configuration using Hydra compose."""
 
-    cfg = SimulatorConfig.from_yaml(default_config_path)
+    assert hydra_config is not None
+    assert "backend" in hydra_config
+    assert "sim" in hydra_config
+    assert "scene" in hydra_config
+
+    assert hydra_config.backend == "mujoco"
+
+
+def test_hydra_config_to_simulator_config(hydra_config_dict: dict) -> None:
+    """Convert Hydra config to SimulatorConfig."""
+
+    cfg = SimulatorConfig.from_dict(hydra_config_dict)
     assert_class_type(cfg, SimulatorConfig)
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__])

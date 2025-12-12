@@ -5,11 +5,10 @@ from robot_sim.configs import ObjectConfig, RobotConfig, configclass
 
 @configclass
 class SceneConfig:
-    objects: list[ObjectConfig] = field(default_factory=list)
+    objects: dict[str, ObjectConfig] = field(default_factory=dict)
     """List of objects to include in the simulation."""
-    robots: list[RobotConfig] = field(default_factory=list)
+    robots: dict[str, RobotConfig] = field(default_factory=dict)
     """List of robots to include in the simulation."""
 
-
-# Backwards compatibility for older name
-SceneConfig = SceneConfig
+    def __post_init__(self) -> None:
+        pass

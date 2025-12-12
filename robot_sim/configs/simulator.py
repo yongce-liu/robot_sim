@@ -23,6 +23,8 @@ class PhysicsConfig:
     """Gravity vector for the simulation."""
     headless: bool = False
     """Whether to run the simulation in headless mode (no GUI)."""
+    num_envs: int = 1
+    """Number of parallel simulation environments."""
 
 
 @configclass

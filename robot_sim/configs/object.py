@@ -15,8 +15,8 @@ class BuiltinObjectType(Enum):
 
 @configclass
 class ObjectConfig:
-    name: str = MISSING
-    """Name of the object."""
+    # name: str = MISSING
+    # """Name of the object."""
     model_path: str | None = None
     """Path to the object's model file. If None, we can create it using the provided api from the simulator."""
     initial_position: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
@@ -31,5 +31,3 @@ class ObjectConfig:
             raise ValueError("initial_position must be a list of three floats.")
         if not isinstance(self.initial_orientation, list) or len(self.initial_orientation) != 4:
             raise ValueError("initial_orientation must be a list of four floats representing a quaternion.")
-        if self.model_path is None:
-            assert BuiltinObjectType(self.name)

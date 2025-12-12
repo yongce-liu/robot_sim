@@ -44,6 +44,18 @@ class ConfigWrapper:
                 else:
                     kwargs[field_name] = value
                 continue
+            # Dict[...] fields
+            if origin is dict and args:
+                key_type, val_type = args
+                # Dict with Enum values
+                if isinstance(val_type, type) and issubclass(val_type, Enum):
+                    kwargs[field_name] = {k: val_type(v) for k, v in value.items()}
+                # Dict with nested config-like class values
+                elif hasattr(val_type, "from_dict"):
+                    kwargs[field_name] = {k: val_type.from_dict(v) for k, v in value.items()}
+                else:
+                    kwargs[field_name] = value
+                continue
 
             # Optional/Union types where first arg is Enum, e.g. ControlType | None
             if args and any(isinstance(t, type) and issubclass(t, Enum) for t in args if t is not type(None)):
@@ -67,6 +79,10 @@ class ConfigWrapper:
                 yaml.dump(cfg_dict, f)
             else:
                 raise ValueError(f"Unsupported save type: {type}")
+
+    @staticmethod
+    def check_assests():
+        pass
 
 
 def configclass(_cls=None, **kwargs):

@@ -1,8 +1,8 @@
 # @package scene.objects
 
-- name: cube
+cube:
   initial_position: [0.5, 0.0, 0.5]
   initial_orientation: [0.0, 0.0, 0.0, 1.0]
-- name: cube_large
+cube_large:
   initial_position: [0.5, 0.0, 0.75]
   initial_orientation: [0.0, 0.0, 0.0, 1.0]

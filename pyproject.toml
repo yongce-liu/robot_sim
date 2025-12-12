@@ -25,6 +25,8 @@ dependencies = [
     "torch==2.7.0",
     "torchaudio==2.7.0",
     "torchvision==0.22.0",
+    "loguru==0.7.3",
+    "dm-control==1.0.34",
 ]
 
 [project.optional-dependencies]

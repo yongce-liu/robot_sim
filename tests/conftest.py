@@ -74,4 +74,4 @@ def assert_class_type(obj: object, expect: object) -> None:
                 raise AssertionError(f"Field '{exp_name}' is of type {type(obj_value)}, expected {exp_type}.")
         if hasattr(exp_type, "__annotations__"):
             assert_class_type(obj_value, exp_type)
-        print(f"Field '{exp_name}' passed type check as {exp_type}, with value {obj_value}.")
+        # print(f"Field '{exp_name}' passed type check as {exp_type}, with value {obj_value}.")

@@ -1,8 +1,7 @@
 from dataclasses import MISSING, field
 from enum import Enum
 
-from robot_sim.configs.base import configclass
-from robot_sim.configs.scene import SceneConfig
+from robot_sim.configs import SceneConfig, configclass
 
 
 class BackendType(Enum):
@@ -28,8 +27,8 @@ class PhysicsConfig:
 
 @configclass
 class SimulatorConfig:
-    backends: list[BackendType] = field(default_factory=lambda: [BackendType.ISAAC])
-    sim: PhysicsConfig = field(default_factory=PhysicsConfig)
+    backend: BackendType = MISSING
+    sim: PhysicsConfig = MISSING
     """Configuration for the physics simulation."""
-    scene: SceneConfig = field(default_factory=SceneConfig)
+    scene: SceneConfig = MISSING
     """Configuration for the simulation scene."""

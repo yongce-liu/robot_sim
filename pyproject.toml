@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.0.2", "ruff==0.14.8", "mypy==1.19.0"]
+dev = ["pytest==9.0.2", "ruff==0.14.8"]
 isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 
 [tool.uv]
@@ -54,12 +54,12 @@ target-version = "py311"
 "__init__.py" = ["E402", "F401", "F403", "E501"]
 
 
-# mypy type checking configuration
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
+# # mypy type checking configuration
+# [tool.mypy]
+# python_version = "3.11"
+# warn_return_any = true
+# warn_unused_configs = true
+# disallow_untyped_defs = false
 
 # [project.urls]
 # Homepage = "https://github.com/yourusername/robot_sim"

@@ -1,12 +1,13 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from os import PathLike
+from typing import Any
 
 import yaml
 
 
 class ConfigWrapper:
-    def to_dict(self) -> dict[str, any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
@@ -16,17 +17,42 @@ class ConfigWrapper:
         for field_name, field_type in field_types.items():
             if field_name not in cfg_dict:
                 continue
+            value = cfg_dict[field_name]
+
+            # Direct nested config-like class
             if hasattr(field_type, "from_dict"):
-                kwargs[field_name] = field_type.from_dict(cfg_dict[field_name])
-            elif getattr(field_type, "__origin__", None) is list:
-                if hasattr(field_type.__args__[0], "__mro__") and issubclass(field_type.__args__[0], Enum):
-                    kwargs[field_name] = [field_type.__args__[0](item) for item in cfg_dict[field_name]]
-                elif hasattr(field_type.__args__[0], "from_dict"):
-                    kwargs[field_name] = [field_type.__args__[0].from_dict(item) for item in cfg_dict[field_name]]
+                kwargs[field_name] = field_type.from_dict(value)
+                continue
+
+            # Direct Enum field
+            if isinstance(field_type, type) and issubclass(field_type, Enum):
+                kwargs[field_name] = field_type(value)
+                continue
+
+            origin = getattr(field_type, "__origin__", None)
+            args = getattr(field_type, "__args__", ())
+
+            # List[...] fields
+            if origin is list and args:
+                inner_type = args[0]
+                # List of Enums
+                if isinstance(inner_type, type) and issubclass(inner_type, Enum):
+                    kwargs[field_name] = [inner_type(item) for item in value]
+                # List of nested config-like classes
+                elif hasattr(inner_type, "from_dict"):
+                    kwargs[field_name] = [inner_type.from_dict(item) for item in value]
                 else:
-                    kwargs[field_name] = cfg_dict[field_name]
-            else:
-                kwargs[field_name] = cfg_dict[field_name]
+                    kwargs[field_name] = value
+                continue
+
+            # Optional/Union types where first arg is Enum, e.g. ControlType | None
+            if args and any(isinstance(t, type) and issubclass(t, Enum) for t in args if t is not type(None)):
+                enum_type = next(t for t in args if t is not type(None) and isinstance(t, type) and issubclass(t, Enum))
+                kwargs[field_name] = None if value is None else enum_type(value)
+                continue
+
+            # Fallback: keep raw value
+            kwargs[field_name] = value
         return cls(**kwargs)
 
     @classmethod

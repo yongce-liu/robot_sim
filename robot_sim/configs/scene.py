@@ -1,8 +1,6 @@
 from dataclasses import field
 
-from robot_sim.configs.base import configclass
-from robot_sim.configs.object import ObjectConfig
-from robot_sim.configs.robot import RobotConfig
+from robot_sim.configs import ObjectConfig, RobotConfig, configclass
 
 
 @configclass

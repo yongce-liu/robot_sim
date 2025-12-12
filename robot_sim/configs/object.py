@@ -1,7 +1,8 @@
 from dataclasses import MISSING, field
 from enum import Enum
+from typing import Any
 
-from robot_sim.configs.base import configclass
+from robot_sim.configs import configclass
 
 
 class BuiltinObjectType(Enum):
@@ -22,5 +23,5 @@ class ObjectConfig:
     """Initial position of the object in the simulation."""
     initial_orientation: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 1.0])
     """Initial orientation of the object as a quaternion, [x,y,z,w]"""
-    properties: dict[str, any] = field(default_factory=dict)
+    properties: dict[str, Any] = field(default_factory=dict)
     """Additional properties specific to the object."""

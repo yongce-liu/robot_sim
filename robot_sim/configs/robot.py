@@ -1,7 +1,7 @@
 from dataclasses import MISSING, field
 from enum import Enum
 
-from robot_sim.configs.base import configclass
+from robot_sim.configs import configclass
 
 
 class ControlType(Enum):

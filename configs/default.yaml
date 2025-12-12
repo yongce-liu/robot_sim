@@ -13,9 +13,7 @@ hydra:
   job:
     chdir: false
 
-backends:
-  - mujoco
-  # - isaac
+backend: mujoco # OR isaac
 
 # simulator settings
 sim:
@@ -25,7 +23,7 @@ sim:
   headless: false
   device: "cpu"
 
-scence:
+scene:
   objects:
     - name: cube
       initial_position: [0.5, 0.0, 0.5]

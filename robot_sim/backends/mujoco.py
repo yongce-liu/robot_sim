@@ -52,8 +52,8 @@ class MujocoBackend(BaseBackend):
     def __init__(self, config: SimulatorConfig, optional_queries: dict[str, Any] | None = None):
         super().__init__(config, optional_queries)
         self._actions_cache: ActionType = {}  # robot: action
-        assert self.num_envs == 1, "Mujoco only supports single env."
-        assert self.device == "cpu", "Mujoco only supports CPU device."
+        assert self.num_envs == 1, f"Mujoco only supports single env, got {self.num_envs}."
+        assert self.device == "cpu", f"Mujoco only supports CPU device, got {self.device}."
 
         self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
         self._mjcf_model: mjcf.RootElement | None = None
@@ -483,15 +483,15 @@ class MujocoBackend(BaseBackend):
                 robot_attached.add("freejoint")
 
             # FIXME: Ensure the attached robot has an inertial element to avoid simulation issues
-            # if not hasattr(robot_attached, "inertial") or robot_attached.inertial is None:
-            #     child_body = robot_attached.find_all("body")[0]
-            #     pos = child_body.inertial.pos
-            #     robot_attached.pos = child_body.pos
-            #     child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
-            #     robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
-            #     robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
+            if not hasattr(robot_attached, "inertial") or robot_attached.inertial is None:
+                child_body = robot_attached.find_all("body")[0]
+                pos = child_body.inertial.pos
+                robot_attached.pos = child_body.pos
+                child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
+                robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
+                robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
 
-            self._mjcf_models["robots"][robot_name] = robot_mjcf
+            self._mjcf_sub_models[robot_name] = robot_mjcf
             self._update_indices(robot_mjcf)
 
     @staticmethod
@@ -842,7 +842,3 @@ class MujocoBackend(BaseBackend):
     @property
     def actions_cache(self) -> list[ActionType]:
         return self._actions_cache
-
-    @property
-    def device(self) -> torch.device:
-        return torch.device("cpu")

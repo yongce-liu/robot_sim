@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Script to run simulations with different configurations."""
 
+from pathlib import Path
+
 import hydra
+from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-from robot_sim.backends import SimulationManager
+from robot_sim.backends import MujocoBackend
+from robot_sim.configs import SimulatorConfig
+
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 
-@hydra.main(version_base=None, config_path="../configs", config_name="default")
+@hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default")
 def main(cfg: DictConfig) -> None:
     """Main entry point.
 
@@ -20,31 +26,16 @@ def main(cfg: DictConfig) -> None:
         cfg: Hydra configuration object
     """
     # Print configuration
-    print("Configuration:")
-    print(OmegaConf.to_yaml(cfg))
-
-    print(f"\nRunning simulation with backend: {cfg.simulation.backend}")
-    print(f"Robot: {cfg.robot.type}")
+    cfg = SimulatorConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
+    logger.info("Configuration:")
+    cfg.print()
 
     # Create simulation manager
-    manager = SimulationManager(cfg)
-
-    # Add backend from configuration
-    manager.add_backend(name="main", backend_type=cfg.simulation.backend, config=cfg)
+    sim_backend = MujocoBackend(config=cfg)
 
     # Setup and run simulation
-    manager.setup()
-
-    print(f"\nRunning {cfg.simulation.num_steps} steps...")
-    for step in range(cfg.simulation.num_steps):
-        results = manager.step()
-
-        if (step + 1) % 100 == 0:
-            print(f"Step {step + 1}/{cfg.simulation.num_steps}")
-
-    # Cleanup
-    manager.close()
-    print("\nSimulation complete!")
+    sim_backend.launch()
+    logger.info("Simulation launched successfully.")
 
 
 if __name__ == "__main__":

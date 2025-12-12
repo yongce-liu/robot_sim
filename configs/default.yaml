@@ -5,9 +5,9 @@
 
 defaults:
   - _self_
-  - backends: mujoco
-  - robots: g1 # load configs/robots/g1.yaml
-  - objects: cube # load configs/objects/cube.yaml
+  - backends: mujoco.yaml
+  - robots: g1.yaml # load configs/robots/g1.yaml
+  - objects: cube.yaml # load configs/objects/cube.yaml
 
 # Hydra runtime configuration
 hydra:

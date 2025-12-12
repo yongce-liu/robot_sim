@@ -1,7 +1,7 @@
 # @package scene.robots
 
 g1:
-  model_path: "models/robots/g1.urdf"
+  path: "assets/unitree/g1/g1_dex3_rev_1_0.xml"
   initial_position: [0.0, 0.0, 0.0]
   initial_orientation: [0.0, 0.0, 0.0, 1.0]
   joints:

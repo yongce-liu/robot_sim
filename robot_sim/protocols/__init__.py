@@ -4,8 +4,8 @@ This module handles protocol between simulation server and external clients
 (VLA models, planners, etc.) using ZMQ protocol.
 """
 
-from robot_sim.protocol.messages import ZMQProtocol
-from robot_sim.protocol.protocol import CommunicationProtocol
+from robot_sim.protocols.messages import ZMQProtocol
+from robot_sim.protocols.protocol import CommunicationProtocol
 
 __all__ = [
     "CommunicationProtocol",

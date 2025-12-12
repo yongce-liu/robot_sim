@@ -37,6 +37,15 @@ def main(cfg: DictConfig) -> None:
     sim_backend.launch()
     logger.info("Simulation launched successfully.")
 
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        logger.info("Simulation interrupted by user.")
+    finally:
+        sim_backend.close()
+        logger.info("Simulation closed.")
+
 
 if __name__ == "__main__":
     main()

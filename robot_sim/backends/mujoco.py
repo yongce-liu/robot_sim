@@ -408,12 +408,12 @@ class MujocoBackend(BaseBackend):
                 name="texplane",
                 type="2d",
                 builtin="checker",
+                mark="edge",
                 width=512,
                 height=512,
-                rgb1=[0.72, 0.74, 0.78],
-                rgb2=[0.92, 0.94, 0.97],
-                mark="edge",
-                markrgb=[0.98, 0.78, 0.50],
+                rgb1=[0.2, 0.3, 0.4],
+                rgb2=[0.1, 0.2, 0.3],
+                markrgb=[0.8, 0.8, 0.8],
             )
             model.asset.add(
                 "material",
@@ -421,12 +421,12 @@ class MujocoBackend(BaseBackend):
                 texture="texplane",
                 texrepeat=[2, 2],
                 texuniform=True,
-                reflectance="0",
+                reflectance="0.2",
                 specular="0.2",
                 shininess="0.4",
                 emission="0.05",
             )
-            ground = model.worldbody.add(
+            model.worldbody.add(
                 "geom",
                 type="plane",
                 pos="0 0 0",
@@ -476,7 +476,17 @@ class MujocoBackend(BaseBackend):
             robot_mjcf = mjcf.from_path(robot_cfg.path)
             robot_mjcf.model = robot_name
             robot_attached = model.attach(robot_mjcf)
+
+            # FIXME: A temporary workaround for free joint handling in dm_control
             if not robot_cfg.properties.get("fix_base_link", False):  # default: False, assume the robot can move freely
+                child_joint = robot_attached.find_all("joint")[0]
+                if child_joint.type == "free":
+                    log.warning(
+                        f"Robot '{robot_name}' already has a free joint in its MJCF. "
+                        "We will remove it and add the free joint at the root body level."
+                    )
+                    child_joint.remove()
+
                 robot_attached.add("freejoint")
 
             # FIXME: Ensure the attached robot has an inertial element to avoid simulation issues

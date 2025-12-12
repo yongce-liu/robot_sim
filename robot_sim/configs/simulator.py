@@ -1,7 +1,8 @@
 from dataclasses import MISSING, field
 from enum import Enum
 
-from robot_sim.configs import SceneConfig, configclass
+from .base import configclass
+from .scene import SceneConfig
 
 
 class BackendType(Enum):

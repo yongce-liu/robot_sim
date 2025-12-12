@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -6,7 +7,7 @@ import numpy as np
 import torch
 from loguru import logger as log
 
-from robot_sim.configs import ObjectConfig, PhysicsConfig, RobotConfig, SimulatorConfig
+from robot_sim.configs import ObjectConfig, PhysicsConfig, RobotConfig, SimulatorConfig, TerrainConfig
 
 ########################## Data Structures ##########################
 
@@ -77,36 +78,94 @@ class BaseBackend(ABC):
         self.optional_queries = optional_queries
 
         ## For quick reference
+        self.config: SimulatorConfig = config
         self.cfg_phyx: PhysicsConfig = config.sim
-        self.robots: dict[str, RobotConfig] = config.scene.robots
-        self.objects: dict[str, ObjectConfig] = config.scene.objects
+        if config.scene.path is None:
+            self.robots: dict[str, RobotConfig] = config.scene.robots
+            self.objects: dict[str, ObjectConfig] = config.scene.objects
+            self.terrain: TerrainConfig = config.scene.terrain
+        else:
+            log.info("Scene file provided, ignoring robots, objects, and terrain from config.")
+            self.robots = {}
+            self.objects = {}
+            self.terrain = None
         # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
 
         self._state_cache_expire = True
         self._states: ArrayState = None
 
         # Constant tensors
-        self._full_env_ids = torch.arange(self.num_envs, device=self.device)
-        self._joint_indices: dict[str, dict[str, int]] = {}  # robot/object name -> joint name -> joint index
-        self._body_indices: dict[str, dict[str, int]] = {}  # robot/object name -> body name -> body index
+        self._full_env_ids = (
+            np.arange(self.num_envs) if self.device == "cpu" else torch.arange(self.num_envs, device=self.device)
+        )
+        self._joint_indices: dict[str, list[str]] = defaultdict(list)  # robot/object name -> list[joint name]
+        self._body_indices: dict[str, list[str]] = defaultdict(list)  # robot/object name -> list[body name]
 
     def launch(self) -> None:
         """Launch the simulation."""
+        self._launch()
         if self.optional_queries is None:
             self.optional_queries = {}
         for query_name, query_type in self.optional_queries.items():
             query_type.bind_handler(self)
 
+    def simulate(self):
+        """Simulate the environment."""
+        self._state_cache_expire = True
+        self._simulate()
+
+    def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
+        """Set the states of the environment."""
+        self._state_cache_expire = True
+        self._set_states(states, env_ids)
+
+    def set_actions(self, actions: ActionType) -> None:
+        """Set the dof targets of the robot.
+
+        Args:
+            obj_name (str): The name of the robot
+            actions (dict[str, ActionType]): The target actions for the robot
+        """
+        self._set_actions(actions)
+
+    def get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
+        """Get the states of the environment."""
+        if self._state_cache_expire:
+            self._states = self._get_states(env_ids=env_ids)
+            self._state_cache_expire = False
+        return self._states
+
+    def get_extra(self):
+        """Get the extra information of the environment."""
+        ret_dict = {}
+        for query_name, query_type in self.optional_queries.items():
+            ret_dict[query_name] = query_type()
+        return ret_dict
+
+    # Abstract Methods
+    @abstractmethod
+    def _launch(self) -> None:
+        """Launch the simulation.
+        For a new simulator, you should implement this method.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def render(self) -> None:
         raise NotImplementedError
 
+    @abstractmethod
     def close(self) -> None:
         """Close the simulation."""
         raise NotImplementedError
 
-    ############################################################
-    ## Set states
-    ############################################################
+    @abstractmethod
+    def _simulate(self):
+        """Simulate the environment for one time step.
+        For a new simulator, you should implement this method.
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def _set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
         """Set the states of the environment.
@@ -118,11 +177,6 @@ class BaseBackend(ABC):
         """
         raise NotImplementedError
 
-    def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
-        """Set the states of the environment."""
-        self._state_cache_expire = True
-        self._set_states(states, env_ids)
-
     @abstractmethod
     def _set_actions(self, actions: ActionType) -> None:
         """Set the dof targets of the environment.
@@ -130,18 +184,6 @@ class BaseBackend(ABC):
         """
         raise NotImplementedError
 
-    def set_actions(self, actions: ActionType) -> None:
-        """Set the dof targets of the robot.
-
-        Args:
-            obj_name (str): The name of the robot
-            actions (list[Action]): The target actions for the robot
-        """
-        self._set_actions(actions)
-
-    ############################################################
-    ## Get states
-    ############################################################
     @abstractmethod
     def _get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
         """Get the states of the environment.
@@ -155,41 +197,7 @@ class BaseBackend(ABC):
         """
         raise NotImplementedError
 
-    def get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
-        """Get the states of the environment."""
-        if self._state_cache_expire:
-            self._states = self._get_states(env_ids=env_ids)
-            self._state_cache_expire = False
-        return self._states
-
-    ############################################################
-    ## Get extra queries
-    ############################################################
-    def get_extra(self):
-        """Get the extra information of the environment."""
-        ret_dict = {}
-        for query_name, query_type in self.optional_queries.items():
-            ret_dict[query_name] = query_type()
-        return ret_dict
-
-    ############################################################
-    ## Simulate
-    ############################################################
-    @abstractmethod
-    def _simulate(self):
-        """Simulate the environment for one time step.
-        For a new simulator, you should implement this method.
-        """
-        raise NotImplementedError
-
-    def simulate(self):
-        """Simulate the environment."""
-        self._state_cache_expire = True
-        self._simulate()
-
-    ############################################################
-    ## Properties
-    ############################################################
+    # Properties
     @property
     def num_envs(self) -> int:
         return self.cfg_phyx.num_envs

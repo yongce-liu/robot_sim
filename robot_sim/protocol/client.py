@@ -27,7 +27,7 @@ class ModelClient:
 
     def connect(self) -> None:
         """Connect to simulation server."""
-        from robot_sim.communication.messages import ZMQProtocol
+        from robot_sim.protocol.messages import ZMQProtocol
 
         self.protocol = ZMQProtocol(is_server=False, port=self.server_address)
         print(f"Connected to simulation server at {self.server_address}")

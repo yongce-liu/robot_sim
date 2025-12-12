@@ -1,7 +1,7 @@
 from dataclasses import MISSING, field
 from enum import Enum
 
-from robot_sim.configs import configclass
+from .base import configclass
 
 
 class ControlType(Enum):
@@ -40,17 +40,13 @@ class JointConfig:
 class RobotConfig:
     # name: str = MISSING
     # """Name of the robot."""
-    model_path: str = MISSING
+    path: str = MISSING
     """Path to the robot's model file."""
     initial_position: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     """Initial position of the robot in the simulation."""
-    initial_orientation: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 1.0])
-    """Initial orientation of the robot as a quaternion, [x,y,z,w]"""
+    initial_orientation: list[float] = field(default_factory=lambda: [1.0, 0.0, 0.0, 0.0])
+    """Initial orientation of the robot as a quaternion, [w,x,y,z]"""
     joints: dict[str, JointConfig] = field(default_factory=dict)
     """List of actuators (joints) in the robot."""
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.initial_position, list) or len(self.initial_position) != 3:
-            raise ValueError("initial_position must be a list of three floats.")
-        if not isinstance(self.initial_orientation, list) or len(self.initial_orientation) != 4:
-            raise ValueError("initial_orientation must be a list of four floats representing a quaternion.")
+    properties: dict[str, float] = field(default_factory=dict)
+    """Additional properties specific to the robot."""

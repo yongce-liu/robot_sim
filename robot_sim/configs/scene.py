@@ -1,10 +1,17 @@
-from dataclasses import field
+from dataclasses import MISSING, field
 
-from robot_sim.configs import ObjectConfig, RobotConfig, configclass
+from .base import configclass
+from .object import ObjectConfig
+from .robot import RobotConfig
+from .terrain import TerrainConfig
 
 
 @configclass
 class SceneConfig:
+    path: str | None = None
+    """Path to the scene file (e.g., MJCF file)."""
+    terrain: TerrainConfig = MISSING
+    """Terrain configuration."""
     objects: dict[str, ObjectConfig] = field(default_factory=dict)
     """List of objects to include in the simulation."""
     robots: dict[str, RobotConfig] = field(default_factory=dict)

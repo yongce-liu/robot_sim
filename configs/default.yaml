@@ -18,3 +18,7 @@ hydra:
     subdir: ${hydra.job.num}
   job:
     chdir: false
+
+scene:
+  terrain:
+    type: plane

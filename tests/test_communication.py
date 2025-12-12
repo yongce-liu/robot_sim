@@ -1,4 +1,4 @@
-"""Test communication between server and client."""
+"""Test protocol between server and client."""
 
 from omegaconf import OmegaConf
 from robot_sim.client.model_client import ModelClient
@@ -32,7 +32,7 @@ def run_client(num_steps: int = 10):
 
 
 class TestCommunication:
-    """Test server-client communication."""
+    """Test server-client protocol."""
 
     def test_message_serialization(self):
         """Test message serialization."""
@@ -69,8 +69,8 @@ class TestCommunication:
         assert len(cmd2.joint_targets) == 12
 
     # Skip actual server-client test as it requires running processes
-    # def test_server_client_communication(self):
-    #     """Test full server-client communication."""
+    # def test_server_client_protocol(self):
+    #     """Test full server-client protocol."""
     #     # Start server in subprocess
     #     server_proc = mp.Process(target=run_server, args=(5,))
     #     server_proc.start()

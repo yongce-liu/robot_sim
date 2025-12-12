@@ -1,4 +1,4 @@
-"""ZMQ-based communication protocol for model interaction."""
+"""ZMQ-based protocol protocol for model interaction."""
 
 import json
 import pickle
@@ -14,7 +14,7 @@ except ImportError:
 
 
 class ZMQProtocol:
-    """ZMQ-based communication protocol for robot-model interaction.
+    """ZMQ-based protocol protocol for robot-model interaction.
 
     Supports both REQ-REP (request-reply) and PUB-SUB (publish-subscribe) patterns.
     """
@@ -30,7 +30,7 @@ class ZMQProtocol:
         """Initialize ZMQ protocol.
 
         Args:
-            port: Port number for communication
+            port: Port number for protocol
             host: Host address
             mode: "server" or "client"
             pattern: "req_rep" (request-reply) or "pub_sub" (publish-subscribe)

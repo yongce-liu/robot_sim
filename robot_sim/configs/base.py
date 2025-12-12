@@ -4,6 +4,7 @@ from os import PathLike
 from typing import Any
 
 import yaml
+from loguru import logger
 
 
 class ConfigWrapper:
@@ -70,6 +71,7 @@ class ConfigWrapper:
     @classmethod
     def from_yaml(cls, path: PathLike) -> "ConfigWrapper":
         cfg_dict = yaml.safe_load(open(path))
+        cls.print()
         return cls.from_dict(cfg_dict)
 
     def save(self, path: PathLike, type="yaml") -> None:
@@ -79,6 +81,11 @@ class ConfigWrapper:
                 yaml.dump(cfg_dict, f)
             else:
                 raise ValueError(f"Unsupported save type: {type}")
+
+    def print(self) -> None:
+        cfg_dict = self.to_dict()
+        yaml_str = yaml.dump(cfg_dict)
+        logger.info(f"Configuration:\n{yaml_str}")
 
     @staticmethod
     def check_assests():

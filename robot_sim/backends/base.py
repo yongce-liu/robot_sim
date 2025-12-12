@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from argparse import Action
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -81,9 +80,15 @@ class BaseBackend(ABC):
         self.cfg_phyx: PhysicsConfig = config.sim
         self.robots: dict[str, RobotConfig] = config.scene.robots
         self.objects: dict[str, ObjectConfig] = config.scene.objects
+        # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
 
         self._state_cache_expire = True
         self._states: ArrayState = None
+
+        # Constant tensors
+        self._full_env_ids = torch.arange(self.num_envs, device=self.device)
+        self._joint_indices: dict[str, dict[str, int]] = {}  # robot/object name -> joint name -> joint index
+        self._body_indices: dict[str, dict[str, int]] = {}  # robot/object name -> body name -> body index
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -91,7 +96,6 @@ class BaseBackend(ABC):
             self.optional_queries = {}
         for query_name, query_type in self.optional_queries.items():
             query_type.bind_handler(self)
-        # raise NotImplementedError
 
     def render(self) -> None:
         raise NotImplementedError
@@ -104,7 +108,7 @@ class BaseBackend(ABC):
     ## Set states
     ############################################################
     @abstractmethod
-    def _set_states(self, states: ArrayState, env_ids: list[int] | None = None) -> None:
+    def _set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
         """Set the states of the environment.
         For a new simulator, you should implement this method.
 
@@ -114,32 +118,32 @@ class BaseBackend(ABC):
         """
         raise NotImplementedError
 
-    def set_states(self, states: ArrayState, env_ids: list[int] | None = None) -> None:
+    def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
         """Set the states of the environment."""
         self._state_cache_expire = True
         self._set_states(states, env_ids)
 
-    # @abstractmethod
-    def _set_dof_targets(self, actions: ActionType) -> None:
+    @abstractmethod
+    def _set_actions(self, actions: ActionType) -> None:
         """Set the dof targets of the environment.
         For a new simulator, you should implement this method.
         """
         raise NotImplementedError
 
-    def set_dof_targets(self, actions: ActionType) -> None:
+    def set_actions(self, actions: ActionType) -> None:
         """Set the dof targets of the robot.
 
         Args:
             obj_name (str): The name of the robot
             actions (list[Action]): The target actions for the robot
         """
-        self._set_dof_targets(actions)
+        self._set_actions(actions)
 
     ############################################################
     ## Get states
     ############################################################
     @abstractmethod
-    def _get_states(self, env_ids: list[int] | None = None) -> ArrayState:
+    def _get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
         """Get the states of the environment.
         For a new simulator, you should implement this method.
 
@@ -151,7 +155,7 @@ class BaseBackend(ABC):
         """
         raise NotImplementedError
 
-    def get_states(self, env_ids: list[int] | None = None) -> ArrayState:
+    def get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
         """Get the states of the environment."""
         if self._state_cache_expire:
             self._states = self._get_states(env_ids=env_ids)
@@ -184,130 +188,8 @@ class BaseBackend(ABC):
         self._simulate()
 
     ############################################################
-    ## Misc
+    ## Properties
     ############################################################
-    # @abstractmethod
-    def _get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        """Get the joint names for a given object.
-        For a new simulator, you should implement this method.
-
-        Note:
-            Different simulators may have different joint order, but joint names should be the same.
-
-        Args:
-            obj_name (str): The name of the object.
-            sort (bool): Whether to sort the joint names. Default is True. If True, the joint names are returned in alphabetical order. If False, the joint names are returned in the order defined by the simulator.
-
-        Returns:
-            list[str]: A list of joint names. For non-articulation objects, return an empty list.
-        """
-        raise NotImplementedError
-
-    def get_joint_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        """Get the joint names for a given object."""
-        return self._get_joint_names(obj_name, sort)
-
-    def get_joint_reindex(self, obj_name: str, inverse: bool = False) -> list[int]:
-        """Get the reindexing order for joint indices of a given object. The returned indices can be used to reorder the joints such that they are sorted alphabetically by their names.
-
-        Args:
-            obj_name (str): The name of the object.
-            inverse (bool): Whether to return the inverse reindexing order. Default is False.
-
-        Returns:
-            list[int]: A list of joint indices that specifies the order to sort the joints alphabetically by their names.
-               The length of the list matches the number of joints. If ``inverse`` is True, the returned list is inversed, which means they can be used to restore the original order.
-
-        Example:
-            Suppose ``obj_name = "h1"``, and the ``h1`` has joints:
-
-            index 0: ``"hip"``
-
-            index 1: ``"knee"``
-
-            index 2: ``"ankle"``
-
-            This function will return: ``[2, 0, 1]``, which corresponds to the alphabetical order:
-                ``"ankle"``, ``"hip"``, ``"knee"``.
-        """
-        if not hasattr(self, "_joint_reindex_cache"):
-            self._joint_reindex_cache = {}
-            self._joint_reindex_cache_inverse = {}
-
-        if obj_name not in self._joint_reindex_cache:
-            origin_joint_names = self._get_joint_names(obj_name, sort=False)
-            sorted_joint_names = self._get_joint_names(obj_name, sort=True)
-            self._joint_reindex_cache[obj_name] = [origin_joint_names.index(jn) for jn in sorted_joint_names]
-            self._joint_reindex_cache_inverse[obj_name] = [sorted_joint_names.index(jn) for jn in origin_joint_names]
-
-        return self._joint_reindex_cache_inverse[obj_name] if inverse else self._joint_reindex_cache[obj_name]
-
-    # @abstractmethod
-    def _get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        """Get the body names for a given object.
-        For a new simulator, you should implement this method.
-
-        Note:
-            Different simulators may have different body order, but body names should be the same.
-
-        Args:
-            obj_name (str): The name of the object.
-            sort (bool): Whether to sort the body names. Default is True. If True, the body names are returned in alphabetical order. If False, the body names are returned in the order defined by the simulator.
-
-        Returns:
-            list[str]: A list of body names. For non-articulation objects, return an empty list.
-        """
-        raise NotImplementedError
-
-    def get_body_names(self, obj_name: str, sort: bool = True) -> list[str]:
-        """Get the body names for a given object."""
-        return self._get_body_names(obj_name, sort)
-
-    def get_body_reindex(self, obj_name: str) -> list[int]:
-        """Get the reindexing order for body indices of a given object. The returned indices can be used to reorder the bodies such that they are sorted alphabetically by their names.
-
-        Args:
-            obj_name (str): The name of the object.
-
-        Returns:
-            list[int]: A list of body indices that specifies the order to sort the bodies alphabetically by their names.
-               The length of the list matches the number of bodies.
-
-        Example:
-            Suppose ``obj_name = "h1"``, and the ``h1`` has the following bodies:
-
-                - index 0: ``"torso"``
-                - index 1: ``"left_leg"``
-                - index 2: ``"right_leg"``
-
-            This function will return: ``[1, 2, 0]``, which corresponds to the alphabetical order:
-                ``"left_leg"``, ``"right_leg"``, ``"torso"``.
-        """
-        if not hasattr(self, "_body_reindex_cache"):
-            self._body_reindex_cache = {}
-
-        if obj_name not in self._body_reindex_cache:
-            origin_body_names = self._get_body_names(obj_name, sort=False)
-            sorted_body_names = self._get_body_names(obj_name, sort=True)
-            self._body_reindex_cache[obj_name] = [origin_body_names.index(bn) for bn in sorted_body_names]
-
-        return self._body_reindex_cache[obj_name]
-
-    ############################################################
-    ## GS Renderer
-    ############################################################
-    def _get_camera_params(self, camera):
-        """Get the camera parameters for GS rendering.
-        For a new simulator, you should implement this method.
-        Args:
-            camera: PinholeCameraCfg object
-
-        Returns:
-            Ks: (3, 3) intrinsic matrix
-            c2w: (4, 4) camera-to-world transformation matrix
-        """
-        raise NotImplementedError
-
     @property
     def num_envs(self) -> int:
         return self.cfg_phyx.num_envs
@@ -319,3 +201,18 @@ class BaseBackend(ABC):
     @property
     def device(self) -> str:
         return self.cfg_phyx.device
+
+    @property
+    def full_env_ids(self) -> torch.Tensor:
+        """Get all environment ids."""
+        return self._full_env_ids
+
+    @property
+    def joint_indices(self) -> dict[str, dict[str, int]]:
+        """Get the joint indices of all robots and objects."""
+        return self._joint_indices
+
+    @property
+    def body_indices(self) -> dict[str, dict[str, int]]:
+        """Get the body indices of all robots and objects."""
+        return self._body_indices

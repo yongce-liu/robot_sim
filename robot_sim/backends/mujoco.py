@@ -4,7 +4,6 @@ import mujoco
 import numpy as np
 import torch
 from dm_control import mjcf
-from dm_control.mujoco.wrapper import MjData
 from loguru import logger as log
 
 try:
@@ -58,7 +57,6 @@ class MujocoBackend(BaseBackend):
         self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
         self._mjcf_model: mjcf.RootElement | None = None
         self._mjcf_physics: mjcf.Physics | None = None
-        self._mjcf_data: MjData | None = None
         # self._mujoco_robot_names = []
         # self._robot_num_dofs = []
         # self._robot_paths = []
@@ -101,7 +99,6 @@ class MujocoBackend(BaseBackend):
 
         self._mjcf_model = mjcf_model
         self._mjcf_physics = mjcf.Physics.from_mjcf_model(mjcf_model)
-        self._mjcf_data = self._mjcf_physics.data
 
         # Export MJCF + assets to a temp dir.
         # Handle filename variability (dm_control 1.0.34).
@@ -117,7 +114,7 @@ class MujocoBackend(BaseBackend):
         # self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
 
         if not self.headless:
-            self.viewer = mujoco.viewer.launch_passive(self.physics.model.ptr, self.physics.data.ptr)
+            self.viewer = mujoco.viewer.launch_passive(self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr)
             self.viewer.sync()
 
     def render(self) -> None:

@@ -17,6 +17,3 @@ class SceneConfig:
     """List of robots to include in the simulation."""
     path: str | None = None
     """Path to the scene file (e.g., MJCF file)."""
-
-    def __post_init__(self) -> None:
-        pass

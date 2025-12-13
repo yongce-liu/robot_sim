@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import field
 from typing import Any
 
@@ -83,8 +84,8 @@ class ArrayState:
 
 @configclass
 class Buffer:
-    joint_names: dict[str, list[str]] = field(default_factory=list)  # robot/object name -> list[joint name]
-    body_names: dict[str, list[str]] = field(default_factory=list)  # robot/object name -> list[body name]
+    joint_names: list[str] = field(default_factory=list)  # robot/object name -> buffer -> list[joint name]
+    body_names: list[str] = field(default_factory=list)  # robot/object name -> buffer -> list[body name]
 
 
 ########################### Base Backend ##########################
@@ -119,7 +120,7 @@ class BaseBackend(ABC):
             np.arange(self.num_envs) if self.device == "cpu" else torch.arange(self.num_envs, device=self.device)
         )
         # you can use it to store anything, e.g., default joint names order/ body names order, etc.
-        self._buffer = Buffer()
+        self._buffer_dict = defaultdict(Buffer)
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -237,12 +238,10 @@ class BaseBackend(ABC):
         """Get all environment ids."""
         return self._full_env_ids
 
-    @property
-    def joint_names(self) -> dict[str, dict[str, int]]:
+    def get_joint_names(self, name: str) -> list[str]:
         """Get the joint indices of all robots and objects."""
-        return self._buffer.joint_names
+        return self._buffer_dict[name].joint_names
 
-    @property
-    def body_names(self) -> dict[str, dict[str, int]]:
+    def get_body_names(self, name: str) -> list[str]:
         """Get the body indices of all robots and objects."""
-        return self._buffer.body_names
+        return self._buffer_dict[name].body_names

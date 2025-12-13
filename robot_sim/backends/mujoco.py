@@ -481,13 +481,13 @@ class MujocoBackend(BaseBackend):
         """Update joint and body name indices for the given model."""
         obj_name = model.model
         for joint in model.find_all("joint"):
-            if joint.name not in self.joint_names:
-                self._buffer.joint_names.append(joint.name)
+            if joint.name not in self._buffer_dict[obj_name].joint_names:
+                self._buffer_dict[obj_name].joint_names.append(joint.name)
             else:
                 logger.error(f"Duplicate joint name detected: {joint.name} in object {obj_name}")
         for body in model.find_all("body"):
-            if body.name not in self.body_names:
-                self._buffer.body_names.append(body.name)
+            if body.name not in self._buffer_dict[obj_name].body_names:
+                self._buffer_dict[obj_name].body_names.append(body.name)
             else:
                 logger.error(f"Duplicate body name detected: {body.name} in object {obj_name}")
 

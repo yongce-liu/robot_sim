@@ -408,6 +408,10 @@ class MujocoBackend(BaseBackend):
                 solimp="0.9 0.95 0.001 0.5 2",  # restition parameters [min, max, margin, stiffness, damping]
                 solref="0.02 1",  # contact stiffness and damping [timeconst, dampratio]
             )
+            model.visual.headlight.diffuse = [0.6, 0.6, 0.6]
+            model.visual.headlight.ambient = [0.3, 0.3, 0.3]
+            model.visual.headlight.specular = [0.0, 0.0, 0.0]
+            model.visual.rgba.haze = [0.15, 0.25, 0.35, 1.0]
         else:
             raise NotImplementedError(f"Terrain type '{self.terrain.type}' not supported yet in MuJoCo backend.")
 

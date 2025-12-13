@@ -15,7 +15,7 @@ class BaseSensor(ABC):
     """Base class for all sensors."""
 
     ################### private attributes ###################
-    _data: torch.Tensor | np.ndarray | None = None
+    _data: torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray] | None = None
     """the latest sensor data."""
     _data_queue: deque[torch.Tensor | np.ndarray] | None = None
     """Current sensor data."""

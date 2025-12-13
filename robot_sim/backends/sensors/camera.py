@@ -44,9 +44,6 @@ class Camera(BaseSensor):
 
     def update(self) -> None:
         """Update camera data from mujoco backend."""
-        if self._backend is None:
-            raise RuntimeError("Backend not bound. Call bind() first.")
-
         if self._backend.type == BackendType.MUJOCO:
             self._update_mujoco()
         else:
@@ -107,19 +104,6 @@ class Camera(BaseSensor):
         # logger.info(f"euler angles (rad): roll={roll.item()}, pitch={pitch.item()}, yaw={yaw.item()}")
         target_body.add("camera", name=self.sensor_name, **camera_params)
 
-    def _setup_mujoco_camera(self) -> None:
-        """Setup camera in mujoco model."""
-        mjcf_model = self._backend._mjcf_model
-        if mjcf_model is None:
-            raise RuntimeError("MuJoCo model not initialized. Call backend._launch() first.")
-
-        if self.mount_to is not None:
-            # Mounted camera: attach to specified link
-            self._setup_mounted_camera()
-        else:
-            # World frame camera: use pos and look_at
-            self._setup_world_camera(mjcf_model)
-
     def _update_mujoco(self) -> None:
         """Capture camera data from mujoco."""
         physics = self._backend._mjcf_physics
@@ -127,12 +111,14 @@ class Camera(BaseSensor):
         data_dict = {}
 
         if "rgb" in self.data_types:
-            rgb = physics.render(width=self.width, height=self.height, camera_id=self._camera_id, depth=False)
-            data_dict["rgb"] = torch.from_numpy(rgb).float()
+            data_dict["rgb"] = physics.render(
+                width=self.width, height=self.height, camera_id=self._camera_id, depth=False
+            )
 
         if "depth" in self.data_types:
-            depth = physics.render(width=self.width, height=self.height, camera_id=self._camera_id, depth=True)
-            data_dict["depth"] = torch.from_numpy(depth).float()
+            data_dict["depth"] = physics.render(
+                width=self.width, height=self.height, camera_id=self._camera_id, depth=True
+            )
 
         if "segmentation" in self.data_types:
             seg = physics.render(
@@ -141,6 +127,6 @@ class Camera(BaseSensor):
             # Extract geom IDs (first channel if multi-channel)
             if seg.ndim == 3:
                 seg = seg[..., 0]
-            data_dict["segmentation"] = torch.from_numpy(seg).long()
+            data_dict["segmentation"] = seg
 
         self._data = data_dict

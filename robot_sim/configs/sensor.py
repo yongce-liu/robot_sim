@@ -3,8 +3,6 @@
 from dataclasses import MISSING, dataclass, field
 from enum import Enum
 
-from loguru import logger
-
 
 class SensorType(Enum):
     """Enumeration of available sensor types."""

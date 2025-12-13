@@ -1,6 +1,6 @@
 """Control utilities and algorithms."""
 
-TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass

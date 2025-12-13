@@ -42,7 +42,7 @@ def main(cfg: DictConfig) -> None:
         # manager.apply_action(action)
 
         # Step simulation
-        results = manager.step()
+        results = manager.step()  # noqa: F841
 
         # Print progress
         if (step + 1) % 100 == 0:

@@ -18,7 +18,7 @@ def main(cfg: DictConfig) -> None:
     print(f"Backend: {cfg.simulation.backend}")
 
     # Load robot configuration
-    robot_config = Go2Config()
+    robot_config = Go2Config()  # noqa: F841
 
     # Initialize backend
     backend = IsaacBackend()

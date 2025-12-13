@@ -40,7 +40,7 @@ def main(cfg: DictConfig) -> None:
 
     try:
         while True:
-            pass
+            sim_backend.simulate()
     except KeyboardInterrupt:
         logger.info("Simulation interrupted by user.")
     finally:

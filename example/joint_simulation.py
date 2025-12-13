@@ -37,7 +37,7 @@ def main(cfg: DictConfig) -> None:
 
     # Reset all backends to ensure same initial state
     print("\nResetting all backends...")
-    initial_states = manager.reset()
+    initial_states = manager.reset()  # noqa: F841
 
     # Synchronize initial states (optional)
     # manager.synchronize_states(source="mujoco", targets=["isaac"])
@@ -54,7 +54,7 @@ def main(cfg: DictConfig) -> None:
         # manager.apply_action(action)
 
         # Step all backends
-        results = manager.step()
+        results = manager.step()  # noqa: F841
 
         # Compare states periodically
         if (step + 1) % comparison_interval == 0:

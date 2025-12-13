@@ -61,9 +61,10 @@ class MujocoBackend(BaseBackend):
         # self._add_cameras(model)
         self._add_objects(mjcf_model)
         self._add_robots(mjcf_model)
-        for k, v in asdict(self.cfg_phyx).items():
-            if hasattr(mjcf_model.option, k):
-                setattr(mjcf_model.option, k, v)  # dt, gravity, etc.
+        # dt
+        mjcf_model.option.timestep = self.cfg_phyx.dt
+        # gravity
+        mjcf_model.option.gravity = self.cfg_phyx.gravity
 
         self._mjcf_model = mjcf_model
         self._mjcf_physics = mjcf.Physics.from_mjcf_model(mjcf_model)
@@ -85,8 +86,8 @@ class MujocoBackend(BaseBackend):
             self.viewer = mujoco.viewer.launch_passive(self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr)
             self.viewer.sync()
 
-    def render(self) -> None:
-        pass
+    def _render(self) -> None:
+        self.viewer.sync()
 
     def close(self):
         if self.viewer is not None:
@@ -106,9 +107,7 @@ class MujocoBackend(BaseBackend):
 
         # Apply torque control if manual PD is enabled
         self._mjcf_physics.step()
-
-        if not self.headless:
-            self.viewer.sync()
+            
 
     def _set_states(self, states, env_ids=None, zero_vel=True):
         states_flat = [{**state["objects"], **state["robots"]} for state in states]

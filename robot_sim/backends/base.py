@@ -137,11 +137,16 @@ class BaseBackend(ABC):
             for sensor_name, sensor_instance in obj_buffer.sensors.items():
                 sensor_instance.bind(self, obj_name, sensor_name)
 
+    def render(self) -> None:
+        if self._sim_cnt % self.cfg_phyx.render_interval == 0 and not self.headless:
+            self._render()
+
     def simulate(self):
         """Simulate the environment."""
         self._state_cache_expire = True
         self._simulate()
         self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
+        self.render()
 
     def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
         """Set the states of the environment."""
@@ -180,7 +185,7 @@ class BaseBackend(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def render(self) -> None:
+    def _render(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

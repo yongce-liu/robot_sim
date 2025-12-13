@@ -1,6 +1,6 @@
 from dataclasses import MISSING
 
-from .base import configclass
+from robot_sim.utils import configclass
 
 
 @configclass

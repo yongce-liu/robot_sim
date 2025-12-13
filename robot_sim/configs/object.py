@@ -2,7 +2,9 @@ from dataclasses import field
 from enum import Enum
 from typing import Any
 
-from .base import configclass
+from robot_sim.utils import configclass
+
+# from .sensor import SensorConfig
 
 
 class ObjectType(Enum):
@@ -24,5 +26,11 @@ class ObjectConfig:
     """Initial orientation of the object as a quaternion, [w,x,y,z]"""
     properties: dict[str, Any] = field(default_factory=dict)
     """Additional properties specific to the object."""
+    # sensors: dict[str, SensorConfig] = field(default_factory=dict)
+    # """Sensor configurations for the robot."""
     type: ObjectType = ObjectType.CUSTOM
     """Type of the object. Can be a ObjectType or 'custom'."""
+
+    def __post_init__(self):
+        if self.path is None and self.type == ObjectType.CUSTOM:
+            raise ValueError("For custom object type, a valid path to the model file must be provided.")

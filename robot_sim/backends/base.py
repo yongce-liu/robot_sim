@@ -1,13 +1,20 @@
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import Any
 
 import numpy as np
 import torch
-from loguru import logger as log
+from loguru import logger
 
-from robot_sim.configs import ObjectConfig, PhysicsConfig, RobotConfig, SimulatorConfig, TerrainConfig
+from robot_sim.configs import (
+    BackendType,
+    ObjectConfig,
+    PhysicsConfig,
+    RobotConfig,
+    SimulatorConfig,
+    TerrainConfig,
+)
+from robot_sim.utils import configclass
 
 ########################## Data Structures ##########################
 
@@ -15,7 +22,7 @@ ArrayTypes = torch.Tensor | np.ndarray
 ActionType = dict[str, ArrayTypes]
 
 
-@dataclass
+@configclass
 class ObjectState:
     """State of a single object."""
 
@@ -29,9 +36,13 @@ class ObjectState:
     """Joint positions. Shape is (num_envs, num_joints). This is only available for articulation objects."""
     joint_vel: ArrayTypes | None = None
     """Joint velocities. Shape is (num_envs, num_joints). This is only available for articulation objects."""
+    sensors: dict[str, ArrayTypes] = field(default_factory=dict)
+    """Sensor readings. Each sensor has shape (num_envs, sensor_dim)."""
+    extras: dict = field(default_factory=dict)
+    """Extra information."""
 
 
-@dataclass
+@configclass
 class RobotState:
     """State of a single robot."""
 
@@ -57,7 +68,7 @@ class RobotState:
     """Extra information."""
 
 
-@dataclass
+@configclass
 class ArrayState:
     """A dictionary that holds the states of all robots and objects in tensor format.
 
@@ -70,6 +81,12 @@ class ArrayState:
     extras: dict = field(default_factory=dict)
 
 
+@configclass
+class Buffer:
+    joint_names: dict[str, list[str]] = field(default_factory=list)  # robot/object name -> list[joint name]
+    body_names: dict[str, list[str]] = field(default_factory=list)  # robot/object name -> list[body name]
+
+
 ########################### Base Backend ##########################
 class BaseBackend(ABC):
     """Base class for simulation handler."""
@@ -79,13 +96,14 @@ class BaseBackend(ABC):
 
         ## For quick reference
         self.config: SimulatorConfig = config
+        self.type: BackendType = config.backend
         self.cfg_phyx: PhysicsConfig = config.sim
         if config.scene.path is None:
             self.robots: dict[str, RobotConfig] = config.scene.robots
             self.objects: dict[str, ObjectConfig] = config.scene.objects
             self.terrain: TerrainConfig = config.scene.terrain
         else:
-            log.info("Scene file provided, ignoring robots, objects, and terrain from config.")
+            logger.info("Scene file provided, ignoring robots, objects, and terrain from config.")
             self.robots = {}
             self.objects = {}
             self.terrain = None
@@ -94,16 +112,19 @@ class BaseBackend(ABC):
         self._state_cache_expire = True
         self._states: ArrayState = None
 
-        # Constant tensors
+        # Constants
+        self._sim_cnt = 0
+        self._sim_freq = int(1.0 / self.cfg_phyx.dt)
         self._full_env_ids = (
             np.arange(self.num_envs) if self.device == "cpu" else torch.arange(self.num_envs, device=self.device)
         )
-        self._joint_indices: dict[str, list[str]] = defaultdict(list)  # robot/object name -> list[joint name]
-        self._body_indices: dict[str, list[str]] = defaultdict(list)  # robot/object name -> list[body name]
+        # you can use it to store anything, e.g., default joint names order/ body names order, etc.
+        self._buffer = Buffer()
 
     def launch(self) -> None:
         """Launch the simulation."""
         self._launch()
+        self._sim_cnt = 0
         if self.optional_queries is None:
             self.optional_queries = {}
         for query_name, query_type in self.optional_queries.items():
@@ -113,6 +134,7 @@ class BaseBackend(ABC):
         """Simulate the environment."""
         self._state_cache_expire = True
         self._simulate()
+        self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
 
     def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
         """Set the states of the environment."""
@@ -216,11 +238,11 @@ class BaseBackend(ABC):
         return self._full_env_ids
 
     @property
-    def joint_indices(self) -> dict[str, dict[str, int]]:
+    def joint_names(self) -> dict[str, dict[str, int]]:
         """Get the joint indices of all robots and objects."""
-        return self._joint_indices
+        return self._buffer.joint_names
 
     @property
-    def body_indices(self) -> dict[str, dict[str, int]]:
+    def body_names(self) -> dict[str, dict[str, int]]:
         """Get the body indices of all robots and objects."""
-        return self._body_indices
+        return self._buffer.body_names

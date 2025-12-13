@@ -1,3 +1,4 @@
+# @package scene.objects
 
 cube:
   initial_position: [0.5, 0.0, 0.5]

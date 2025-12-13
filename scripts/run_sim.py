@@ -7,7 +7,7 @@ import hydra
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-from robot_sim.backends import MujocoBackend
+from robot_sim.backends.factory import BackendFactory
 from robot_sim.configs import SimulatorConfig
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -31,7 +31,7 @@ def main(cfg: DictConfig) -> None:
     cfg.print()
 
     # Create simulation manager
-    sim_backend = MujocoBackend(config=cfg)
+    sim_backend = BackendFactory(config=cfg).backend
 
     # Setup and run simulation
     sim_backend.launch()

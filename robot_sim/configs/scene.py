@@ -1,6 +1,7 @@
 from dataclasses import MISSING, field
 
-from .base import configclass
+from robot_sim.utils import configclass
+
 from .object import ObjectConfig
 from .robot import RobotConfig
 from .terrain import TerrainConfig

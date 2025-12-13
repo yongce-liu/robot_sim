@@ -8,7 +8,7 @@
 
 # import numpy as np
 # import torch
-# from loguru import logger as log
+# from loguru import logger
 # from metasim.queries.base import BaseQueryType
 # from metasim.scenario.cameras import PinholeCameraCfg
 # from metasim.scenario.objects import (

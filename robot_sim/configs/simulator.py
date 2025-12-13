@@ -1,7 +1,8 @@
 from dataclasses import MISSING, field
 from enum import Enum
 
-from .base import configclass
+from robot_sim.utils import configclass
+
 from .scene import SceneConfig
 
 

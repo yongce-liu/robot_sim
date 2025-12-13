@@ -1,37 +1,16 @@
-"""Sensor module for camera, IMU, and other sensors."""
-
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections import deque
-from dataclasses import MISSING
-from enum import Enum
 
 import numpy as np
 import torch
-from loguru import logger
 
 from robot_sim.backends import BaseBackend
-from robot_sim.utils import configclass
-
-from .simulator import BackendType
+from robot_sim.configs import SensorConfig
 
 
-class SensorType(Enum):
-    """Enumeration of available sensor types."""
-
-    CAMERA = "camera"
-    CONTACT = "contact"
-
-
-@configclass
-class SensorConfig:
+class BaseSensor:
     """Base class for all sensors."""
 
-    type: SensorType = MISSING
-    """Type of the sensor."""
-    freq: float | None = None
-    """Update frequency in Hz. It should less than or equal to the simulation frequency."""
-    data_buffer_length: int = 1
-    """Maximum length of the data queue."""
     ################### private attributes ###################
     _data: torch.Tensor | np.ndarray | None = None
     """the latest sensor data."""
@@ -44,9 +23,9 @@ class SensorConfig:
     _backend: "BaseBackend | None" = None
     """Backend simulator instance reference."""
 
-
-    def _post_init__(self):
-        self._data_queue = deque(maxlen=self.data_buffer_length)
+    def __init__(self, config: SensorConfig, **kwargs) -> None:
+        self.config = config
+        self._data_queue = deque(maxlen=self.config.data_buffer_length)
 
     def _bind(self, *args, **kwargs) -> None:
         raise NotImplementedError
@@ -54,7 +33,7 @@ class SensorConfig:
     def bind(self, backend: "BaseBackend", *args, **kwargs) -> None:
         self._backend = backend
         # Compute update interval based on frequency, if not specified, update every step
-        self._update_interval = int(backend._sim_freq / self.freq) if self.freq is not None else 1
+        self._update_interval = int(backend._sim_freq / self.config.freq) if self.config.freq is not None else 1
         assert self._update_interval > 0, "Sensor update frequency must be less than or equal to simulation frequency."
         self._bind(*args, **kwargs)
 

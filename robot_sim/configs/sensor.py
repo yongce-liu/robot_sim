@@ -14,7 +14,7 @@ class SensorType(Enum):
 
 
 # Registry to map sensor type to concrete class
-_SENSOR_TYPE_REGISTRY: dict[SensorType, type] = {}
+_SENSOR_CONFIG_TYPE_REGISTRY: dict[SensorType, type] = {}
 
 
 @configclass
@@ -25,6 +25,8 @@ class SensorConfig:
     """Type of the sensor."""
     freq: float | None = None
     """Update frequency in Hz. It should less than or equal to the simulation frequency."""
+    data_buffer_length: int = 1
+    """Maximum length of the data queue."""
 
     @classmethod
     def from_dict(cls, cfg_dict: dict) -> "SensorConfig":
@@ -40,17 +42,17 @@ class SensorConfig:
         sensor_type_str = cfg_dict["type"]
         sensor_type = SensorType(sensor_type_str)
 
-        if sensor_type not in _SENSOR_TYPE_REGISTRY:
+        if sensor_type not in _SENSOR_CONFIG_TYPE_REGISTRY:
             raise ValueError(
-                f"Unknown sensor type: {sensor_type}. Available types: {list(_SENSOR_TYPE_REGISTRY.keys())}"
+                f"Unknown sensor type: {sensor_type}. Available types: {list(_SENSOR_CONFIG_TYPE_REGISTRY.keys())}"
             )
 
-        concrete_class = _SENSOR_TYPE_REGISTRY[sensor_type]
+        concrete_class = _SENSOR_CONFIG_TYPE_REGISTRY[sensor_type]
         return concrete_class.from_dict(cfg_dict)
 
 
 @configclass
-class Camera(SensorConfig):
+class CameraConfig(SensorConfig):
     """Camera sensor for RGB, depth, and segmentation."""
 
     width: int = 640
@@ -83,4 +85,4 @@ class Camera(SensorConfig):
 
 
 # Register sensor types
-_SENSOR_TYPE_REGISTRY[SensorType.CAMERA] = Camera
+_SENSOR_CONFIG_TYPE_REGISTRY[SensorType.CAMERA] = CameraConfig

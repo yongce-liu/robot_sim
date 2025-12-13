@@ -1,16 +1,10 @@
+from collections import deque
 
-@configclass
-class ContactSensor(SensorConfig):
+from .base import BaseSensor
+
+
+class ContactForce(BaseSensor):
     """Contact/force sensor."""
-
-    type: SensorType = SensorType.CONTACT
-    """Sensor type, defaults to CONTACT."""
-    history_length: int = 3
-    """Length of contact force history."""
-    _current_contact_force: torch.Tensor | None = None
-    """Current contact force."""
-    _contact_forces_queue: deque[torch.Tensor] | None = None
-    """Queue of contact forces."""
 
     def _post_init__(self):
         super()._post_init__()
@@ -100,4 +94,3 @@ class ContactSensor(SensorConfig):
     # def contact_forces(self) -> torch.Tensor:
     #     """Return the latest contact forces snapshot."""
     #     return self._contact_forces_queue[-1]
-

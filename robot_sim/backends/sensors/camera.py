@@ -1,31 +1,48 @@
+from typing import TYPE_CHECKING
+
 import numpy as np
 import torch
 from loguru import logger
 
-from robot_sim.configs import CameraConfig
+from robot_sim.configs import BackendType, CameraConfig
+from robot_sim.utils.math import euler_xyz_from_quat
 
 from .base import BaseSensor
+
+if TYPE_CHECKING:
+    from robot_sim.backends import MujocoBackend
 
 
 class Camera(BaseSensor):
     """Camera sensor for RGB, depth, and segmentation."""
 
+    _backend: "MujocoBackend | None" = None
+    """Backend simulator instance reference."""
+
     def __init__(self, config: CameraConfig, **kwargs):
         super().__init__(config, **kwargs)
+        logger.info(
+            f"Initializing Camera Sensor: width={self.config.width}, height={self.config.height}"
+            f"Camera will be mounted to '{self.config.mount_to}' at link '{self.config.mount_to}' "
+            f"with position {self.config.position} and quaternion {self.config.orientation}."
+        )
 
-    def _bind(self, *args, **kwargs) -> None:
-        pass
-        # """Bind to mujoco backend and setup camera."""
-        # if self.mount_link is not None:
-        #     self._setup_mounted_camera()
-        #     logger.info(
-        #         f"Camera mounted to '{self.mount_to}' at link '{self.mount_link}', mount position {self.mount_pos} and orientation {self.mount_quat}."
-        #     )
-        # else:
-        #     self._setup_world_camera()
-        #     logger.info(f"World frame camera at position {self.position} looking at {self.look_at}.")
+    def _bind(self, obj_name: str, sensor_name: str, **kwargs) -> None:
+        """Bind to mujoco backend and setup camera."""
+        self.obj_name = obj_name
+        self.sensor_name = sensor_name
+        if self.config.mount_to is not None:
+            if self._backend.type == BackendType.MUJOCO:
+                self._setup_mounted_camera_mujoco()
+            else:
+                logger.error(f"Mounted camera not supported for backend: {self._backend.type}")
+        else:
+            if self._backend.type == BackendType.MUJOCO:
+                self._setup_world_camera_mujoco()
+            else:
+                logger.error(f"World camera not supported for backend: {self._backend.type}")
 
-    def update(self, *args, **kwargs) -> None:
+    def update(self) -> None:
         """Update camera data from mujoco backend."""
         if self._backend is None:
             raise RuntimeError("Backend not bound. Call bind() first.")
@@ -35,9 +52,10 @@ class Camera(BaseSensor):
         else:
             raise NotImplementedError(f"Camera update not implemented for backend: {self._backend.type}")
 
-    def _setup_world_camera(self, mjcf_model) -> None:
+    def _setup_world_camera_mujoco(self) -> None:
         """Setup a world-frame camera using pos and look_at."""
         # Compute camera orientation from pos and look_at
+        mjcf_model = self._backend._mjcf_model
         direction = np.array(
             [
                 self.look_at[0] - self.pos[0],
@@ -59,46 +77,35 @@ class Camera(BaseSensor):
         }
         mjcf_model.worldbody.add("camera", name=self._camera_id, **camera_params)
 
-    def _setup_mounted_camera(self) -> None:
+    def _setup_mounted_camera_mujoco(self) -> None:
         """Setup a camera mounted to a specific link."""
         # Find the target body (link) to mount the camera
-        model_name = self._backend._mjcf_sub_models.get(self.mount_to)
+        model_name = self._backend._mjcf_sub_models.get(self.obj_name)
         if model_name is None:
-            raise ValueError(f"Mount target '{self.mount_to}' not found in the model.")
+            raise ValueError(f"Mount target '{self.config.mount_to}' not found in the model.")
 
         # Find the specific link body
         target_body = None
         for body in model_name.find_all("body"):
-            if body.name == self.mount_link:
+            if body.name == self.config.mount_to:
                 target_body = body
                 break
 
         if target_body is None:
-            raise ValueError(f"Link '{self.mount_link}' not found in '{self.mount_to}'.")
+            raise ValueError(f"Link '{self.config.mount_to}' not found in '{self.obj_name}'.")
 
         # Convert quaternion [w, x, y, z] to rotation matrix, then to xyaxes
-        qw, qx, qy, qz = self.mount_quat
-
-        # Quaternion to rotation matrix
-        R = np.array(
-            [
-                [1 - 2 * (qy**2 + qz**2), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy)],
-                [2 * (qx * qy + qw * qz), 1 - 2 * (qx**2 + qz**2), 2 * (qy * qz - qw * qx)],
-                [2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx**2 + qy**2)],
-            ]
-        )
-
-        # Extract right and up vectors (MuJoCo camera convention)
-        right = R[:, 0]  # X-axis
-        up = R[:, 1]  # Y-axis
-
+        roll, pitch, yaw = euler_xyz_from_quat(
+            torch.tensor([self.config.orientation], dtype=torch.float32)
+        )  # Shape (1, 3)
         camera_params = {
-            "pos": f"{self.mount_pos[0]} {self.mount_pos[1]} {self.mount_pos[2]}",
+            "pos": f"{self.config.position[0]} {self.config.position[1]} {self.config.position[2]}",
             "mode": "fixed",
-            "fovy": self.vertical_fov,
-            "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
+            "fovy": self.config.vertical_fov,
+            "euler": f"{roll.item()} {pitch.item()} {yaw.item()}",  # in radians
         }
-        target_body.add("camera", name=self._camera_id, **camera_params)
+        # logger.info(f"euler angles (rad): roll={roll.item()}, pitch={pitch.item()}, yaw={yaw.item()}")
+        target_body.add("camera", name=self.sensor_name, **camera_params)
 
     def _setup_mujoco_camera(self) -> None:
         """Setup camera in mujoco model."""

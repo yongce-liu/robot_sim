@@ -1,10 +1,9 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import deque
 from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-from loguru import logger
 
 from robot_sim.configs import SensorConfig
 
@@ -12,7 +11,7 @@ if TYPE_CHECKING:
     from robot_sim.backends import BaseBackend
 
 
-class BaseSensor:
+class BaseSensor(ABC):
     """Base class for all sensors."""
 
     ################### private attributes ###################
@@ -31,38 +30,17 @@ class BaseSensor:
         self.config = config
         self._data_queue = deque(maxlen=self.config.data_buffer_length)
 
-        # Validate camera configuration
-        if self.config.mount_to is not None:
-            assert self.config.position is None, "position should not be set when mount_to is specified."
-            assert self.config.look_at is None, "look_at should not be set when mount_to is specified."
-            # Mounted camera: require mount_to and mount_link
-            assert self.config.mount_link is not None, "mount_link must be specified when mount_to is set."
-            if self.config.mount_pos is None:
-                self.config.mount_pos = [0.0, 0.0, 0.0]
-            if self.config.mount_quat is None:
-                self.config.mount_quat = [1.0, 0.0, 0.0, 0.0]  # [w, x, y, z]
-            logger.info(
-                f"Camera will be mounted to '{self.config.mount_to}' at link '{self.config.mount_link}' "
-                f"with position {self.config.mount_pos} and quaternion {self.config.mount_quat}."
-            )
-
-        else:
-            # World frame camera: require pos and look_at
-            assert self.config.position is not None, "position must be specified for world frame camera."
-            assert self.config.look_at is not None, "look_at must be specified for world frame camera."
-            logger.info(f"World frame camera at position {self.config.position} looking at {self.config.look_at}.")
-
-    def _bind(self, *args, **kwargs) -> None:
+    def _bind(self, obj_name: str, sensor_name: str, **kwargs) -> None:
         raise NotImplementedError
 
-    def bind(self, backend: "BaseBackend", *args, **kwargs) -> None:
+    def bind(self, backend: "BaseBackend", obj_name: str, sensor_name: str, **kwargs) -> None:
         self._backend = backend
         # Compute update interval based on frequency, if not specified, update every step
         self._update_interval = int(backend._sim_freq / self.config.freq) if self.config.freq is not None else 1
         assert self._update_interval > 0, "Sensor update frequency must be less than or equal to simulation frequency."
-        self._bind(*args, **kwargs)
+        self._bind(obj_name=obj_name, sensor_name=sensor_name, **kwargs)
 
-    def __call__(self, cnt: int, *args, **kwargs) -> torch.Tensor | np.ndarray | None:
+    def __call__(self, cnt: int, **kwargs) -> torch.Tensor | np.ndarray | None:
         """Update sensor data if frequency allows.
 
         Args:

@@ -18,6 +18,7 @@ g1:
       width: 640
       height: 480
       freq: 50
-      mount_to: g1
-      mount_link: head_link
+      mount_to: torso_link
+      position: [0.0576235, 0.01753, 0.42987]
+      orientation: [0.9149597, 0, 0.4035453, 0] # [w, x, y, z]
     # imu: it is built in the xml model

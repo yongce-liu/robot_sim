@@ -135,7 +135,7 @@ class BaseBackend(ABC):
             query_type.bind(self)
         for obj_name, obj_buffer in self._buffer_dict.items():
             for sensor_name, sensor_instance in obj_buffer.sensors.items():
-                sensor_instance.bind(self)
+                sensor_instance.bind(self, obj_name, sensor_name)
 
     def simulate(self):
         """Simulate the environment."""
@@ -223,6 +223,13 @@ class BaseBackend(ABC):
 
         Returns:
             dict: A dictionary containing the states of the environment
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _update_buffer_dict(self, *args, **kwargs) -> None:
+        """Update the buffer dict with the model and config information.
+        For a new simulator, you should implement this method.
         """
         raise NotImplementedError
 

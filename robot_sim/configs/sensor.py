@@ -35,21 +35,14 @@ class CameraConfig(SensorConfig):
     """Image height in pixels."""
 
     mount_to: str | None = None
-    """Mount the camera to a specific object or robot. Defaults to None (world frame camera)."""
+    """Mount the camera to a specific link of object or robot. Defaults to None (world frame camera)."""
 
-    # when you want to mount the camera to a robot or object, set mount_to and mount_link
-    position: list[float] | None = None
+    # if mount_to is None, it represents a world frame camera
+    # elif mount_to is not None, it represents a pose with respect to the link frame
+    position: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     """Camera position [x, y, z] in world frame. Used when camera is not mounted."""
-    look_at: list[float] | None = None
-    """Camera look-at point [x, y, z] in world frame. Used when camera is not mounted."""
-
-    # when you want to mount the camera to a robot or object, set mount_to and mount_link
-    mount_link: str | None = None
-    """Specify the link name to mount the camera to. Defaults to None."""
-    mount_pos: list[float] | None = None
-    """Position of the camera relative to the mount link. Defaults to (0, 0, 0)."""
-    mount_quat: list[float] | None = None
-    """Quaternion [w, x, y, z] of the camera relative to the mount link. Defaults to (1, 0, 0, 0)."""
+    orientation: list[float] = field(default_factory=lambda: [1.0, 0.0, 0.0, 0.0])
+    """Camera orientation [w, x, y, z] in world frame. Used when camera is not mounted."""
 
     # camera parameters
     vertical_fov: float = 45.0

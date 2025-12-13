@@ -3,7 +3,7 @@ from enum import Enum
 
 from robot_sim.utils import configclass
 
-# from .sensor import SensorConfig
+from .sensor import SensorConfig
 
 
 class ControlType(Enum):
@@ -50,7 +50,7 @@ class RobotConfig:
     """Initial orientation of the robot as a quaternion, [w,x,y,z]"""
     joints: dict[str, JointConfig] = field(default_factory=dict)
     """List of actuators (joints) in the robot."""
-    # sensors: dict[str, SensorConfig] = field(default_factory=dict)
-    # """Sensor configurations for the robot."""
+    sensors: dict[str, SensorConfig] = field(default_factory=dict)
+    """Sensor configurations for the robot."""
     properties: dict[str, float] = field(default_factory=dict)
     """Additional properties specific to the robot."""

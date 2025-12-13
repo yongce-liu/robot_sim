@@ -13,10 +13,8 @@ g1:
       torque_limit: 10.0
       position_limit: [-1.57, 1.57]
   sensors:
-    camera:
-      type: rgb
-      position: [0.1, 0.0, 0.2]
-      orientation: [0.0, 0.0, 0.0, 1.0]
-      fov: 90
-      resolution: [640, 480]
+    head_camera:
+      type: camera
+      width: 640
+      height: 480
     # imu: it is built in the xml model

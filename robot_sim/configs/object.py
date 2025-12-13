@@ -4,7 +4,7 @@ from typing import Any
 
 from robot_sim.utils import configclass
 
-# from .sensor import SensorConfig
+from .sensor import SensorConfig
 
 
 class ObjectType(Enum):
@@ -26,8 +26,8 @@ class ObjectConfig:
     """Initial orientation of the object as a quaternion, [w,x,y,z]"""
     properties: dict[str, Any] = field(default_factory=dict)
     """Additional properties specific to the object."""
-    # sensors: dict[str, SensorConfig] = field(default_factory=dict)
-    # """Sensor configurations for the robot."""
+    sensors: dict[str, SensorConfig] = field(default_factory=dict)
+    """Sensor configurations for the robot."""
     type: ObjectType = ObjectType.CUSTOM
     """Type of the object. Can be a ObjectType or 'custom'."""
 

@@ -1,0 +1,193 @@
+"""Sensor module for camera, IMU, and other sensors."""
+
+from abc import ABC, abstractmethod
+from collections import deque
+from dataclasses import MISSING
+from enum import Enum
+
+import numpy as np
+import torch
+from loguru import logger
+
+from robot_sim.backends import BaseBackend
+from robot_sim.utils import configclass
+
+from .simulator import BackendType
+
+
+@configclass
+class Camera(SensorConfig):
+    """Camera sensor for RGB, depth, and segmentation."""
+
+    type: SensorType = SensorType.CAMERA
+    """Sensor type, defaults to CAMERA."""
+    width: int = 640
+    """Image width in pixels."""
+    height: int = 480
+    """Image height in pixels."""
+
+    mount_to: str | None = None
+    """Mount the camera to a specific object or robot. Defaults to None (world frame camera)."""
+
+    # when you want to mount the camera to a robot or object, set mount_to and mount_link
+    position: list[float] | None = None
+    """Camera position [x, y, z] in world frame. Used when camera is not mounted."""
+    look_at: list[float] | None = None
+    """Camera look-at point [x, y, z] in world frame. Used when camera is not mounted."""
+
+    # when you want to mount the camera to a robot or object, set mount_to and mount_link
+    mount_link: str | None = None
+    """Specify the link name to mount the camera to. Defaults to None."""
+    mount_pos: list[float] | None = None
+    """Position of the camera relative to the mount link. Defaults to (0, 0, 0)."""
+    mount_quat: list[float] | None = None
+    """Quaternion [w, x, y, z] of the camera relative to the mount link. Defaults to (1, 0, 0, 0)."""
+
+    # camera parameters
+    vertical_fov: float = 45.0
+    """Vertical field of view in degrees."""
+    data_types: list[str] = ["rgb"]
+    """Data types to capture: ['rgb', 'depth', 'segmentation']."""
+
+    def _post_init__(self):
+        super()._post_init__()
+
+        # Validate camera configuration
+        if self.mount_to is not None:
+            assert self.position is None, "position should not be set when mount_to is specified."
+            assert self.look_at is None, "look_at should not be set when mount_to is specified."
+            # Mounted camera: require mount_to and mount_link
+            assert self.mount_link is not None, "mount_link must be specified when mount_to is set."
+            if self.mount_pos is None:
+                self.mount_pos = [0.0, 0.0, 0.0]
+            if self.mount_quat is None:
+                self.mount_quat = [1.0, 0.0, 0.0, 0.0]  # [w, x, y, z]
+        else:
+            # World frame camera: require pos and look_at
+            assert self.position is not None, "position must be specified for world frame camera."
+            assert self.look_at is not None, "look_at must be specified for world frame camera."
+            logger.info(f"World frame camera at position {self.position} looking at {self.look_at}.")
+
+    def _bind(self, *args, **kwargs) -> None:
+        """Bind to mujoco backend and setup camera."""
+        if self.mount_link is not None:
+            self._setup_mounted_camera()
+            logger.info(
+                f"Camera mounted to '{self.mount_to}' at link '{self.mount_link}', mount position {self.mount_pos} and orientation {self.mount_quat}."
+            )
+        else:
+            self._setup_world_camera()
+            logger.info(f"World frame camera at position {self.position} looking at {self.look_at}.")
+
+    def update(self, *args, **kwargs) -> None:
+        """Update camera data from mujoco backend."""
+        if self._backend is None:
+            raise RuntimeError("Backend not bound. Call bind() first.")
+
+        if self._backend.type == BackendType.MUJOCO:
+            self._update_mujoco()
+        else:
+            raise NotImplementedError(f"Camera update not implemented for backend: {self._backend.type}")
+
+    def _setup_world_camera(self, mjcf_model) -> None:
+        """Setup a world-frame camera using pos and look_at."""
+        # Compute camera orientation from pos and look_at
+        direction = np.array(
+            [
+                self.look_at[0] - self.pos[0],
+                self.look_at[1] - self.pos[1],
+                self.look_at[2] - self.pos[2],
+            ]
+        )
+        direction = direction / np.linalg.norm(direction)
+        up = np.array([0, 0, 1])
+        right = np.cross(direction, up)
+        right = right / np.linalg.norm(right)
+        up = np.cross(right, direction)
+
+        camera_params = {
+            "pos": f"{self.pos[0]} {self.pos[1]} {self.pos[2]}",
+            "mode": "fixed",
+            "fovy": self.vertical_fov,
+            "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
+        }
+        mjcf_model.worldbody.add("camera", name=self._camera_id, **camera_params)
+
+    def _setup_mounted_camera(self, backend: "BaseBackend", mjcf_model) -> None:
+        """Setup a camera mounted to a specific link."""
+        # Find the target body (link) to mount the camera
+        model_name = backend._mjcf_sub_models.get(self.mount_to)
+        if model_name is None:
+            raise ValueError(f"Mount target '{self.mount_to}' not found in the model.")
+
+        # Find the specific link body
+        target_body = None
+        for body in model_name.find_all("body"):
+            if body.name == self.mount_link:
+                target_body = body
+                break
+
+        if target_body is None:
+            raise ValueError(f"Link '{self.mount_link}' not found in '{self.mount_to}'.")
+
+        # Convert quaternion [w, x, y, z] to rotation matrix, then to xyaxes
+        qw, qx, qy, qz = self.mount_quat
+
+        # Quaternion to rotation matrix
+        R = np.array(
+            [
+                [1 - 2 * (qy**2 + qz**2), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy)],
+                [2 * (qx * qy + qw * qz), 1 - 2 * (qx**2 + qz**2), 2 * (qy * qz - qw * qx)],
+                [2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx**2 + qy**2)],
+            ]
+        )
+
+        # Extract right and up vectors (MuJoCo camera convention)
+        right = R[:, 0]  # X-axis
+        up = R[:, 1]  # Y-axis
+
+        camera_params = {
+            "pos": f"{self.mount_pos[0]} {self.mount_pos[1]} {self.mount_pos[2]}",
+            "mode": "fixed",
+            "fovy": self.vertical_fov,
+            "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
+        }
+        target_body.add("camera", name=self._camera_id, **camera_params)
+
+    def _setup_mujoco_camera(self, backend: "BaseBackend") -> None:
+        """Setup camera in mujoco model."""
+        mjcf_model = backend._mjcf_model
+        if mjcf_model is None:
+            raise RuntimeError("MuJoCo model not initialized. Call backend._launch() first.")
+
+        if self.mount_to is not None:
+            # Mounted camera: attach to specified link
+            self._setup_mounted_camera(backend, mjcf_model)
+        else:
+            # World frame camera: use pos and look_at
+            self._setup_world_camera(mjcf_model)
+
+    def _update_mujoco(self) -> None:
+        """Capture camera data from mujoco."""
+        physics = self._backend._mjcf_physics
+
+        data_dict = {}
+
+        if "rgb" in self.data_types:
+            rgb = physics.render(width=self.width, height=self.height, camera_id=self._camera_id, depth=False)
+            data_dict["rgb"] = torch.from_numpy(rgb).float()
+
+        if "depth" in self.data_types:
+            depth = physics.render(width=self.width, height=self.height, camera_id=self._camera_id, depth=True)
+            data_dict["depth"] = torch.from_numpy(depth).float()
+
+        if "segmentation" in self.data_types:
+            seg = physics.render(
+                width=self.width, height=self.height, camera_id=self._camera_id, depth=False, segmentation=True
+            )
+            # Extract geom IDs (first channel if multi-channel)
+            if seg.ndim == 3:
+                seg = seg[..., 0]
+            data_dict["segmentation"] = torch.from_numpy(seg).long()
+
+        self._data = data_dict

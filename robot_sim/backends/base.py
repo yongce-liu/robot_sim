@@ -1,21 +1,22 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 import torch
 from loguru import logger
 
+from robot_sim.backends.sensors import BaseSensor
 from robot_sim.configs import (
     BackendType,
     ObjectConfig,
     PhysicsConfig,
     RobotConfig,
+    SensorConfig,
     SimulatorConfig,
     TerrainConfig,
 )
-from robot_sim.utils import configclass
 
 ########################## Data Structures ##########################
 
@@ -23,7 +24,7 @@ ArrayTypes = torch.Tensor | np.ndarray
 ActionType = dict[str, ArrayTypes]
 
 
-@configclass
+@dataclass
 class ObjectState:
     """State of a single object."""
 
@@ -43,7 +44,7 @@ class ObjectState:
     """Extra information."""
 
 
-@configclass
+@dataclass
 class RobotState:
     """State of a single robot."""
 
@@ -69,7 +70,7 @@ class RobotState:
     """Extra information."""
 
 
-@configclass
+@dataclass
 class ArrayState:
     """A dictionary that holds the states of all robots and objects in tensor format.
 
@@ -82,10 +83,12 @@ class ArrayState:
     extras: dict = field(default_factory=dict)
 
 
-@configclass
+# robot/object name
+@dataclass
 class Buffer:
-    joint_names: list[str] = field(default_factory=list)  # robot/object name -> buffer -> list[joint name]
-    body_names: list[str] = field(default_factory=list)  # robot/object name -> buffer -> list[body name]
+    sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
+    joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
+    body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
 
 
 ########################### Base Backend ##########################
@@ -129,7 +132,10 @@ class BaseBackend(ABC):
         if self.optional_queries is None:
             self.optional_queries = {}
         for query_name, query_type in self.optional_queries.items():
-            query_type.bind_handler(self)
+            query_type.bind(self)
+        for obj_name, obj_buffer in self._buffer_dict.items():
+            for sensor_name, sensor_instance in obj_buffer.sensors.items():
+                sensor_instance.bind(self)
 
     def simulate(self):
         """Simulate the environment."""
@@ -238,6 +244,7 @@ class BaseBackend(ABC):
         """Get all environment ids."""
         return self._full_env_ids
 
+    # Utility functions for buffers
     def get_joint_names(self, name: str) -> list[str]:
         """Get the joint indices of all robots and objects."""
         return self._buffer_dict[name].joint_names
@@ -245,3 +252,7 @@ class BaseBackend(ABC):
     def get_body_names(self, name: str) -> list[str]:
         """Get the body indices of all robots and objects."""
         return self._buffer_dict[name].body_names
+
+    def get_sensors(self, name: str) -> dict[str, SensorConfig]:
+        """Get the sensor configs of all robots and objects."""
+        return self._buffer_dict[name].sensors

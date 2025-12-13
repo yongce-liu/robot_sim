@@ -17,4 +17,7 @@ g1:
       type: camera
       width: 640
       height: 480
+      freq: 50
+      mount_to: g1
+      mount_link: head_link
     # imu: it is built in the xml model

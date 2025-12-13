@@ -1,23 +1,19 @@
 """Sensor module for camera, IMU, and other sensors."""
 
-from dataclasses import MISSING, field
+from dataclasses import MISSING, dataclass, field
 from enum import Enum
 
-from robot_sim.utils import configclass
+from loguru import logger
 
 
 class SensorType(Enum):
     """Enumeration of available sensor types."""
 
     CAMERA = "camera"
-    CONTACTSENSOR = "contactsensor"
+    CONTACT_FORCE = "contact_force"
 
 
-# Registry to map sensor type to concrete class
-_SENSOR_CONFIG_TYPE_REGISTRY: dict[SensorType, type] = {}
-
-
-@configclass
+@dataclass
 class SensorConfig:
     """Base class for all sensors."""
 
@@ -28,30 +24,8 @@ class SensorConfig:
     data_buffer_length: int = 1
     """Maximum length of the data queue."""
 
-    @classmethod
-    def from_dict(cls, cfg_dict: dict) -> "SensorConfig":
-        """Override from_dict to handle polymorphic sensor types."""
-        if cls is not SensorConfig:
-            # If called on a concrete subclass, use default behavior
-            return super().from_dict(cfg_dict)
 
-        # If called on base class, determine concrete type from 'type' field
-        if "type" not in cfg_dict:
-            raise ValueError("Sensor configuration must include 'type' field")
-
-        sensor_type_str = cfg_dict["type"]
-        sensor_type = SensorType(sensor_type_str)
-
-        if sensor_type not in _SENSOR_CONFIG_TYPE_REGISTRY:
-            raise ValueError(
-                f"Unknown sensor type: {sensor_type}. Available types: {list(_SENSOR_CONFIG_TYPE_REGISTRY.keys())}"
-            )
-
-        concrete_class = _SENSOR_CONFIG_TYPE_REGISTRY[sensor_type]
-        return concrete_class.from_dict(cfg_dict)
-
-
-@configclass
+@dataclass
 class CameraConfig(SensorConfig):
     """Camera sensor for RGB, depth, and segmentation."""
 
@@ -82,7 +56,3 @@ class CameraConfig(SensorConfig):
     """Vertical field of view in degrees."""
     data_types: list[str] = field(default_factory=lambda: ["rgb"])
     """Data types to capture: ['rgb', 'depth', 'segmentation']."""
-
-
-# Register sensor types
-_SENSOR_CONFIG_TYPE_REGISTRY[SensorType.CAMERA] = CameraConfig

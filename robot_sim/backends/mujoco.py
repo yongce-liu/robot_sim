@@ -12,7 +12,8 @@ from dm_control import mjcf
 from loguru import logger
 
 from robot_sim.backends.base import ActionType, BaseBackend
-from robot_sim.configs import ObjectType, SimulatorConfig
+from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY
+from robot_sim.configs import ObjectConfig, ObjectType, RobotConfig, SimulatorConfig
 
 
 class MujocoBackend(BaseBackend):
@@ -56,7 +57,7 @@ class MujocoBackend(BaseBackend):
         else:
             mjcf_model = mjcf.RootElement()
             self._add_terrain(mjcf_model)
-        self._update_indices(mjcf_model)  # update the root model indices first
+        self._update_buffer_dict(mjcf_model, self.config.scene)  # update the root model indices first
 
         # self._add_cameras(model)
         self._add_objects(mjcf_model)
@@ -436,7 +437,7 @@ class MujocoBackend(BaseBackend):
                 obj_attached.add("freejoint")
 
             self._mjcf_sub_models[obj_name] = obj_mjcf
-            self._update_indices(obj_mjcf)
+            self._update_buffer_dict(obj_mjcf, obj_cfg)
 
     def _add_robots(self, model: mjcf.RootElement) -> None:
         """Add robots to the model."""
@@ -467,7 +468,7 @@ class MujocoBackend(BaseBackend):
                 robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
 
             self._mjcf_sub_models[robot_name] = robot_mjcf
-            self._update_indices(robot_mjcf)
+            self._update_buffer_dict(model=robot_mjcf, config=robot_cfg)
 
     @staticmethod
     def export_mjcf(model: mjcf.RootElement, out_dir: os.PathLike, file_name: str = "model.xml") -> None:
@@ -477,7 +478,7 @@ class MujocoBackend(BaseBackend):
         mjcf.export_with_assets(model, out_dir, out_file_name=file_name)
         logger.info(f"Exported MJCF model and assets to: {out_dir}/{file_name}")
 
-    def _update_indices(self, model: mjcf.RootElement) -> None:
+    def _update_buffer_dict(self, model: mjcf.RootElement, config: RobotConfig | ObjectConfig | None = None) -> None:
         """Update joint and body name indices for the given model."""
         obj_name = model.model
         for joint in model.find_all("joint"):
@@ -490,6 +491,15 @@ class MujocoBackend(BaseBackend):
                 self._buffer_dict[obj_name].body_names.append(body.name)
             else:
                 logger.error(f"Duplicate body name detected: {body.name} in object {obj_name}")
+        for sensor_name, sensor_cfg in config.sensors.items():
+            sensor_type = sensor_cfg.type
+            if sensor_type in _SENSOR_TYPE_REGISTRY:
+                sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
+                self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
+            else:
+                logger.error(
+                    f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
+                )
 
     # def _add_cameras(self, mjcf_model: mjcf.RootElement) -> None:
     #     """Add cameras to the model."""

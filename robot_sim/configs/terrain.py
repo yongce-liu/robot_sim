@@ -1,9 +1,7 @@
-from dataclasses import MISSING
-
-from robot_sim.utils import configclass
+from dataclasses import MISSING, dataclass
 
 
-@configclass
+@dataclass
 class TerrainConfig:
     type: str = MISSING
     """Type of the terrain (e.g., 'heightfield', 'plane', 'trimesh')."""

@@ -1,8 +1,6 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
-
-from robot_sim.utils import configclass
 
 from .sensor import SensorConfig
 
@@ -16,7 +14,7 @@ class ObjectType(Enum):
     CUSTOM = "custom"
 
 
-@configclass
+@dataclass
 class ObjectConfig:
     path: str | None = None
     """Path to the object's model file. If None, we can create it using the provided api from the simulator."""

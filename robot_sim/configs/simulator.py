@@ -1,7 +1,5 @@
-from dataclasses import MISSING, field
+from dataclasses import MISSING, dataclass, field
 from enum import Enum
-
-from robot_sim.utils import configclass
 
 from .scene import SceneConfig
 
@@ -13,7 +11,7 @@ class BackendType(Enum):
     MUJOCO = "mujoco"
 
 
-@configclass
+@dataclass
 class PhysicsConfig:
     dt: float = MISSING
     """Simulation timestep."""
@@ -29,10 +27,43 @@ class PhysicsConfig:
     """Number of parallel simulation environments."""
 
 
-@configclass
+@dataclass
 class SimulatorConfig:
     backend: BackendType = MISSING
     sim: PhysicsConfig = MISSING
     """Configuration for the physics simulation."""
     scene: SceneConfig = MISSING
     """Configuration for the simulation scene."""
+
+    @classmethod
+    def from_dict(cls, cfg_dict: dict):
+        import dacite
+
+        from robot_sim.configs.sensor import CameraConfig, SensorConfig, SensorType
+
+        base_dacite_config = dacite.Config(
+            cast=[Enum],
+            strict=True,
+        )
+
+        # Register sensor types
+        def sensor_config_hook(_data_dict: dict) -> SensorConfig:
+            sensor_type = SensorType(_data_dict.get("type"))
+            if sensor_type == SensorType.CAMERA:
+                return dacite.from_dict(data_class=CameraConfig, data=_data_dict, config=base_dacite_config)
+            else:
+                raise ValueError(f"Unsupported sensor type: {sensor_type}")
+
+        dacite_config = dacite.Config(
+            type_hooks={
+                SensorConfig: sensor_config_hook,
+            },
+            cast=[Enum],
+            strict=True,
+        )
+        # dacite will not call __post_init__
+        return dacite.from_dict(
+            data_class=cls,
+            data=cfg_dict,
+            config=dacite_config,
+        )

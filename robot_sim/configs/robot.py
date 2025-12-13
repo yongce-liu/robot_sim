@@ -1,7 +1,5 @@
-from dataclasses import MISSING, field
+from dataclasses import MISSING, dataclass, field
 from enum import Enum
-
-from robot_sim.utils import configclass
 
 from .sensor import SensorConfig
 
@@ -13,7 +11,7 @@ class ControlType(Enum):
     TORQUE = "torque"
 
 
-@configclass
+@dataclass
 class JointConfig:
     # name: str = MISSING
     # """Name of the actuator."""
@@ -38,7 +36,7 @@ class JointConfig:
             assert self.damping is not None, "Damping must be defined for position control."
 
 
-@configclass
+@dataclass
 class RobotConfig:
     # name: str = MISSING
     # """Name of the robot."""

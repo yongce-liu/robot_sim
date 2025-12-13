@@ -4,6 +4,7 @@
 from pathlib import Path
 
 import hydra
+import yaml
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
@@ -27,8 +28,8 @@ def main(cfg: DictConfig) -> None:
     """
     # Print configuration
     cfg = SimulatorConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
-    logger.info("Configuration:")
-    cfg.print()
+    cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)
+    logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
     # Create simulation manager
     sim_backend = BackendFactory(config=cfg).backend

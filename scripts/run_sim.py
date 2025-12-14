@@ -8,7 +8,7 @@ import yaml
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-from robot_sim.backends.factory import BackendFactory
+from robot_sim.backends import BackendFactory
 from robot_sim.configs import SimulatorConfig
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent

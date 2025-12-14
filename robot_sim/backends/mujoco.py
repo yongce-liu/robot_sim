@@ -6,7 +6,6 @@ from typing import Any
 import mujoco
 import mujoco.viewer
 import numpy as np
-import torch
 from dm_control import mjcf
 from loguru import logger
 
@@ -25,6 +24,7 @@ class MujocoBackend(BaseBackend):
         self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
         self._mjcf_model: mjcf.RootElement | None = None
         self._mjcf_physics: mjcf.Physics | None = None
+        self.viewer: mujoco.viewer.Viewer | None = None
         # self._mujoco_robot_names = []
         # self._robot_num_dofs = []
         # self._robot_paths = []
@@ -48,8 +48,7 @@ class MujocoBackend(BaseBackend):
         # self._mj_data = None  # native mujoco.MjData  for offscreen rendering
         # self.renderer = None  # mujoco.Renderer (offscreen)
 
-    def _launch(self) -> None:
-        """Initialize MuJoCo model with optional scene support."""
+    def _init_backend(self) -> mjcf.RootElement:
         if self.config.scene.path is not None:
             mjcf_model = mjcf.from_path(self.config.scene.path)
             logger.info(f"Loaded scene from: {self.config.scene.path}")
@@ -67,7 +66,12 @@ class MujocoBackend(BaseBackend):
         mjcf_model.option.gravity = self.cfg_phyx.gravity
 
         self._mjcf_model = mjcf_model
-        self._mjcf_physics = mjcf.Physics.from_mjcf_model(mjcf_model)
+
+    def _launch(self) -> None:
+        """Initialize MuJoCo model with optional scene support."""
+
+        assert self._mjcf_model is not None, "MuJoCo model must be initialized."
+        self._mjcf_physics = mjcf.Physics.from_mjcf_model(self._mjcf_model)
 
         # Export MJCF + assets to a temp dir.
         # Handle filename variability (dm_control 1.0.34).
@@ -87,17 +91,12 @@ class MujocoBackend(BaseBackend):
             self.viewer.sync()
 
     def _render(self) -> None:
-        self.viewer.sync()
+        if self.viewer is not None:
+            self.viewer.sync()
 
     def close(self):
         if self.viewer is not None:
             self.viewer.close()
-        if self.renderer is not None:
-            try:
-                self.renderer.close()
-            except Exception:
-                pass
-            self.renderer = None
 
     def _simulate(self):
         # # Apply gravity compensation for all robots
@@ -109,11 +108,13 @@ class MujocoBackend(BaseBackend):
 
     def _set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None):
         """Set the states of all objects and robots."""
+        if env_ids is None:
+            env_ids = self._full_env_ids
         for obj_name in self._buffer_dict.keys():
             obj_state = states.objects[obj_name]
 
-            self._set_root_state(obj_name, obj_state)
-            self._set_joint_state(obj_name, obj_state)
+            self._set_root_state(obj_name, obj_state, env_ids)
+            self._set_joint_state(obj_name, obj_state, env_ids)
 
         self._mjcf_physics.forward()
 
@@ -286,6 +287,7 @@ class MujocoBackend(BaseBackend):
             sensor_type = sensor_cfg.type
             if sensor_type in _SENSOR_TYPE_REGISTRY:
                 sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
+                # sensor_instance.bind(self, obj_name, sensor_name)
                 self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
             else:
                 logger.error(
@@ -293,17 +295,17 @@ class MujocoBackend(BaseBackend):
                 )
         self._buffer_dict[obj_name].config = config
 
-    def _set_root_state(self, obj_name: str, obj_state: ObjectState):
+    def _set_root_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
         """Set root position and rotation."""
 
         if not self._buffer_dict[obj_name].config.properties.get("fix_base_link", False):  # only set if not fixed
             root_joint = self._mjcf_physics.data.joint(obj_name)
-            root_joint.qpos[:7] = obj_state.root_state[0, :7]
+            root_joint.qpos[:7] = obj_state.root_state[env_ids, :7]
         else:
             root_body = self._mjcf_physics.named.model.body_pos[obj_name]
             root_body_quat = self._mjcf_physics.named.model.body_quat[obj_name]
-            root_body[:] = obj_state.root_state[0, :3]
-            root_body_quat[:] = obj_state.root_state[0, 3:7]
+            root_body[:] = obj_state.root_state[env_ids, :3]
+            root_body_quat[:] = obj_state.root_state[env_ids, 3:7]
 
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState):
         """Set joint positions."""

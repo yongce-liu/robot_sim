@@ -50,13 +50,13 @@ class BaseSensor(ABC):
         # cnt: [0, self._backend._sim_freq-1]
         # scenerio: cnt=10 last_cnt=490
         if (cnt - self._last_update_cnt_stamp) % self._update_interval == 0:
-            self.update(**kwargs)
+            self._update(**kwargs)
             self._data_queue.append(self._data)
             self._last_update_cnt_stamp = cnt
         return self.data
 
     @abstractmethod
-    def update(self, **kwargs) -> None:
+    def _update(self, **kwargs) -> None:
         """Update sensor data from the backend simulator.
         Especially, you only need to update the _data attribute here for different simulator backends.
         """

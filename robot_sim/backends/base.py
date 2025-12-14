@@ -27,6 +27,7 @@ ActionType = dict[str, ArrayTypes]
 @dataclass
 class ObjectState:
     """State of a single robot/object."""
+
     root_state: ArrayTypes
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
     body_state: ArrayTypes
@@ -73,7 +74,7 @@ class BaseBackend(ABC):
     """Base class for simulation handler."""
 
     def __init__(self, config: SimulatorConfig, optional_queries: dict[str, Any] | None = None):
-        self.optional_queries = optional_queries
+        self.optional_queries = optional_queries if optional_queries is not None else {}
 
         ## For quick reference
         self.config: SimulatorConfig = config
@@ -102,17 +103,28 @@ class BaseBackend(ABC):
         # you can use it to store anything, e.g., default joint names order/ body names order, etc.
         self._buffer_dict = defaultdict(Buffer)
 
+    def _init_backend(self, *args, **kwargs) -> None:
+        """Initialize the backend simulator.
+        You can do some preparation work here before launching the simulator.
+        Or you can directly put the initialization code in the `_launch` method.
+        You also don't overide this method if you don't need it.
+        """
+        pass
+
     def launch(self) -> None:
         """Launch the simulation."""
+        self._init_backend()
+        self._bind_sensors_queries()
         self._launch()
         self._sim_cnt = 0
-        if self.optional_queries is None:
-            self.optional_queries = {}
-        for query_name, query_type in self.optional_queries.items():
-            query_type.bind(self)
+
+    def _bind_sensors_queries(self) -> None:
+        """Bind sensors to the backend."""
         for obj_name, obj_buffer in self._buffer_dict.items():
             for sensor_name, sensor_instance in obj_buffer.sensors.items():
                 sensor_instance.bind(self, obj_name, sensor_name)
+        for query_name, query_type in self.optional_queries.items():
+            query_type.bind(self)
 
     def render(self) -> None:
         if self._sim_cnt % self.cfg_phyx.render_interval == 0 and not self.headless:
@@ -125,7 +137,7 @@ class BaseBackend(ABC):
         self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
         for sensor_dict in self._buffer_dict.values():
             for sensor in sensor_dict.sensors.values():
-                sensor.update()
+                sensor(self._sim_cnt)
         self.render()
 
     def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:

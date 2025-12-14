@@ -41,8 +41,10 @@ class Camera(BaseSensor):
                 self._setup_world_camera_mujoco()
             else:
                 logger.error(f"World camera not supported for backend: {self._backend.type}")
+        if self._backend.type == BackendType.MUJOCO:
+            self._camera_id = self.obj_name + "/" + self.sensor_name
 
-    def update(self) -> None:
+    def _update(self) -> None:
         """Update camera data from mujoco backend."""
         if self._backend.type == BackendType.MUJOCO:
             self._update_mujoco()
@@ -77,13 +79,13 @@ class Camera(BaseSensor):
     def _setup_mounted_camera_mujoco(self) -> None:
         """Setup a camera mounted to a specific link."""
         # Find the target body (link) to mount the camera
-        model_name = self._backend._mjcf_sub_models.get(self.obj_name)
-        if model_name is None:
+        model = self._backend._mjcf_sub_models.get(self.obj_name)
+        if model is None:
             raise ValueError(f"Mount target '{self.config.mount_to}' not found in the model.")
 
         # Find the specific link body
         target_body = None
-        for body in model_name.find_all("body"):
+        for body in model.find_all("body"):
             if body.name == self.config.mount_to:
                 target_body = body
                 break
@@ -110,19 +112,23 @@ class Camera(BaseSensor):
 
         data_dict = {}
 
-        if "rgb" in self.data_types:
+        if "rgb" in self.config.data_types:
             data_dict["rgb"] = physics.render(
-                width=self.width, height=self.height, camera_id=self._camera_id, depth=False
+                width=self.config.width, height=self.config.height, camera_id=self._camera_id, depth=False
             )
 
-        if "depth" in self.data_types:
+        if "depth" in self.config.data_types:
             data_dict["depth"] = physics.render(
-                width=self.width, height=self.height, camera_id=self._camera_id, depth=True
+                width=self.config.width, height=self.config.height, camera_id=self._camera_id, depth=True
             )
 
-        if "segmentation" in self.data_types:
+        if "segmentation" in self.config.data_types:
             seg = physics.render(
-                width=self.width, height=self.height, camera_id=self._camera_id, depth=False, segmentation=True
+                width=self.config.width,
+                height=self.config.height,
+                camera_id=self._camera_id,
+                depth=False,
+                segmentation=True,
             )
             # Extract geom IDs (first channel if multi-channel)
             if seg.ndim == 3:

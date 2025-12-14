@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from robot_sim.configs import BackendType, CameraConfig
+from robot_sim.configs import BackendType
 from robot_sim.utils.math import euler_xyz_from_quat
 
 from .base import BaseSensor
@@ -18,14 +18,6 @@ class Camera(BaseSensor):
 
     _backend: "MujocoBackend | None" = None
     """Backend simulator instance reference."""
-
-    def __init__(self, config: CameraConfig, **kwargs):
-        super().__init__(config, **kwargs)
-        logger.info(
-            f"Initializing Camera Sensor: width={self.config.width}, height={self.config.height}"
-            f"Camera will be mounted to '{self.config.mount_to}' at link '{self.config.mount_to}' "
-            f"with position {self.config.position} and quaternion {self.config.orientation}."
-        )
 
     def _bind(self, obj_name: str, sensor_name: str, **kwargs) -> None:
         """Bind to mujoco backend and setup camera."""
@@ -42,7 +34,10 @@ class Camera(BaseSensor):
             else:
                 logger.error(f"World camera not supported for backend: {self._backend.type}")
         if self._backend.type == BackendType.MUJOCO:
-            self._camera_id = self.obj_name + "/" + self.sensor_name
+            self._camera_id = f"{self.obj_name}/{self.sensor_name}"
+        logger.info(
+            f"Initializing Camera Sensor: width={self.config.width}, height={self.config.height}. Camera {sensor_name} will be mounted to '{self.config.mount_to}' at link '{self.config.mount_to}' for object {obj_name} with position {self.config.position} and quaternion {self.config.orientation}."
+        )
 
     def _update(self) -> None:
         """Update camera data from mujoco backend."""
@@ -74,20 +69,20 @@ class Camera(BaseSensor):
             "fovy": self.vertical_fov,
             "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
         }
-        mjcf_model.worldbody.add("camera", name=self._camera_id, **camera_params)
+        mjcf_model.worldbody.add("camera", name=self.sensor_name, **camera_params)
 
     def _setup_mounted_camera_mujoco(self) -> None:
         """Setup a camera mounted to a specific link."""
         # Find the target body (link) to mount the camera
-        model = self._backend._mjcf_sub_models.get(self.obj_name)
+        model = self._backend._mjcf_model
         if model is None:
             raise ValueError(f"Mount target '{self.config.mount_to}' not found in the model.")
 
         # Find the specific link body
         target_body = None
-        for body in model.find_all("body"):
-            if body.name == self.config.mount_to:
-                target_body = body
+        for body_name in self._backend.get_body_names(self.obj_name):
+            if body_name == f"{self.obj_name}/{self.config.mount_to}":
+                target_body = model.find("body", body_name)
                 break
 
         if target_body is None:

@@ -7,24 +7,25 @@ import pytest
 from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
 
-from robot_sim.backends import BackendFactory, ObjectState
+from robot_sim.backends import BackendFactory
+from robot_sim.backends.types import ArrayState, ObjectState
 from robot_sim.configs import SimulatorConfig
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def project_dir() -> Path:
     """Root directory of the project (repository root)."""
 
     return Path(__file__).parent.parent
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def config_dir(project_dir: Path) -> Path:
     """Path to the configs directory."""
     return project_dir / "configs"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def hydra_config(config_dir: Path) -> DictConfig:
     """Load configuration using Hydra with defaults."""
     with initialize_config_dir(config_dir=str(config_dir.absolute()), version_base=None):
@@ -32,7 +33,7 @@ def hydra_config(config_dir: Path) -> DictConfig:
     return cfg
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def hydra_config_dict(hydra_config: DictConfig) -> dict:
     """Convert Hydra DictConfig to plain Python dict."""
     return OmegaConf.to_container(hydra_config, resolve=True)
@@ -106,28 +107,47 @@ def set_seed(seed: int = 42) -> None:
         torch.backends.cudnn.benchmark = False
 
 
-# @pytest.fixture
-# def obj_state() -> ObjectState:
-#     """Create a test ObjectState with random data."""
-#     return ObjectState(
-#         root_state=np.random.rand(1, 3 + 4 + 3 + 3).astype(np.float32),
-#         body_state=np.random.rand(1, 5, 13).astype(np.float32),
-#         joint_pos=np.random.rand(1, 10).astype(np.float32),
-#         joint_vel=np.random.rand(1, 10).astype(np.float32),
-#         joint_pos_target=np.random.rand(1, 10).astype(np.float32),
-#         joint_vel_target=np.random.rand(1, 10).astype(np.float32),
-#         joint_effort_target=np.random.rand(1, 10).astype(np.float32),
-#         sensors=None,
-#         extras=None,
-#     )
+def obj_state(num_joint: int, num_envs: int = 1) -> ObjectState:
+    """Create a test ObjectState with random data."""
+    return ObjectState(
+        root_state=np.random.rand(num_envs, 3 + 4 + 3 + 3).astype(np.float32),
+        body_state=None,
+        joint_pos=np.random.rand(num_envs, num_joint).astype(np.float32),
+        joint_vel=np.random.rand(num_envs, num_joint).astype(np.float32),
+        joint_action=None,
+        sensors=None,
+        extras=None,
+    )
 
 
 @pytest.fixture
+def array_state() -> ArrayState:
+    return ArrayState(
+        objects={
+            "g1": obj_state(43),
+            "cube": obj_state(0),
+        }
+    )
+
+
+@pytest.fixture
+def robot_name() -> str:
+    """Provide a robot name for testing."""
+    return "g1"
+
+
+@pytest.fixture
+def object_name() -> str:
+    """Provide an object name for testing."""
+    return "cube"
+
+
+@pytest.fixture(scope="class")
 def mujoco_backend(hydra_config_dict: DictConfig):
     """Create and setup MuJoCo backend for testing."""
     # Force headless mode for tests to avoid viewer segfaults
     hydra_config_dict["sim"]["headless"] = True
-    
+
     cfg = SimulatorConfig.from_dict(hydra_config_dict)
     backend = BackendFactory(config=cfg).backend
     backend.launch()

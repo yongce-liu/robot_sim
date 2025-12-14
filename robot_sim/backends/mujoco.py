@@ -1,6 +1,5 @@
 import os
 import tempfile
-from dataclasses import asdict
 from typing import Any
 
 import mujoco
@@ -9,9 +8,10 @@ import numpy as np
 from dm_control import mjcf
 from loguru import logger
 
-from robot_sim.backends.base import ActionType, ArrayState, ArrayTypes, BaseBackend, ObjectState
+from robot_sim.backends.base import BaseBackend
 from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY
-from robot_sim.configs import ObjectConfig, ObjectType, RobotConfig, SimulatorConfig
+from robot_sim.backends.types import ActionType, ArrayState, ArrayTypes, ObjectState
+from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig
 
 
 class MujocoBackend(BaseBackend):
@@ -21,7 +21,7 @@ class MujocoBackend(BaseBackend):
         assert self.num_envs == 1, f"Mujoco only supports single env, got {self.num_envs}."
         assert self.device == "cpu", f"Mujoco only supports CPU device, got {self.device}."
 
-        self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
+        # self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
         self._mjcf_model: mjcf.RootElement | None = None
         self._mjcf_physics: mjcf.Physics | None = None
         self.viewer: mujoco.viewer.Viewer | None = None
@@ -55,17 +55,16 @@ class MujocoBackend(BaseBackend):
         else:
             mjcf_model = mjcf.RootElement()
             self._add_terrain(mjcf_model)
-        self._update_buffer_dict(mjcf_model, self.config.scene)  # update the root model indices first
 
         # self._add_cameras(model)
         self._add_objects(mjcf_model)
-        self._add_robots(mjcf_model)
         # dt
         mjcf_model.option.timestep = self.cfg_phyx.dt
         # gravity
         mjcf_model.option.gravity = self.cfg_phyx.gravity
 
         self._mjcf_model = mjcf_model
+        self._update_buffer_dict(mjcf_model)  # update the root model indices first
 
     def _launch(self) -> None:
         """Initialize MuJoCo model with optional scene support."""
@@ -118,27 +117,28 @@ class MujocoBackend(BaseBackend):
 
         self._mjcf_physics.forward()
 
-    def _set_actions(self, actions: ActionType) -> None:
-        """Unified: Tensor/ndarray -> write ctrl (or cache for PD); dict-list -> name-based."""
-        self._actions_cache = actions
+    def _set_actions(self, actions: ActionType, env_ids: ArrayTypes | None = None) -> None:
+        """Set actions for all robots/objects with ctrl entrypoint."""
+        self._actions_cache = actions  # dict[str, np.ndarray (num_envs, num_dofs)]
+
+        if env_ids is None:
+            env_ids = self._full_env_ids
 
         for obj_name, obj_action in actions.items():
-            joint_names = self.get_joint_names(obj_name)
-            for i, joint_name in enumerate(joint_names):
-                actuator_id = self._mjcf_physics.model.actuator(joint_name).id
-                self._mjcf_physics.data.ctrl[actuator_id] = obj_action[0, i]
+            action_indices = self.get_action_indices(obj_name)
+            # Here, we also use the default order index when adding a object/robot
+            self._mjcf_physics.data.ctrl[action_indices] = obj_action[env_ids]
 
     def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
         """Get states of all objects and robots."""
 
         obj_states: dict[str, ObjectState] = {}
         for obj_name in self._buffer_dict.keys():
-            model_name = self._mjcf_sub_models[obj_name].model
             joint_names = self.get_joint_names(obj_name)
 
             state = ObjectState(
-                root_state=self._mjcf_physics.data.qpos[self._mjcf_physics.model.joint(model_name).id][:7].copy(),
-                body_state=self._mjcf_physics.data.xpos[self._mjcf_physics.model.body(model_name).id].copy(),
+                root_state=self._mjcf_physics.data.qpos[self._mjcf_physics.model.joint(obj_name).id][:7].copy(),
+                body_state=self._mjcf_physics.data.xpos[self._mjcf_physics.model.body(obj_name).id].copy(),
                 joint_pos=self._mjcf_physics.data.qpos[
                     [self._mjcf_physics.model.joint(joint_name).id for joint_name in joint_names]
                 ].copy(),
@@ -206,8 +206,8 @@ class MujocoBackend(BaseBackend):
     def _add_objects(self, model: mjcf.RootElement) -> None:
         """Add individual objects to the model."""
         for obj_name, obj_cfg in self.objects.items():
-            if obj_cfg.type == ObjectType.CUSTOM:
-                obj_mjcf = mjcf.from_path(obj_cfg.mjcf_path)
+            if obj_cfg.type in [ObjectType.CUSTOM, ObjectType.ROBOT]:
+                obj_mjcf = mjcf.from_path(obj_cfg.path)
                 # TODO: handle free joints for custom objects
                 """
                 # Remove free joint since dm_control has limit support for it.
@@ -221,46 +221,43 @@ class MujocoBackend(BaseBackend):
 
             obj_mjcf.model = obj_name
             obj_attached = model.attach(obj_mjcf)
+
+            # FIXME: temporary fix for free joint handling in dm_control
+            self._fix_attach_bugs(obj_attached, obj_name, obj_cfg)
+
             # Apply default position and orientation to the object's root body,
             obj_attached.pos = obj_cfg.initial_position
             obj_attached.quat = obj_cfg.initial_orientation  # [w,x,y,z] format
 
-            if not obj_cfg.properties.get("fix_base_link", False):  # default: False, assume the object can move freely
-                obj_attached.add("freejoint")
+            # self._mjcf_sub_models[obj_name] = obj_mjcf
+            # self._update_buffer_dict(obj_mjcf, obj_cfg)
 
-            self._mjcf_sub_models[obj_name] = obj_mjcf
-            self._update_buffer_dict(obj_mjcf, obj_cfg)
+    @staticmethod
+    def _fix_attach_bugs(obj_attached: mjcf.RootElement, obj_name: str, obj_cfg: ObjectConfig) -> None:
+        """
+        # FIXME: A temporary workaround for free joint handling in dm_control
+        temporaly fix attaching robots bugs in dm_control when attach a object.
+        """
 
-    def _add_robots(self, model: mjcf.RootElement) -> None:
-        """Add robots to the model."""
-        for robot_name, robot_cfg in self.robots.items():
-            robot_mjcf = mjcf.from_path(robot_cfg.path)
-            robot_mjcf.model = robot_name
-            robot_attached = model.attach(robot_mjcf)
+        child_joint = obj_attached.find_all("joint")[0]
+        if child_joint.type == "free":
+            logger.warning(
+                f"Robot '{obj_name}' already has a free joint in its MJCF. "
+                "Use dm_control load the object will create a dummy body. "
+                "We will remove it and add the free joint at the root body level."
+            )
+            child_joint.remove()
+        if not obj_cfg.properties.get("fix_base_link", False):  # default: False, assume the robot can move freely
+            obj_attached.add("freejoint")
 
-            # FIXME: A temporary workaround for free joint handling in dm_control
-            if not robot_cfg.properties.get("fix_base_link", False):  # default: False, assume the robot can move freely
-                child_joint = robot_attached.find_all("joint")[0]
-                if child_joint.type == "free":
-                    logger.warning(
-                        f"Robot '{robot_name}' already has a free joint in its MJCF. "
-                        "We will remove it and add the free joint at the root body level."
-                    )
-                    child_joint.remove()
-
-                robot_attached.add("freejoint")
-
-            # FIXME: Ensure the attached robot has an inertial element to avoid simulation issues
-            if not hasattr(robot_attached, "inertial") or robot_attached.inertial is None:
-                child_body = robot_attached.find_all("body")[0]
-                pos = child_body.inertial.pos
-                robot_attached.pos = child_body.pos
-                child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
-                robot_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
-                robot_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
-
-            self._mjcf_sub_models[robot_name] = robot_mjcf
-            self._update_buffer_dict(model=robot_mjcf, config=robot_cfg)
+        # FIXME: Ensure the attached robot has an inertial element to avoid simulation issues
+        if not hasattr(obj_attached, "inertial") or obj_attached.inertial is None:
+            child_body = obj_attached.find_all("body")[0]  # The first child body after the root
+            pos = child_body.inertial.pos
+            obj_attached.pos = child_body.pos
+            child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
+            obj_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
+            obj_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
 
     @staticmethod
     def export_mjcf(model: mjcf.RootElement, out_dir: os.PathLike, file_name: str = "model.xml") -> None:
@@ -270,53 +267,91 @@ class MujocoBackend(BaseBackend):
         mjcf.export_with_assets(model, out_dir, out_file_name=file_name)
         logger.info(f"Exported MJCF model and assets to: {out_dir}/{file_name}")
 
-    def _update_buffer_dict(self, model: mjcf.RootElement, config: RobotConfig | ObjectConfig | None = None) -> None:
+    def _update_buffer_dict(self, model: mjcf.RootElement) -> None:
         """Update joint and body name indices for the given model."""
-        obj_name = model.model
-        for joint in model.find_all("joint"):
-            if joint.name not in self._buffer_dict[obj_name].joint_names:
-                self._buffer_dict[obj_name].joint_names.append(joint.name)
-            else:
-                logger.error(f"Duplicate joint name detected: {joint.name} in object {obj_name}")
-        for body in model.find_all("body"):
-            if body.name not in self._buffer_dict[obj_name].body_names:
-                self._buffer_dict[obj_name].body_names.append(body.name)
-            else:
-                logger.error(f"Duplicate body name detected: {body.name} in object {obj_name}")
-        for sensor_name, sensor_cfg in config.sensors.items():
-            sensor_type = sensor_cfg.type
-            if sensor_type in _SENSOR_TYPE_REGISTRY:
-                sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
-                # sensor_instance.bind(self, obj_name, sensor_name)
-                self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
-            else:
-                logger.error(
-                    f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
-                )
-        self._buffer_dict[obj_name].config = config
+        all_joints = model.find_all("joint")
+        all_bodies = model.find_all("body")
+
+        for obj_name, obj_cfg in self.objects.items():
+            # Only find joints and bodies belonging to this specific object
+            # In dm_control, attached elements are prefixed with the model name
+            obj_prefix = f"{obj_name}/"
+
+            for joint in all_joints:
+                # Check if joint belongs to this object by checking the full_identifier
+                full_identifier = joint.full_identifier
+                if full_identifier and full_identifier.startswith(obj_prefix):
+                    # Extract the joint name without the prefix
+                    # joint_name = getattr(joint, "name", full_identifier.split("/")[-1])
+                    if len(full_identifier) == 0 or len(full_identifier.split("/")[-1]) == 0:
+                        # logger.warning(f"Remove the attached dummy joint in object {obj_name}!")
+                        continue
+                    elif full_identifier not in self._buffer_dict[obj_name].joint_names:
+                        self._buffer_dict[obj_name].joint_names.append(full_identifier)
+                    else:
+                        logger.error(f"Duplicate joint name detected: {full_identifier} in object {obj_name}")
+
+            for body in all_bodies:
+                # Check if body belongs to this object
+                full_identifier = body.full_identifier
+                if full_identifier and full_identifier.startswith(obj_prefix):
+                    # Extract the body name without the prefix
+                    # body_name = getattr(body, "name", full_identifier.split("/")[-1])
+                    if len(full_identifier) == 0 or len(full_identifier.split("/")[-1]) == 0:
+                        # logger.warning(f"Remove the attached dummy body in object {obj_name}!")
+                        continue
+                    elif full_identifier not in self._buffer_dict[obj_name].body_names:
+                        self._buffer_dict[obj_name].body_names.append(full_identifier)
+                    else:
+                        logger.error(f"Duplicate body name detected: {full_identifier} in object {obj_name}")
+
+            # Add sensors if configured for this object
+            if hasattr(obj_cfg, "sensors") and obj_cfg.sensors:
+                for sensor_name, sensor_cfg in obj_cfg.sensors.items():
+                    sensor_type = sensor_cfg.type
+                    if sensor_type in _SENSOR_TYPE_REGISTRY:
+                        sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
+                        # sensor_instance.bind(self, obj_name, sensor_name)
+                        self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
+                    else:
+                        logger.error(
+                            f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
+                        )
+            self._buffer_dict[obj_name].config = obj_cfg
 
     def _set_root_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
         """Set root position and rotation."""
 
-        if not self._buffer_dict[obj_name].config.properties.get("fix_base_link", False):  # only set if not fixed
-            root_joint = self._mjcf_physics.data.joint(obj_name)
+        identifier = obj_name + "/"  # MuJoCo joint/body names are prefixed with model name
+        try:  # only set if not fixed
+            root_joint = self._mjcf_physics.data.joint(identifier)
             root_joint.qpos[:7] = obj_state.root_state[env_ids, :7]
-        else:
-            root_body = self._mjcf_physics.named.model.body_pos[obj_name]
-            root_body_quat = self._mjcf_physics.named.model.body_quat[obj_name]
-            root_body[:] = obj_state.root_state[env_ids, :3]
-            root_body_quat[:] = obj_state.root_state[env_ids, 3:7]
+        except KeyError:  # when the object is fixed-base-link, use the following method
+            # body pos
+            self._mjcf_physics.named.model.body_pos[identifier] = obj_state.root_state[env_ids, :3]
+            # body quat
+            self._mjcf_physics.named.model.body_quat[identifier] = obj_state.root_state[env_ids, 3:7]
 
-    def _set_joint_state(self, obj_name: str, obj_state: ObjectState):
+    def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
         """Set joint positions."""
 
-        for joint_name in self.get_joint_names(obj_name).items():
-            # joint = self._mjcf_physics.data.joint(joint_name)
-            try:
-                actuator = self._mjcf_physics.model.actuator(joint_name)
-                self._mjcf_physics.data.ctrl[actuator.id] = obj_state.joint_pos[0, :]
-            except KeyError:
-                logger.error(f"No actuator found for joint '{joint_name}' in object '{obj_name}'")
+        for i, joint_name in enumerate(self.get_joint_names(obj_name)):
+            # Here, we assume the data order is same with the order od the get_joint_names()
+            joint = self._mjcf_physics.data.joint(joint_name)
+            joint.qpos[:] = obj_state.joint_pos[env_ids, i]
+            joint.qvel[:] = obj_state.joint_vel[env_ids, i]
+
+    def get_action_indices(self, name: str) -> np.ndarray:
+        if self._buffer_dict[name].action_indices is None:
+            joint_names = self.get_joint_names(name)
+            action_indices = []
+            for joint_name in joint_names:
+                actuator_id = self._mjcf_physics.model.actuator(joint_name).id
+                action_indices.append(actuator_id)
+            action_indices = np.array(action_indices, dtype=np.int32)
+            self._buffer_dict[name].action_indices = action_indices
+            return action_indices
+        return self._buffer_dict[name].action_indices
 
     # def _add_cameras(self, mjcf_model: mjcf.RootElement) -> None:
     #     """Add cameras to the model."""

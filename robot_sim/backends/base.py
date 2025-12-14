@@ -1,72 +1,20 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 import torch
 from loguru import logger
 
-from robot_sim.backends.sensors import BaseSensor
+from robot_sim.backends.types import ActionType, ArrayState, ArrayTypes, Buffer
 from robot_sim.configs import (
     BackendType,
     ObjectConfig,
     PhysicsConfig,
-    RobotConfig,
     SensorConfig,
     SimulatorConfig,
     TerrainConfig,
 )
-
-########################## Data Structures ##########################
-
-ArrayTypes = torch.Tensor | np.ndarray
-ActionType = dict[str, ArrayTypes]
-
-
-@dataclass
-class ObjectState:
-    """State of a single robot/object."""
-
-    root_state: ArrayTypes
-    """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_state: ArrayTypes
-    """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
-    joint_pos: ArrayTypes | None = None
-    """Joint positions. Shape is (num_envs, num_joints)."""
-    joint_vel: ArrayTypes | None = None
-    """Joint velocities. Shape is (num_envs, num_joints)."""
-    joint_pos_target: ArrayTypes | None = None
-    """Joint positions target. Shape is (num_envs, num_joints)."""
-    joint_vel_target: ArrayTypes | None = None
-    """Joint velocities target. Shape is (num_envs, num_joints)."""
-    joint_effort_target: ArrayTypes | None = None
-    """Joint effort targets. Shape is (num_envs, num_joints)."""
-    sensors: dict[str, ArrayTypes] = field(default_factory=dict)
-    """Sensor readings. Each sensor has shape (num_envs, sensor_dim)."""
-    extras: dict = field(default_factory=dict)
-    """Extra information."""
-
-
-@dataclass
-class ArrayState:
-    """A dictionary that holds the states of all robots and objects in tensor format.
-
-    The keys are the names of the robots and objects, and the values are tensors representing their states.
-    The tensor shape is (num_envs, state_dim), where num_envs is the number of environments, and state_dim is the dimension of the state for each robot or object.
-    """
-
-    objects: dict[str, ObjectState]
-    extras: dict = field(default_factory=dict)
-
-
-# robot/object name
-@dataclass
-class Buffer:
-    config: RobotConfig | ObjectConfig | None = None
-    sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
-    joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
-    body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
 
 
 ########################### Base Backend ##########################
@@ -81,12 +29,10 @@ class BaseBackend(ABC):
         self.type: BackendType = config.backend
         self.cfg_phyx: PhysicsConfig = config.sim
         if config.scene.path is None:
-            self.robots: dict[str, RobotConfig] = config.scene.robots
-            self.objects: dict[str, ObjectConfig] = config.scene.objects
+            self.objects: dict[str, ObjectConfig] = config.scene.objects  # robots + objects
             self.terrain: TerrainConfig = config.scene.terrain
         else:
             logger.info("Scene file provided, ignoring robots, objects, and terrain from config.")
-            self.robots = {}
             self.objects = {}
             self.terrain = None
         # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
@@ -249,6 +195,10 @@ class BaseBackend(ABC):
         return self._full_env_ids
 
     # Utility functions for buffers
+    def get_joint_indices(self, name: str) -> list[int]:
+        """Get the joint indices of all robots and objects."""
+        return self._buffer_dict[name].joint_indices
+
     def get_joint_names(self, name: str) -> list[str]:
         """Get the joint indices of all robots and objects."""
         return self._buffer_dict[name].joint_names
@@ -260,3 +210,7 @@ class BaseBackend(ABC):
     def get_sensors(self, name: str) -> dict[str, SensorConfig]:
         """Get the sensor configs of all robots and objects."""
         return self._buffer_dict[name].sensors
+
+    def get_action_indices(self, name: str) -> list[int]:
+        """Get the action indices of all robots and objects."""
+        return self._buffer_dict[name].action_indices

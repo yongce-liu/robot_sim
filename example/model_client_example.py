@@ -1,7 +1,6 @@
 """Example: Model client connecting to simulation."""
 
 import numpy as np
-
 from robot_sim.client.model_client import ModelClient
 from robot_sim.utils.comm.messages import ControlCommand, RobotState
 

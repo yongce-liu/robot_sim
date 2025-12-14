@@ -1,10 +1,8 @@
 """Tests for backend implementations."""
 
 import numpy as np
-from omegaconf import DictConfig
 
-from robot_sim.backends import BackendFactory, ObjectState
-from robot_sim.configs import SimulatorConfig
+from robot_sim.backends.types import ArrayState
 
 
 class TestMuJoCoBackend:
@@ -14,9 +12,22 @@ class TestMuJoCoBackend:
         """Test a single simulation step."""
         mujoco_backend.simulate()
 
-    def test_set_root_state(self, mujoco_backend, obj_state: ObjectState) -> None:
+    def test_set_root_state(self, mujoco_backend, array_state: ArrayState, robot_name: str) -> None:
         """Test setting root state of an object."""
-        mujoco_backend._set_root_state("g1", obj_state, env_ids=np.array([0]))
+
+        mujoco_backend._set_root_state(robot_name, array_state.objects[robot_name], env_ids=np.array([0]))
+        mujoco_backend.simulate()
+
+    def test_set_joint_state(self, mujoco_backend, array_state: ArrayState, robot_name: str) -> None:
+        """Test setting joint state of an object."""
+        mujoco_backend._set_joint_state(robot_name, array_state.objects[robot_name], env_ids=np.array([0]))
+        mujoco_backend.simulate()
+
+    def test_set_actions(self, mujoco_backend, array_state: ArrayState, robot_name: str) -> None:
+        """Test setting actions for an object."""
+        actions = {robot_name: array_state.objects[robot_name].joint_pos}
+        mujoco_backend._set_actions(actions, env_ids=np.array([0]))
+        mujoco_backend.simulate()
 
 
 class TestIsaacBackend:

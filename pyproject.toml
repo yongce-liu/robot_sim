@@ -27,7 +27,8 @@ dependencies = [
     "torchvision==0.22.0",
     "loguru==0.7.3",
     "dm-control==1.0.34",
-    "dacite==1.9.2"
+    "dacite==1.9.2",
+    "opencv-python==4.11.*"
 ]
 
 [project.optional-dependencies]

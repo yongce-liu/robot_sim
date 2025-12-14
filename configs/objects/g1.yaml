@@ -4,7 +4,7 @@ g1:
   type: robot
   path: "assets/unitree/g1/g1_dex3_rev_1_0.xml"
   initial_position: [0.0, 0.0, 0.78]
-  initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  initial_orientation: [1.0, 0.0, 0.0, 0.0] # [w, x, y, z]
   joints:
     joint1:
       control_type: position
@@ -18,20 +18,20 @@ g1:
       type: camera
       width: 640
       height: 480
-      freq: 50.0
+      freq: 10.0
+      vertical_fov: 59.
       mount_to: torso_link
-      position: [0.0576235, 0.01753, 0.42987]
-      orientation: [0.9149597, 0, 0.4035453, 0] # [w, x, y, z]
+      position: [0.06, 0.0, 0.45]
+      orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
   properties:
-    fix_base_link: false
+    fix_base_link: true
     # imu: it is built in the xml model
-
 
 g2:
   type: robot
   path: "assets/unitree/g1/g1_dex3_rev_1_0.xml"
   initial_position: [1.0, 0.0, 0.78]
-  initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  initial_orientation: [1.0, 0.0, 0.0, 0.0]
   joints:
     joint1:
       control_type: position
@@ -45,10 +45,11 @@ g2:
       type: camera
       width: 640
       height: 480
-      freq: 50.0
+      freq: 10.0
+      vertical_fov: 59.
       mount_to: torso_link
-      position: [0.0576235, 0.01753, 0.42987]
-      orientation: [0.9149597, 0, 0.4035453, 0] # [w, x, y, z]
+      position: [0.06, 0.0, 0.45]
+      orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
   properties:
     fix_base_link: false
     # imu: it is built in the xml model

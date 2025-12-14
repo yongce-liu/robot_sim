@@ -1,11 +1,10 @@
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import numpy as np
-import torch
 from loguru import logger
 
 from robot_sim.configs import BackendType
-from robot_sim.utils.math import euler_xyz_from_quat
 
 from .base import BaseSensor
 
@@ -18,6 +17,11 @@ class Camera(BaseSensor):
 
     _backend: "MujocoBackend | None" = None
     """Backend simulator instance reference."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        self._data = defaultdict(lambda: None)
+        """Camera data dictionary with keys: 'rgb', 'depth', 'segmentation'."""
 
     def _bind(self, obj_name: str, sensor_name: str, **kwargs) -> None:
         """Bind to mujoco backend and setup camera."""
@@ -88,15 +92,12 @@ class Camera(BaseSensor):
         if target_body is None:
             raise ValueError(f"Link '{self.config.mount_to}' not found in '{self.obj_name}'.")
 
-        # Convert quaternion [w, x, y, z] to rotation matrix, then to xyaxes
-        roll, pitch, yaw = euler_xyz_from_quat(
-            torch.tensor([self.config.orientation], dtype=torch.float32)
-        )  # Shape (1, 3)
         camera_params = {
             "pos": f"{self.config.position[0]} {self.config.position[1]} {self.config.position[2]}",
             "mode": "fixed",
             "fovy": self.config.vertical_fov,
-            "euler": f"{roll.item()} {pitch.item()} {yaw.item()}",  # in radians
+            "quat": f"{self.config.orientation[0]} {self.config.orientation[1]} {self.config.orientation[2]} {self.config.orientation[3]}",
+            # "euler": "0 -0.8 -1.57",  # in radians
         }
         # logger.info(f"euler angles (rad): roll={roll.item()}, pitch={pitch.item()}, yaw={yaw.item()}")
         target_body.add("camera", name=self.sensor_name, **camera_params)
@@ -105,15 +106,13 @@ class Camera(BaseSensor):
         """Capture camera data from mujoco."""
         physics = self._backend._mjcf_physics
 
-        data_dict = {}
-
         if "rgb" in self.config.data_types:
-            data_dict["rgb"] = physics.render(
+            self._data["rgb"] = physics.render(
                 width=self.config.width, height=self.config.height, camera_id=self._camera_id, depth=False
             )
 
         if "depth" in self.config.data_types:
-            data_dict["depth"] = physics.render(
+            self._data["depth"] = physics.render(
                 width=self.config.width, height=self.config.height, camera_id=self._camera_id, depth=True
             )
 
@@ -128,6 +127,4 @@ class Camera(BaseSensor):
             # Extract geom IDs (first channel if multi-channel)
             if seg.ndim == 3:
                 seg = seg[..., 0]
-            data_dict["segmentation"] = seg
-
-        self._data = data_dict
+            self._data["segmentation"] = seg

@@ -14,19 +14,20 @@ if TYPE_CHECKING:
 class BaseSensor(ABC):
     """Base class for all sensors."""
 
-    ################### private attributes ###################
-    _data: torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray] | None = None
-    """the latest sensor data."""
-    _data_queue: deque[torch.Tensor | np.ndarray] | None = None
-    """Current sensor data."""
-    _last_update_cnt_stamp: int = 0
-    """Last update count stamp."""
-    _update_interval: int = 1
-    """Update interval in simulation steps."""
     _backend: "BaseBackend | None" = None
-    """Backend simulator instance reference."""
+    """Backend simulator instance reference. All class share the common backend instance."""
 
     def __init__(self, config: SensorConfig, **kwargs) -> None:
+        ################### private attributes ###################
+        self._data: torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray] | None = None
+        """the latest sensor data."""
+        self._data_queue: deque[torch.Tensor | np.ndarray] | None = None
+        """Current sensor data."""
+        self._last_update_cnt_stamp: int = 0
+        """Last update count stamp."""
+        self._update_interval: int = 1
+        """Update interval in simulation steps."""
+
         self.config = config
         self._data_queue = deque(maxlen=self.config.data_buffer_length)
 
@@ -63,11 +64,11 @@ class BaseSensor(ABC):
         raise NotImplementedError
 
     @property
-    def data(self) -> torch.Tensor | np.ndarray | None:
+    def data(self) -> torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray]:
         """Get the latest sensor data."""
         return self._data
 
     @property
-    def data_queue(self) -> deque[torch.Tensor | np.ndarray] | None:
+    def data_queue(self) -> deque[torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray]]:
         """Get the data queue."""
         return self._data_queue

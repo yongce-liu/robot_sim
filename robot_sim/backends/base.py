@@ -80,10 +80,10 @@ class BaseBackend(ABC):
         """Simulate the environment."""
         self._state_cache_expire = True
         self._simulate()
-        self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
         for sensor_dict in self._buffer_dict.values():
             for sensor in sensor_dict.sensors.values():
                 sensor(self._sim_cnt)
+        self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
         self.render()
 
     def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
@@ -100,10 +100,12 @@ class BaseBackend(ABC):
         """
         self._set_actions(actions)
 
-    def get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
-        """Get the states of the environment."""
+    def get_states(self) -> ArrayState:
+        """Get the states of the environment.
+        It will return all env state
+        """
         if self._state_cache_expire:
-            self._states = self._get_states(env_ids=env_ids)
+            self._states = self._get_states()
             self._state_cache_expire = False
         return self._states
 
@@ -157,7 +159,7 @@ class BaseBackend(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_states(self, env_ids: ArrayTypes | None = None) -> ArrayState:
+    def _get_states(self) -> ArrayState:
         """Get the states of the environment.
         For a new simulator, you should implement this method.
 

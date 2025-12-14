@@ -109,12 +109,9 @@ class MujocoBackend(BaseBackend):
         """Set the states of all objects and robots."""
         if env_ids is None:
             env_ids = self._full_env_ids
-        for obj_name in self._buffer_dict.keys():
-            obj_state = states.objects[obj_name]
-
+        for obj_name, obj_state in states.objects.items():
             self._set_root_state(obj_name, obj_state, env_ids)
             self._set_joint_state(obj_name, obj_state, env_ids)
-
         self._mjcf_physics.forward()
 
     def _set_actions(self, actions: ActionType, env_ids: ArrayTypes | None = None) -> None:
@@ -129,31 +126,53 @@ class MujocoBackend(BaseBackend):
             # Here, we also use the default order index when adding a object/robot
             self._mjcf_physics.data.ctrl[action_indices] = obj_action[env_ids]
 
-    def _get_states(self, env_ids: list[int] | None = None) -> list[dict]:
+    def _get_states(self) -> ArrayState:
         """Get states of all objects and robots."""
 
         obj_states: dict[str, ObjectState] = {}
+        _pnd = self._mjcf_physics.named.data
         for obj_name in self._buffer_dict.keys():
             joint_names = self.get_joint_names(obj_name)
-
+            _root_state, _body_state = self._pack_state(obj_name)
             state = ObjectState(
-                root_state=self._mjcf_physics.data.qpos[self._mjcf_physics.model.joint(obj_name).id][:7].copy(),
-                body_state=self._mjcf_physics.data.xpos[self._mjcf_physics.model.body(obj_name).id].copy(),
-                joint_pos=self._mjcf_physics.data.qpos[
-                    [self._mjcf_physics.model.joint(joint_name).id for joint_name in joint_names]
-                ].copy(),
-                joint_vel=self._mjcf_physics.data.qvel[
-                    [self._mjcf_physics.model.joint(joint_name).id for joint_name in joint_names]
-                ].copy(),
-                joint_pos_target=None,
-                joint_vel_target=None,
-                joint_effort_target=None,
-                sensors={data for data in self._buffer_dict[obj_name].sensors.data},
+                root_state=_root_state,
+                body_state=_body_state,
+                joint_pos=_pnd.qpos[joint_names].copy()[None, ...],
+                joint_vel=_pnd.qvel[joint_names].copy()[None, ...],
+                joint_action=None,
+                sensors={k: v.data for k, v in self._buffer_dict[obj_name].sensors.items()},
             )
-        obj_states[obj_name] = state
+            obj_states[obj_name] = state
 
         extras = self.get_extra()
         return ArrayState(objects=obj_states, extras=extras)
+
+    def _pack_state(self, obj_name: str):
+        """
+        Pack pos(3), quat(4), lin_vel_world(3), ang_vel(3) for one-env MuJoCo.
+
+        Args:
+            obj_name: name of the object
+
+        Returns:
+            root_np: numpy (13,)      — the first body
+            body_np: numpy (n_body,13)     — n_body bodies
+        """
+        data = self._mjcf_physics.named.data
+        body_names = [obj_name + "/"] + self.get_body_names(obj_name)
+        pos = data.xpos[body_names]
+        quat = data.xquat[body_names]
+
+        # angular ω (world) & v @ subtree_com
+        w = data.cvel[body_names, 0:3]
+        v = data.cvel[body_names, 3:6]
+        # compute world‐frame linear velocity at body origin
+        offset = data.xpos[body_names] - data.subtree_com[body_names]
+        lin_world = v + np.cross(w, offset)
+
+        full = np.concatenate([pos, quat, lin_world, w], axis=1)
+        root_np = full[0]
+        return root_np[None, ...], full[1:][None, ...]  # root, bodies
 
     # Private methods for initializing MuJoCo model
     def _add_terrain(self, model: mjcf.RootElement) -> None:
@@ -323,10 +342,13 @@ class MujocoBackend(BaseBackend):
         """Set root position and rotation."""
 
         identifier = obj_name + "/"  # MuJoCo joint/body names are prefixed with model name
-        try:  # only set if not fixed
+        if not self._buffer_dict[obj_name].config.properties.get("fix_base_link", False):
+            # when the object is not fixed-base-link
             root_joint = self._mjcf_physics.data.joint(identifier)
             root_joint.qpos[:7] = obj_state.root_state[env_ids, :7]
-        except KeyError:  # when the object is fixed-base-link, use the following method
+            root_joint.qvel[:6] = obj_state.root_state[env_ids, 7:13]
+        # except KeyError:  # when the object is fixed-base-link, use the following method
+        else:
             # body pos
             self._mjcf_physics.named.model.body_pos[identifier] = obj_state.root_state[env_ids, :3]
             # body quat
@@ -334,12 +356,15 @@ class MujocoBackend(BaseBackend):
 
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
         """Set joint positions."""
+        joint_names = self.get_joint_names(obj_name)
+        self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
+        self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
 
-        for i, joint_name in enumerate(self.get_joint_names(obj_name)):
-            # Here, we assume the data order is same with the order od the get_joint_names()
-            joint = self._mjcf_physics.data.joint(joint_name)
-            joint.qpos[:] = obj_state.joint_pos[env_ids, i]
-            joint.qvel[:] = obj_state.joint_vel[env_ids, i]
+        # for i, joint_name in enumerate(self.get_joint_names(obj_name)):
+        #     # Here, we assume the data order is same with the order od the get_joint_names()
+        #     joint = self._mjcf_physics.data.joint(joint_name)
+        #     joint.qpos[:] = obj_state.joint_pos[env_ids, i]
+        #     joint.qvel[:] = obj_state.joint_vel[env_ids, i]
 
     def get_action_indices(self, name: str) -> np.ndarray:
         if self._buffer_dict[name].action_indices is None:

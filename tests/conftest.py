@@ -93,7 +93,6 @@ def set_seed(seed: int = 42) -> None:
     import os
     import random
 
-    import numpy as np
     import torch
 
     random.seed(seed)
@@ -126,9 +125,12 @@ def set_seed(seed: int = 42) -> None:
 @pytest.fixture
 def mujoco_backend(hydra_config_dict: DictConfig):
     """Create and setup MuJoCo backend for testing."""
+    # Force headless mode for tests to avoid viewer segfaults
+    hydra_config_dict["sim"]["headless"] = True
+    
     cfg = SimulatorConfig.from_dict(hydra_config_dict)
     backend = BackendFactory(config=cfg).backend
     backend.launch()
     yield backend
     # Cleanup if needed
-    # backend.close()
+    backend.close()

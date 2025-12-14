@@ -26,43 +26,20 @@ ActionType = dict[str, ArrayTypes]
 
 @dataclass
 class ObjectState:
-    """State of a single object."""
-
+    """State of a single robot/object."""
     root_state: ArrayTypes
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_names: list[str] | None = None
-    """Body names. This is only available for articulation objects."""
-    body_state: ArrayTypes | None = None
-    """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13). This is only available for articulation objects."""
-    joint_pos: ArrayTypes | None = None
-    """Joint positions. Shape is (num_envs, num_joints). This is only available for articulation objects."""
-    joint_vel: ArrayTypes | None = None
-    """Joint velocities. Shape is (num_envs, num_joints). This is only available for articulation objects."""
-    sensors: dict[str, ArrayTypes] = field(default_factory=dict)
-    """Sensor readings. Each sensor has shape (num_envs, sensor_dim)."""
-    extras: dict = field(default_factory=dict)
-    """Extra information."""
-
-
-@dataclass
-class RobotState:
-    """State of a single robot."""
-
-    root_state: ArrayTypes
-    """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_names: list[str]
-    """Body names."""
     body_state: ArrayTypes
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
-    joint_pos: ArrayTypes
+    joint_pos: ArrayTypes | None = None
     """Joint positions. Shape is (num_envs, num_joints)."""
-    joint_vel: ArrayTypes
+    joint_vel: ArrayTypes | None = None
     """Joint velocities. Shape is (num_envs, num_joints)."""
-    joint_pos_target: ArrayTypes
+    joint_pos_target: ArrayTypes | None = None
     """Joint positions target. Shape is (num_envs, num_joints)."""
-    joint_vel_target: ArrayTypes
+    joint_vel_target: ArrayTypes | None = None
     """Joint velocities target. Shape is (num_envs, num_joints)."""
-    joint_effort_target: ArrayTypes
+    joint_effort_target: ArrayTypes | None = None
     """Joint effort targets. Shape is (num_envs, num_joints)."""
     sensors: dict[str, ArrayTypes] = field(default_factory=dict)
     """Sensor readings. Each sensor has shape (num_envs, sensor_dim)."""
@@ -79,13 +56,13 @@ class ArrayState:
     """
 
     objects: dict[str, ObjectState]
-    robots: dict[str, RobotState]
     extras: dict = field(default_factory=dict)
 
 
 # robot/object name
 @dataclass
 class Buffer:
+    config: RobotConfig | ObjectConfig | None = None
     sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
     joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
     body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
@@ -146,6 +123,9 @@ class BaseBackend(ABC):
         self._state_cache_expire = True
         self._simulate()
         self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
+        for sensor_dict in self._buffer_dict.values():
+            for sensor in sensor_dict.sensors.values():
+                sensor.update()
         self.render()
 
     def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:

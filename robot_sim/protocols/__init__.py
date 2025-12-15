@@ -5,7 +5,6 @@ This module handles protocol between simulation server and external clients
 """
 
 from robot_sim.protocols.messages import ZMQProtocol
-from robot_sim.protocols.protocol import CommunicationProtocol
 
 __all__ = [
     "CommunicationProtocol",

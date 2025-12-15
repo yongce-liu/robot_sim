@@ -4,11 +4,7 @@ import json
 import pickle
 
 import numpy as np
-
-try:
-    import zmq
-except ImportError:
-    zmq = None
+import zmq
 
 
 class ZMQProtocol:

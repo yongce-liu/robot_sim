@@ -1,12 +1,12 @@
-"""Communication module for robot simulation.
+"""Communication module for robot simulation."""
 
-This module handles protocol between simulation server and external clients
-(VLA models, planners, etc.) using ZMQ protocol.
-"""
-
-from robot_sim.protocols.messages import ZMQProtocol
+from .base import BaseBridge, Message
+from .unitree import UnitreeBridge
+from .zmq import ZMQBridge
 
 __all__ = [
-    "CommunicationProtocol",
-    "ZMQProtocol",
+    "Message",
+    "BaseBridge",
+    "UnitreeBridge",
+    "ZMQBridge",
 ]

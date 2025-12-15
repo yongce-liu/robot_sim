@@ -1,7 +1,5 @@
 """Robot controller implementations."""
 
-any
-
 
 class BaseController:
     """Base class for robot controllers."""

@@ -2,12 +2,13 @@
 
 import json
 import pickle
+from typing import Any
 
 import numpy as np
 import zmq
 
 
-class ZMQProtocol:
+class ZMQBridge:
     """ZMQ-based protocol protocol for robot-model interaction.
 
     Supports both REQ-REP (request-reply) and PUB-SUB (publish-subscribe) patterns.
@@ -71,7 +72,7 @@ class ZMQProtocol:
         else:
             raise ValueError(f"Unknown pattern: {self.pattern}")
 
-    def send(self, data: dict[str, any]) -> None:
+    def send(self, data: dict[str, Any]) -> None:
         """Send data through ZMQ.
 
         Args:
@@ -80,7 +81,7 @@ class ZMQProtocol:
         serialized = self._serialize(data)
         self.socket.send(serialized)
 
-    def receive(self, timeout: int | None = None) -> dict[str, any] | None:
+    def receive(self, timeout: int | None = None) -> dict[str, Any] | None:
         """Receive data from ZMQ.
 
         Args:
@@ -98,7 +99,7 @@ class ZMQProtocol:
         except zmq.Again:
             return None
 
-    def _serialize(self, data: dict[str, any]) -> bytes:
+    def _serialize(self, data: dict[str, Any]) -> bytes:
         """Serialize data for transmission."""
         if self.serialization == "json":
             # Convert numpy arrays to lists for JSON
@@ -109,7 +110,7 @@ class ZMQProtocol:
         else:
             raise ValueError(f"Unknown serialization: {self.serialization}")
 
-    def _deserialize(self, data: bytes) -> dict[str, any]:
+    def _deserialize(self, data: bytes) -> dict[str, Any]:
         """Deserialize received data."""
         if self.serialization == "json":
             return json.loads(data.decode("utf-8"))
@@ -118,7 +119,7 @@ class ZMQProtocol:
         else:
             raise ValueError(f"Unknown serialization: {self.serialization}")
 
-    def _convert_numpy_to_list(self, data: any) -> any:
+    def _convert_numpy_to_list(self, data: Any) -> Any:
         """Recursively convert numpy arrays to lists for JSON."""
         if isinstance(data, np.ndarray):
             return data.tolist()

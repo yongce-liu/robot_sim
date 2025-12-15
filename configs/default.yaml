@@ -6,7 +6,9 @@
 defaults:
   - _self_
   - backends: mujoco.yaml
-  - objects: g1.yaml # load configs/robots/g1.yaml
+  - objects: [g1.yaml, sphere.yaml] # load configs/robots/g1.yaml
+  # - objects: g1.yaml
+  # - objects: sphere.yaml
 
 # Hydra runtime configuration
 hydra:

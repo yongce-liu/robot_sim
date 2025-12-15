@@ -30,16 +30,16 @@ class TestMuJoCoBackend:
         mujoco_backend._set_actions(actions, env_ids=np.array([0]))
         mujoco_backend.simulate()
 
-    # def test_get_state(self, mujoco_backend: MujocoBackend, array_state: ArrayState, robot_name: str) -> None:
-    #     mujoco_backend.set_states({robot_name: array_state.objects[robot_name]}, env_ids=np.array([0]))
-    #     new_state: ArrayState = mujoco_backend.get_states()
-    #     for key in array_state.objects[robot_name].keys():
-    #         np.testing.assert_allclose(
-    #             new_state.objects[robot_name][key],
-    #             array_state.objects[robot_name][key],
-    #             rtol=1e-5,
-    #             atol=1e-8,
-    #         )
+    def test_get_state(self, mujoco_backend: MujocoBackend, array_state: ArrayState, robot_name: str) -> None:
+        mujoco_backend.set_states(array_state, env_ids=np.array([0]))
+        new_state: ArrayState = mujoco_backend.get_states()
+        for key in array_state.objects[robot_name].keys():
+            np.testing.assert_allclose(
+                new_state.objects[robot_name][key],
+                array_state.objects[robot_name][key],
+                rtol=1e-5,
+                atol=1e-8,
+            )
 
 
 class TestIsaacBackend:

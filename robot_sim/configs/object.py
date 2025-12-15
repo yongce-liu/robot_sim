@@ -53,7 +53,7 @@ class ObjectConfig:
     # """Name of the robot."""
     type: ObjectType = MISSING
     """Type of the object. Can be a ObjectType or 'custom'."""
-    path: str = MISSING
+    path: str | None = None
     """Path to the robot's model file."""
     initial_position: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     """Initial position of the robot in the simulation."""

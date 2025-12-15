@@ -137,8 +137,8 @@ class MujocoBackend(BaseBackend):
             state = ObjectState(
                 root_state=_root_state,
                 body_state=_body_state,
-                joint_pos=_pnd.qpos[joint_names].copy()[None, ...],
-                joint_vel=_pnd.qvel[joint_names].copy()[None, ...],
+                joint_pos=None if len(joint_names) == 0 else _pnd.qpos[joint_names].copy()[None, ...],
+                joint_vel=None if len(joint_names) == 0 else _pnd.qvel[joint_names].copy()[None, ...],
                 joint_action=None,
                 sensors={k: v.data for k, v in self._buffer_dict[obj_name].sensors.items()},
             )
@@ -258,25 +258,31 @@ class MujocoBackend(BaseBackend):
         temporaly fix attaching robots bugs in dm_control when attach a object.
         """
 
-        child_joint = obj_attached.find_all("joint")[0]
-        if child_joint.type == "free":
-            logger.warning(
-                f"Robot '{obj_name}' already has a free joint in its MJCF. "
-                "Use dm_control load the object will create a dummy body. "
-                "We will remove it and add the free joint at the root body level."
-            )
-            child_joint.remove()
+        all_joints = obj_attached.find_all("joint")
+        if len(all_joints) > 0:
+            child_joint = all_joints[0]
+            if child_joint.type == "free":
+                logger.warning(
+                    f"Robot '{obj_name}' already has a free joint in its MJCF. "
+                    "Use dm_control load the object will create a dummy body. "
+                    "We will remove it and add the free joint at the root body level."
+                )
+                child_joint.remove()
         if not obj_cfg.properties.get("fix_base_link", False):  # default: False, assume the robot can move freely
             obj_attached.add("freejoint")
 
-        # FIXME: Ensure the attached robot has an inertial element to avoid simulation issues
-        if not hasattr(obj_attached, "inertial") or obj_attached.inertial is None:
-            child_body = obj_attached.find_all("body")[0]  # The first child body after the root
-            pos = child_body.inertial.pos
-            obj_attached.pos = child_body.pos
-            child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
-            obj_attached.quat = child_body.quat if child_body.quat is not None else "1 0 0 0"
-            obj_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
+        # FIXME: Ensure the attached robot has an inertial element to avoid simulation issues, (height)
+        all_bodies = obj_attached.find_all("body")
+        if len(all_bodies) > 0 and not hasattr(obj_attached, "inertial") or obj_attached.inertial is None:
+            child_body = all_bodies[0]  # The first child body after the root
+            if child_body.pos is not None:
+                obj_attached.pos = child_body.pos
+                child_body.pos = "0 0 0"  # Reset child body position to origin with respect to the attached robot
+            if child_body.quat is not None:
+                obj_attached.quat = child_body.quat
+                child_body.quat = "1 0 0 0"
+            # pos = child_body.inertial.pos
+            # obj_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
 
     @staticmethod
     def export_mjcf(model: mjcf.RootElement, out_dir: os.PathLike, file_name: str = "model.xml") -> None:
@@ -357,8 +363,9 @@ class MujocoBackend(BaseBackend):
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
         """Set joint positions."""
         joint_names = self.get_joint_names(obj_name)
-        self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
-        self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
+        if len(joint_names) > 0:
+            self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
+            self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
 
         # for i, joint_name in enumerate(self.get_joint_names(obj_name)):
         #     # Here, we assume the data order is same with the order od the get_joint_names()
@@ -377,6 +384,40 @@ class MujocoBackend(BaseBackend):
             self._buffer_dict[name].action_indices = action_indices
             return action_indices
         return self._buffer_dict[name].action_indices
+
+    def _create_builtin_xml(self, obj_cfg: ObjectConfig) -> str:
+        prop: dict[str, Any] = obj_cfg.properties
+        if obj_cfg.type == ObjectType.CUBE:
+            half_size = prop.get("half_size", [0.1, 0.1, 0.1])
+            size_str = f"{half_size[0]} {half_size[1]} {half_size[2]}"
+            type_str = "box"
+        elif obj_cfg.type == ObjectType.CYLINDER:
+            radius = prop.get("radius", 0.1)
+            height = prop.get("height", 0.1)
+            size_str = f"{radius} {height}"
+            type_str = "cylinder"
+        elif obj_cfg.type == ObjectType.SPHERE:
+            radius = prop.get("radius", 0.1)
+            size_str = f"{radius}"
+            type_str = "sphere"
+        else:
+            raise ValueError(
+                f"Unknown object type, available types: {[t.value for t in ObjectType if t not in [ObjectType.CUSTOM, ObjectType.ROBOT]]}."
+            )
+        color = prop.get("color", [0.5, 0.5, 0.5])
+        rgba_str = f"{color[0]} {color[1]} {color[2]} 1"
+        density = prop.get("density", 1000.0)
+        xml = f"""
+        <mujoco model="{type_str}">
+        <worldbody>
+            <body name="{type_str}_body" pos="{0} {0} {0}">
+            <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}" density="{density}"/>
+            </body>
+        </worldbody>
+        </mujoco>
+        """
+
+        return xml.strip()
 
     # def _add_cameras(self, mjcf_model: mjcf.RootElement) -> None:
     #     """Add cameras to the model."""
@@ -674,28 +715,3 @@ class MujocoBackend(BaseBackend):
     #         global_elem = visual_elem.add("global")
     #     global_elem.offwidth = width
     #     global_elem.offheight = height
-
-    # def _create_builtin_xml(self, obj):
-    #     if isinstance(obj, PrimitiveCubeCfg):
-    #         size_str = f"{obj.half_size[0]} {obj.half_size[1]} {obj.half_size[2]}"
-    #         type_str = "box"
-    #     elif isinstance(obj, PrimitiveCylinderCfg):
-    #         size_str = f"{obj.radius} {obj.height}"
-    #         type_str = "cylinder"
-    #     elif isinstance(obj, PrimitiveSphereCfg):
-    #         size_str = f"{obj.radius}"
-    #         type_str = "sphere"
-    #     else:
-    #         raise ValueError("Unknown primitive type")
-
-    #     rgba_str = f"{obj.color[0]} {obj.color[1]} {obj.color[2]} 1"
-    #     xml = f"""
-    #     <mujoco model="{obj.name}_model">
-    #     <worldbody>
-    #         <body name="{type_str}_body" pos="{0} {0} {0}">
-    #         <geom name="{type_str}_geom" type="{type_str}" size="{size_str}" rgba="{rgba_str}"/>
-    #         </body>
-    #     </worldbody>
-    #     </mujoco>
-    #     """
-    #     return xml.strip()

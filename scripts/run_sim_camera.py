@@ -13,7 +13,6 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 from robot_sim.backends import BackendFactory
-from robot_sim.backends.types import ArrayState, ObjectState
 from robot_sim.configs import SimulatorConfig
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -127,37 +126,14 @@ def main(cfg: DictConfig) -> None:
     cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)
     logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
-    num_envs = cfg.sim.num_envs
-    num_joint = 43  # Assuming 12 joints for the robot
-    default_state = ArrayState(
-        objects={
-            "g1": ObjectState(
-                root_state=np.array([[0, 0, 0.78, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]]).astype(np.float32),
-                body_state=None,
-                joint_pos=np.random.rand(num_envs, num_joint).astype(np.float32) * 0.0,
-                joint_vel=np.random.rand(num_envs, num_joint).astype(np.float32) * 0.0,
-                joint_action=None,
-                sensors=None,
-                extras=None,
-            ),
-            "g2": ObjectState(
-                root_state=np.array([[1, 0, 0.78, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]]).astype(np.float32),
-                body_state=None,
-                joint_pos=np.random.rand(num_envs, num_joint).astype(np.float32) * 0.0,
-                joint_vel=np.random.rand(num_envs, num_joint).astype(np.float32) * 0.0,
-                joint_action=None,
-                sensors=None,
-                extras=None,
-            ),
-        }
-    )
-
     # Create simulation manager
     sim_backend = BackendFactory(config=cfg).backend
 
     # Setup and run simulation
     sim_backend.launch()
     logger.info("Simulation launched successfully.")
+
+    default_state = sim_backend.get_states()
 
     # Start a single dual image viewer
     viewer = DualImageViewer(window_name="Robot Cameras (G1 | G2)", max_queue_size=2)

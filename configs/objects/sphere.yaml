@@ -1,0 +1,8 @@
+# @package scene.objects
+sphere_1:
+  type: sphere
+  initial_position: [0.5, 0.0, 1.0]
+  initial_orientation: [0.0, 0.0, 0.0, 1.0]
+  properties:
+    radius: 0.1
+    color: [1.0, 0.0, 0.0]

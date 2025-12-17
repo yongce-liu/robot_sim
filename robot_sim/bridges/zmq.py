@@ -7,6 +7,11 @@ from typing import Any
 import numpy as np
 import zmq
 
+state_format = {
+    
+}
+action_format = {}
+
 
 class ZMQBridge:
     """ZMQ-based protocol protocol for robot-model interaction.

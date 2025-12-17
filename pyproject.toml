@@ -28,7 +28,8 @@ dependencies = [
     "loguru==0.7.3",
     "dm-control==1.0.34",
     "dacite==1.9.2",
-    "opencv-python==4.11.*"
+    "opencv-python==4.11.*",
+    "msgpack>=1.1.2",
 ]
 
 [project.optional-dependencies]

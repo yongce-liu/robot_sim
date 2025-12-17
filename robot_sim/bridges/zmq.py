@@ -7,9 +7,7 @@ from typing import Any
 import numpy as np
 import zmq
 
-state_format = {
-    
-}
+state_format = {}
 action_format = {}
 
 

@@ -131,4 +131,5 @@ class Buffer:
     sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
     joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
     body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
+    actuator_names: list[str] = field(default_factory=list)  # buffer -> list[actuator name]
     action_indices: list[int] | None = None  # buffer -> list[joint index]

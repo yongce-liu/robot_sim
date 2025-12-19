@@ -382,8 +382,12 @@ class MujocoBackend(BaseBackend):
             joint_names = self.get_joint_names(name)
             action_indices = []
             for joint_name in joint_names:
-                actuator_id = self._mjcf_physics.model.actuator(joint_name).id
-                action_indices.append(actuator_id)
+                try:
+                    actuator_id = self._mjcf_physics.model.actuator(joint_name).id
+                    action_indices.append(actuator_id)
+                    self._buffer_dict[name].actuator_names.append(joint_name)
+                except Exception:
+                    logger.warning(f"Joint '{joint_name}' in object '{name}' has no corresponding actuator.")
             action_indices = np.array(action_indices, dtype=np.int32)
             self._buffer_dict[name].action_indices = action_indices
             return action_indices

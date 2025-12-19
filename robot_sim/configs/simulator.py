@@ -38,7 +38,7 @@ class SimulatorConfig:
     """Configuration for the simulation scene."""
 
     @staticmethod
-    def _get_dacite_config():
+    def get_dacite_config():
         import dacite
 
         from robot_sim.configs.sensor import CameraConfig, SensorConfig, SensorType

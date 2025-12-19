@@ -42,8 +42,8 @@ def _from_dict(cls, cfg_dict: dict):
         strict=True,
     )
 
-    if hasattr(cls, "_get_dacite_config"):
-        _dacite_config = cls._get_dacite_config()
+    if hasattr(cls, "get_dacite_config"):
+        _dacite_config = cls.get_dacite_config()
         for key, value in vars(_dacite_config).items():
             if value is not None:
                 setattr(dacite_config, key, value)

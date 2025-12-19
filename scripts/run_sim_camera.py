@@ -14,6 +14,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from robot_sim.backends import BackendFactory
 from robot_sim.configs import SimulatorConfig
+from robot_sim.utils.helper import setup_logger
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
@@ -121,6 +122,7 @@ def main(cfg: DictConfig) -> None:
     Args:
         cfg: Hydra configuration object
     """
+    setup_logger(max_file_size=10)
     # Print configuration
     cfg = SimulatorConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
     cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)

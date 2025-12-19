@@ -144,8 +144,14 @@ def main(cfg: DictConfig) -> None:
             sim_backend.set_states(default_state)
             sim_backend.simulate()
             state = sim_backend.get_states()
-            image1 = state.objects["g1"].sensors["head_camera"]["rgb"]
-            image2 = state.objects["g2"].sensors["head_camera"]["rgb"]
+            try:
+                image1 = state.objects["g1"].sensors["head_camera"]["rgb"]
+            except KeyError:
+                image1 = np.zeros((480, 640, 3), dtype=np.uint8)
+            try:
+                image2 = state.objects["g2"].sensors["head_camera"]["rgb"]
+            except KeyError:
+                image2 = np.zeros((480, 640, 3), dtype=np.uint8)
             # Send both images to the dual viewer
             viewer.update_images(image1, image2)
 

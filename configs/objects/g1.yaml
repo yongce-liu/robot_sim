@@ -1,55 +1,27 @@
-# @package scene.objects
+# @package _group_
 
-g1:
-  type: robot
-  path: "assets/robots/unitree/g1/g1_dex3_rev_1_0.xml"
-  initial_position: [0.0, 0.0, 0.78]
-  initial_orientation: [1.0, 0.0, 0.0, 0.0] # [w, x, y, z]
-  joints:
-    joint1:
-      control_type: position
-      stiffness: 100.0
-      damping: 1.0
-      velocity_limit: 5.0
-      torque_limit: 10.0
-      position_limit: [-1.57, 1.57]
-  sensors:
-    head_camera:
-      type: camera
-      width: 640
-      height: 480
-      freq: 10.0
-      vertical_fov: 59.
-      mount_to: torso_link
-      position: [0.06, 0.0, 0.45]
-      orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
-  properties:
-    fix_base_link: true
-    # imu: it is built in the xml model
-
-g2:
-  type: robot
-  path: "assets/robots/unitree/g1/g1_dex3_rev_1_0.xml"
-  initial_position: [1.0, 0.0, 0.78]
-  initial_orientation: [1.0, 0.0, 0.0, 0.0]
-  joints:
-    joint1:
-      control_type: position
-      stiffness: 100.0
-      damping: 1.0
-      velocity_limit: 5.0
-      torque_limit: 10.0
-      position_limit: [-1.57, 1.57]
-  sensors:
-    head_camera:
-      type: camera
-      width: 640
-      height: 480
-      freq: 10.0
-      vertical_fov: 59.
-      mount_to: torso_link
-      position: [0.06, 0.0, 0.45]
-      orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
-  properties:
-    fix_base_link: false
-    # imu: it is built in the xml model
+type: robot
+path: "assets/robots/unitree/g1/g1_dex3_rev_1_0.xml"
+# initial_position: [0.0, 0.0, 0.78]
+# initial_orientation: [1.0, 0.0, 0.0, 0.0] # [w, x, y, z]
+joints:
+  joint1:
+    control_type: position
+    stiffness: 100.0
+    damping: 1.0
+    velocity_limit: 5.0
+    torque_limit: 10.0
+    position_limit: [-1.57, 1.57]
+sensors:
+  head_camera:
+    type: camera
+    width: 640
+    height: 480
+    freq: 10.0
+    vertical_fov: 59.
+    mount_to: torso_link
+    position: [0.06, 0.0, 0.45]
+    orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
+properties:
+  fix_base_link: true
+  # imu: it is built in the xml model

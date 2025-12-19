@@ -51,7 +51,7 @@ class JointConfig:
 class ObjectConfig:
     # name: str = MISSING
     # """Name of the robot."""
-    type: ObjectType = MISSING
+    type: ObjectType = ObjectType.CUSTOM
     """Type of the object. Can be a ObjectType or 'custom'."""
     path: str | None = None
     """Path to the robot's model file."""

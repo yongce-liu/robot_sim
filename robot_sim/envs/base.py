@@ -23,7 +23,12 @@ class BaseEnv(ABC, gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, config: SimulatorConfig | None = None, render_mode: str | None = None) -> None:
+    def __init__(
+        self,
+        config: SimulatorConfig | None = None,
+        render_mode: str | None = None,
+        **kwargs,
+    ) -> None:
         """Initialize the base environment with a backend.
 
         Args:
@@ -46,6 +51,9 @@ class BaseEnv(ABC, gym.Env):
         if not self._backend.is_launched:
             self._backend.launch()
         self._initial_states: ArrayState = self._backend.get_states()
+
+        self._observation_space: gym.Space = None  # to be defined in subclass
+        self._action_space: gym.Space = None  # to be defined in subclass
 
     def reset(
         self,
@@ -77,7 +85,7 @@ class BaseEnv(ABC, gym.Env):
         observation = self.stateArray2observation(states)
 
         # Get extra info
-        info = self._backend.get_extra()
+        info = self.compute_info(observation, None)
 
         return observation, info
 
@@ -106,12 +114,12 @@ class BaseEnv(ABC, gym.Env):
         observation = self.stateArray2observation(states)
 
         # Calculate reward and done flags
-        reward = self.compute_reward(states, action)
-        terminated = self.compute_terminated(states)
-        truncated = self.compute_truncated(states)
+        reward = self.compute_reward(observation, action)
+        terminated = self.compute_terminated(observation, action)
+        truncated = self.compute_truncated(observation, action)
 
         # Get extra info
-        info = self._backend.get_extra()
+        info = self.compute_info(observation, action)
 
         return observation, reward, terminated, truncated, info
 
@@ -160,11 +168,11 @@ class BaseEnv(ABC, gym.Env):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_reward(self, states: ArrayState, action: Any) -> float | np.ndarray:
+    def compute_reward(self, observation: Any, action: Any | None = None) -> float | np.ndarray:
         """Compute the reward for the current step.
 
         Args:
-            states: The current state dictionary from backend.
+            observation: The current observation.
             action: The action taken.
 
         Returns:
@@ -173,40 +181,50 @@ class BaseEnv(ABC, gym.Env):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_terminated(self, states: ArrayState) -> bool | np.ndarray:
+    def compute_terminated(self, observation: Any, action: Any | None = None) -> bool | np.ndarray:
         """Compute whether the episode has terminated.
 
         Args:
-            states: The current state dictionary from backend.
-
+            observation: The current observation.
+            action: The action taken.
         Returns:
             terminated: Whether the episode has reached a terminal state.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def compute_truncated(self, states: ArrayState) -> bool | np.ndarray:
+    def compute_truncated(self, observation: Any, action: Any | None = None) -> bool | np.ndarray:
         """Compute whether the episode should be truncated.
 
         Args:
-            states: The current state dictionary from backend.
-
+            observation: The current observation.
+            action: The action taken.
         Returns:
             truncated: Whether the episode should be truncated (e.g., time limit).
         """
         raise NotImplementedError
 
-    @property
     @abstractmethod
-    def observation_space(self) -> gym.Space:
-        """Required by gymnasium."""
-        pass
+    def compute_info(self, observation: Any, action: Any | None = None) -> dict[str, Any]:
+        """Compute additional info for the current step.
+
+        Args:
+            observation: The current observation.
+            action: The action taken.
+        Returns:
+            info: Additional information dictionary.
+        """
+        raise NotImplementedError
 
     @property
-    @abstractmethod
+    def observation_space(self) -> gym.Space:
+        """Required by gymnasium."""
+        return self._observation_space
+
+    @property
     def action_space(self) -> gym.Space:
         """Required by gymnasium."""
-        pass
+        return self._action_space
 
     @property
     def backend(self) -> BaseBackend:

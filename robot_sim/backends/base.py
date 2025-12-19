@@ -44,6 +44,7 @@ class BaseBackend(ABC):
         self._states: ArrayState = None
 
         # Constants
+        self.is_launched = False
         self._sim_cnt = 0
         self._sim_freq = int(1.0 / self.cfg_phyx.dt)
         self._full_env_ids = (
@@ -66,6 +67,7 @@ class BaseBackend(ABC):
         self._bind_sensors_queries()
         self._launch()
         self._sim_cnt = 0
+        self.is_launched = True
 
     def _bind_sensors_queries(self) -> None:
         """Bind sensors to the backend."""
@@ -78,6 +80,10 @@ class BaseBackend(ABC):
     def render(self) -> None:
         if self._sim_cnt % self.cfg_phyx.render_interval == 0 and not self.headless:
             self._render()
+
+    # def get_world_image(self):
+    #     """Get the world image from the backend."""
+    #     raise NotImplementedError("get_world_image() is not implemented for this backend.")
 
     def simulate(self):
         """Simulate the environment."""

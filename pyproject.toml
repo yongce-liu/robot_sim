@@ -7,7 +7,7 @@ name = "robot_sim"
 version = "0.1.0"
 description = "Unified Robot Simulation Platform for Isaac Lab and MuJoCo"
 readme = "README.md"
-requires-python = "==3.11.*"
+requires-python = ">=3.10,<=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "Yongce Liu", email = "yongce.liu@outlook.com" }]
 keywords = ["robotics", "simulation", "isaac-lab", "mujoco", "unitree"]
@@ -15,26 +15,21 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3",
 ]
 
 dependencies = [
-    "hydra-core==1.3.2",
-    "mujoco==3.4.0",
-    "numpy==1.26.0",
+    "dacite>=1.9.2",
+    "dm-control>=1.0.34",
+    "hydra-core>=1.3.2",
+    "loguru>=0.7.3",
+    "mujoco>=3.4.0",
+    "numpy==1.26.4",
+    "opencv-python>=4.11.0.86",
     "torch==2.7.0",
-    "torchaudio==2.7.0",
     "torchvision==0.22.0",
-    "loguru==0.7.3",
-    "dm-control==1.0.34",
-    "dacite==1.9.2",
-    "opencv-python==4.11.*",
-    "msgpack>=1.1.2",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest==9.0.2", "ruff==0.14.8"]
-isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 
 [tool.uv]
 package = true
@@ -57,6 +52,14 @@ target-version = "py311"
 [tool.ruff.lint.extend-per-file-ignores]
 # Also ignore `E402` in all `__init__.py` files.
 "__init__.py" = ["E402", "F401", "F403", "E501"]
+
+[project.optional-dependencies]
+dev = ["opencv-python>=4.11.0.86", "pytest>=9.0.2"]
+# isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
+
+[dependency-groups]
+dev = ["opencv-python>=4.11.0.86", "pytest>=9.0.2"]
+# isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 
 
 # # mypy type checking configuration

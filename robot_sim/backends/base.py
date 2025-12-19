@@ -10,7 +10,6 @@ from robot_sim.configs import (
     BackendType,
     ObjectConfig,
     PhysicsConfig,
-    SensorConfig,
     SimulatorConfig,
     TerrainConfig,
 )
@@ -206,10 +205,7 @@ class BaseBackend(ABC):
         return self._full_env_ids
 
     # Utility functions for buffers
-    def get_joint_indices(self, name: str) -> list[int]:
-        """Get the joint indices of all robots and objects."""
-        return self._buffer_dict[name].joint_indices
-
+    # public functions
     def get_joint_names(self, name: str) -> list[str]:
         """Get the joint indices of all robots and objects."""
         return self._buffer_dict[name].joint_names
@@ -218,10 +214,15 @@ class BaseBackend(ABC):
         """Get the body indices of all robots and objects."""
         return self._buffer_dict[name].body_names
 
-    def get_sensors(self, name: str) -> dict[str, SensorConfig]:
-        """Get the sensor configs of all robots and objects."""
-        return self._buffer_dict[name].sensors
+    # private functions
+    # def get_sensors(self, name: str) -> dict[str, SensorConfig]:
+    #     """Get the sensor configs of all robots and objects."""
+    #     return self._buffer_dict[name].sensors
 
-    def get_action_indices(self, name: str) -> list[int]:
+    def _get_joint_indices(self, name: str) -> list[int]:
+        """Get the joint indices of all robots and objects."""
+        return self._buffer_dict[name].joint_indices
+
+    def _get_action_indices(self, name: str) -> list[int]:
         """Get the action indices of all robots and objects."""
         return self._buffer_dict[name].action_indices

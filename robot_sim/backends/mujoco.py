@@ -122,7 +122,7 @@ class MujocoBackend(BaseBackend):
             env_ids = self._full_env_ids
 
         for obj_name, obj_action in actions.items():
-            action_indices = self.get_action_indices(obj_name)
+            action_indices = self._get_action_indices(obj_name)
             # Here, we also use the default order index when adding a object/robot
             self._mjcf_physics.data.ctrl[action_indices] = obj_action[env_ids]
 
@@ -377,7 +377,7 @@ class MujocoBackend(BaseBackend):
         #     joint.qpos[:] = obj_state.joint_pos[env_ids, i]
         #     joint.qvel[:] = obj_state.joint_vel[env_ids, i]
 
-    def get_action_indices(self, name: str) -> np.ndarray:
+    def _get_action_indices(self, name: str) -> np.ndarray:
         if self._buffer_dict[name].action_indices is None:
             joint_names = self.get_joint_names(name)
             action_indices = []

@@ -44,13 +44,13 @@ class BaseEnv(ABC, gym.Env):
         assert (render_mode == "human" and not config.sim.headless) or (
             render_mode == "rgb_array" or render_mode is None and not config.sim.headless
         ), f"Incompatible render_mode: {render_mode} and headless: {config.sim.headless} setting."
-        self._backend = BackendFactory.create_backend(config)
+        self._backend = BackendFactory.createbackend(config)
         self.render_mode = render_mode
 
         # Launch the backend if not already launched
-        if not self._backend.is_launched:
-            self._backend.launch()
-        self._initial_states: ArrayState = self._backend.get_states()
+        if not self.backend.is_launched:
+            self.backend.launch()
+        self._initial_states: ArrayState = self.backend.get_states()
 
         self._observation_space: gym.Space = None  # to be defined in subclass
         self._action_space: gym.Space = None  # to be defined in subclass
@@ -75,13 +75,13 @@ class BaseEnv(ABC, gym.Env):
 
         # Reset the backend state
         states = options.get("initial_states", self._initial_states)
-        self._backend.set_states(states)
+        self.backend.set_states(states)
 
         # FIXME: Whether need to resimulate?
-        # self._backend.simulate()
+        # self.backend.simulate()
 
         # Get observation from backend state
-        states = self._backend.get_states()
+        states = self.backend.get_states()
         observation = self.stateArray2observation(states)
 
         # Get extra info
@@ -106,11 +106,11 @@ class BaseEnv(ABC, gym.Env):
         action_array = self.action2actionArray(action)
 
         # Set action and simulate
-        self._backend.set_actions(action_array)
-        self._backend.simulate()
+        self.backend.set_actions(action_array)
+        self.backend.simulate()
 
         # Get new state and observation
-        states = self._backend.get_states()
+        states = self.backend.get_states()
         observation = self.stateArray2observation(states)
 
         # Calculate reward and done flags
@@ -130,17 +130,17 @@ class BaseEnv(ABC, gym.Env):
             Rendered output if render_mode requires it, otherwise None.
         """
         if self.render_mode == "rgb_array":
-            if hasattr(self._backend, "get_world_image"):
-                return self._backend.get_world_image()
+            if hasattr(self.backend, "get_world_image"):
+                return self.backend.get_world_image()
             else:
                 logger.warning("Backend does not support image rendering.")
         elif self.render_mode == "human":
-            self._backend.render()
+            self.backend.render()
         return None
 
     def close(self) -> None:
         """Close the environment and cleanup resources."""
-        self._backend.close()
+        self.backend.close()
 
     # Abstract methods to be implemented by subclasses
     @abstractmethod

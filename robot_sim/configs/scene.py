@@ -1,4 +1,4 @@
-from dataclasses import MISSING, dataclass, field
+from dataclasses import dataclass, field
 
 from .object import ObjectConfig
 from .sensor import SensorConfig
@@ -7,8 +7,9 @@ from .terrain import TerrainConfig
 
 @dataclass
 class SceneConfig:
-    terrain: TerrainConfig = MISSING
-    """Terrain configuration."""
+    terrain: TerrainConfig | None = None
+    """Terrain configuration.
+       If None, the terrain will be loaded from the scene file."""
     objects: dict[str, ObjectConfig] = field(default_factory=dict)
     """List of objects and robots to include in the simulation."""
     # robots: dict[str, RobotConfig] = field(default_factory=dict)

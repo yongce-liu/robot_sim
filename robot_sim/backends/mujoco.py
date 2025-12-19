@@ -177,50 +177,54 @@ class MujocoBackend(BaseBackend):
     # Private methods for initializing MuJoCo model
     def _add_terrain(self, model: mjcf.RootElement) -> None:
         """Add default ground plane."""
-        if self.terrain.type == "plane":
-            model.asset.add(
-                "texture",
-                name="texplane",
-                type="2d",
-                builtin="checker",
-                mark="edge",
-                width=512,
-                height=512,
-                rgb1=[0.2, 0.3, 0.4],
-                rgb2=[0.1, 0.2, 0.3],
-                markrgb=[0.8, 0.8, 0.8],
-            )
-            model.asset.add(
-                "material",
-                name="matplane",
-                texture="texplane",
-                texrepeat=[2, 2],
-                texuniform=True,
-                reflectance="0.2",
-                specular="0.2",
-                shininess="0.4",
-                emission="0.05",
-            )
-            model.worldbody.add(
-                "geom",
-                type="plane",
-                pos="0 0 0",
-                size="100 100 0.001",
-                quat="1 0 0 0",
-                condim="3",
-                conaffinity="15",
-                material="matplane",
-                friction="1.0 0.005 0.0001",  # friction coefficients [sliding, torsional, rolling]
-                solimp="0.9 0.95 0.001 0.5 2",  # restition parameters [min, max, margin, stiffness, damping]
-                solref="0.02 1",  # contact stiffness and damping [timeconst, dampratio]
-            )
-            # FIXME: Temporary headlight settings (dm_control default is too low)
-            model.visual.headlight.diffuse = [0.6, 0.6, 0.6]
-            model.visual.headlight.ambient = [0.3, 0.3, 0.3]
-            model.visual.headlight.specular = [0.0, 0.0, 0.0]
-            model.visual.rgba.haze = [0.15, 0.25, 0.35, 1.0]
+        if self.terrain is None:
+            logger.info("Using terrain from the scene file.")
+            return
         else:
-            raise NotImplementedError(f"Terrain type '{self.terrain.type}' not supported yet in MuJoCo backend.")
+            if self.terrain.type == "plane":
+                model.asset.add(
+                    "texture",
+                    name="texplane",
+                    type="2d",
+                    builtin="checker",
+                    mark="edge",
+                    width=512,
+                    height=512,
+                    rgb1=[0.2, 0.3, 0.4],
+                    rgb2=[0.1, 0.2, 0.3],
+                    markrgb=[0.8, 0.8, 0.8],
+                )
+                model.asset.add(
+                    "material",
+                    name="matplane",
+                    texture="texplane",
+                    texrepeat=[2, 2],
+                    texuniform=True,
+                    reflectance="0.2",
+                    specular="0.2",
+                    shininess="0.4",
+                    emission="0.05",
+                )
+                model.worldbody.add(
+                    "geom",
+                    type="plane",
+                    pos="0 0 0",
+                    size="100 100 0.001",
+                    quat="1 0 0 0",
+                    condim="3",
+                    conaffinity="15",
+                    material="matplane",
+                    friction="1.0 0.005 0.0001",  # friction coefficients [sliding, torsional, rolling]
+                    solimp="0.9 0.95 0.001 0.5 2",  # restition parameters [min, max, margin, stiffness, damping]
+                    solref="0.02 1",  # contact stiffness and damping [timeconst, dampratio]
+                )
+                # FIXME: Temporary headlight settings (dm_control default is too low)
+                model.visual.headlight.diffuse = [0.6, 0.6, 0.6]
+                model.visual.headlight.ambient = [0.3, 0.3, 0.3]
+                model.visual.headlight.specular = [0.0, 0.0, 0.0]
+                model.visual.rgba.haze = [0.15, 0.25, 0.35, 1.0]
+            else:
+                raise NotImplementedError(f"Terrain type '{self.terrain.type}' not supported yet in MuJoCo backend.")
 
     def _add_objects(self, model: mjcf.RootElement) -> None:
         """Add individual objects to the model."""

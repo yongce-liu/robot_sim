@@ -4,7 +4,6 @@ from typing import Any
 
 import numpy as np
 import torch
-from loguru import logger
 
 from robot_sim.backends.types import ActionType, ArrayState, ArrayTypes, Buffer
 from robot_sim.configs import (
@@ -28,13 +27,17 @@ class BaseBackend(ABC):
         self.config: SimulatorConfig = config
         self.type: BackendType = config.backend
         self.cfg_phyx: PhysicsConfig = config.sim
+        self.objects: dict[str, ObjectConfig] = config.scene.objects  # robots + objects
+        self.terrain: TerrainConfig | None = config.scene.terrain
+        """
         if config.scene.path is None:
             self.objects: dict[str, ObjectConfig] = config.scene.objects  # robots + objects
-            self.terrain: TerrainConfig = config.scene.terrain
+            self.terrain: TerrainConfig | None = config.scene.terrain
         else:
             logger.info("Scene file provided, ignoring robots, objects, and terrain from config.")
             self.objects = {}
             self.terrain = None
+        """
         # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
 
         self._state_cache_expire = True

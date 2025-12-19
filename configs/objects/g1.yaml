@@ -2,7 +2,7 @@
 
 g1:
   type: robot
-  path: "assets/unitree/g1/g1_dex3_rev_1_0.xml"
+  path: "assets/robots/unitree/g1/g1_dex3_rev_1_0.xml"
   initial_position: [0.0, 0.0, 0.78]
   initial_orientation: [1.0, 0.0, 0.0, 0.0] # [w, x, y, z]
   joints:
@@ -29,7 +29,7 @@ g1:
 
 g2:
   type: robot
-  path: "assets/unitree/g1/g1_dex3_rev_1_0.xml"
+  path: "assets/robots/unitree/g1/g1_dex3_rev_1_0.xml"
   initial_position: [1.0, 0.0, 0.78]
   initial_orientation: [1.0, 0.0, 0.0, 0.0]
   joints:

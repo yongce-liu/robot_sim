@@ -21,5 +21,6 @@ hydra:
     chdir: false
 
 scene:
-  terrain:
-    type: plane
+  path: assets/scenes/gear_lab/gear_lab.xml
+  # terrain:
+  #   type: plane

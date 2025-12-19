@@ -1,6 +1,8 @@
 from dataclasses import MISSING, dataclass, field
 from enum import Enum
 
+from robot_sim.utils.config import configclass
+
 from .scene import SceneConfig
 
 
@@ -27,7 +29,7 @@ class PhysicsConfig:
     """Number of parallel simulation environments."""
 
 
-@dataclass
+@configclass
 class SimulatorConfig:
     backend: BackendType = MISSING
     sim: PhysicsConfig = MISSING
@@ -35,8 +37,8 @@ class SimulatorConfig:
     scene: SceneConfig = MISSING
     """Configuration for the simulation scene."""
 
-    @classmethod
-    def from_dict(cls, cfg_dict: dict):
+    @staticmethod
+    def _get_dacite_config():
         import dacite
 
         from robot_sim.configs.sensor import CameraConfig, SensorConfig, SensorType
@@ -62,8 +64,4 @@ class SimulatorConfig:
             strict=True,
         )
         # dacite will not call __post_init__
-        return dacite.from_dict(
-            data_class=cls,
-            data=cfg_dict,
-            config=dacite_config,
-        )
+        return dacite_config

@@ -7,133 +7,144 @@ import yaml
 from loguru import logger
 
 
-def to_dict(cls) -> dict[str, Any]:
+def _to_dict(cls) -> dict[str, Any]:
+    """Convert dataclass instance to dictionary."""
     return asdict(cls)
 
 
-def from_dict(cls, cfg_dict: dict):
-    # Collect annotations from all parent classes (MRO - Method Resolution Order)
-    field_types = {}
-    for base_cls in reversed(cls.__mro__):
-        if hasattr(base_cls, "__annotations__"):
-            field_types.update(base_cls.__annotations__)
+def _from_dict(cls, cfg_dict: dict):
+    """Load dataclass from dictionary using dacite with custom hooks support.
 
-    kwargs = {}
-    for field_name, field_type in field_types.items():
-        if field_name not in cfg_dict:
-            continue
-        value = cfg_dict[field_name]
+    Uses dacite library for robust dictionary-to-dataclass conversion.
 
-        # Direct nested config-like class
-        if hasattr(field_type, "from_dict"):
-            kwargs[field_name] = field_type.from_dict(value)
-            continue
+    Supports custom type hooks via class method:
+        @classmethod
+        def _get_dacite_config(cls) -> dacite.Config:
+            return dacite.Config(
+                type_hooks={
+                    CustomType: custom_hook_function,
+                },
+                ...
+            )
 
-        # Direct Enum field
-        if isinstance(field_type, type) and issubclass(field_type, Enum):
-            kwargs[field_name] = field_type(value)
-            continue
+    Automatically handles:
+    - Nested config classes with from_dict method
+    - Enum types (via cast=[Enum])
+    - List/Dict of config classes and enums
+    - Optional/Union types
+    """
+    import dacite
 
-        origin = getattr(field_type, "__origin__", None)
-        args = getattr(field_type, "__args__", ())
+    # Get custom dacite config from subclass if provided
+    # Default configuration
+    dacite_config = dacite.Config(
+        cast=[Enum],
+        strict=True,
+    )
 
-        # List[...] fields
-        if origin is list and args:
-            inner_type = args[0]
-            # List of Enums
-            if isinstance(inner_type, type) and issubclass(inner_type, Enum):
-                kwargs[field_name] = [inner_type(item) for item in value]
-            # List of nested config-like classes
-            elif hasattr(inner_type, "from_dict"):
-                kwargs[field_name] = [inner_type.from_dict(item) for item in value]
-            else:
-                kwargs[field_name] = value
-            continue
-        # Dict[...] fields
-        if origin is dict and args:
-            key_type, val_type = args
-            # Dict with Enum values
-            if isinstance(val_type, type) and issubclass(val_type, Enum):
-                kwargs[field_name] = {k: val_type(v) for k, v in value.items()}
-            # Dict with nested config-like class values
-            elif hasattr(val_type, "from_dict"):
-                kwargs[field_name] = {k: val_type.from_dict(v) for k, v in value.items()}
-            else:
-                kwargs[field_name] = value
-            continue
+    if hasattr(cls, "_get_dacite_config"):
+        _dacite_config = cls._get_dacite_config()
+        for key, value in vars(_dacite_config).items():
+            if value is not None:
+                setattr(dacite_config, key, value)
 
-        # Optional/Union types where first arg is Enum, e.g. ControlType | None
-        if args and any(isinstance(t, type) and issubclass(t, Enum) for t in args if t is not type(None)):
-            enum_type = next(t for t in args if t is not type(None) and isinstance(t, type) and issubclass(t, Enum))
-            kwargs[field_name] = None if value is None else enum_type(value)
-            continue
-
-        # Fallback: keep raw value
-        kwargs[field_name] = value
-    return cls(**kwargs)
+    # Use dacite to convert dictionary to dataclass
+    # dacite automatically handles nested classes with from_dict methods
+    return dacite.from_dict(
+        data_class=cls,
+        data=cfg_dict,
+        config=dacite_config,
+    )
 
 
-def from_yaml(cls, path: PathLike):
-    cfg_dict = yaml.safe_load(open(path))
-    cls.print()
+def _from_yaml(cls, path: PathLike):
+    """Load configuration from YAML file."""
+    with open(path) as f:
+        cfg_dict = yaml.safe_load(f)
     return cls.from_dict(cfg_dict)
 
 
-def save(cls, path: PathLike, type="yaml") -> None:
+def _save(cls, path: PathLike, save_type: str = "yaml") -> None:
+    """Save configuration to file."""
     cfg_dict = cls.to_dict()
     with open(path, "w") as f:
-        if type == "yaml":
-            yaml.dump(cfg_dict, f)
+        if save_type == "yaml":
+            yaml.dump(cfg_dict, f, default_flow_style=False)
         else:
-            raise ValueError(f"Unsupported save type: {type}")
+            raise ValueError(f"Unsupported save type: {save_type}")
 
 
-def print(cls) -> None:
+def _print(cls) -> None:
+    """Print configuration as YAML."""
     cfg_dict = cls.to_dict()
-    yaml_str = yaml.dump(cfg_dict)
+    yaml_str = yaml.dump(cfg_dict, default_flow_style=False)
     logger.info(f"Configuration:\n{yaml_str}")
 
 
-_ADD_METHODS = ["to_dict", "from_dict", "from_yaml", "save", "print"]
+_CONFIG_METHODS = {
+    "to_dict": _to_dict,
+    "from_dict": _from_dict,
+    "from_yaml": _from_yaml,
+    "save": _save,
+    "print": _print,
+}
 
 
-def configclass(_cls=None, **kwargs):
-    """Decorator to create a dataclass with additional configuration loading and saving methods.
+def configclass(_cls=None, **dataclass_kwargs):
+    """Decorator to create a dataclass with automatic configuration loading.
 
-    This decorator should be placed at the top (applied last):
-        @dataclass
-        @other_decorator
+    This decorator:
+    1. Wraps the class with @dataclass
+    2. Adds from_dict() method that recursively loads nested config classes
+    3. Adds utility methods: to_dict(), from_yaml(), save(), print()
+
+    The from_dict() method automatically handles:
+    - Nested config classes (any class with from_dict method)
+    - Enum types
+    - List[ConfigClass], List[Enum]
+    - Dict[K, ConfigClass], Dict[K, Enum]
+    - Optional/Union types
+
+    Usage:
+        @configclass
         class MyConfig:
-            ...
+            value: int
+            nested: NestedConfig
+            items: list[ItemConfig]
 
-    You can override any method in your class before applying the decorator:
-        @dataclass
+        config = MyConfig.from_dict({"value": 1, "nested": {...}, "items": [...]})
+
+    You can override any method by defining it in your class:
+        @configclass
         class MyConfig:
+            @classmethod
             def from_dict(cls, cfg_dict: dict):
                 # Custom implementation
                 ...
 
     Args:
-        _cls: The class to decorate
-        **kwargs: Additional arguments to pass to the dataclass decorator
+        _cls: The class to decorate (automatically passed when used without parentheses)
+        **dataclass_kwargs: Additional arguments to pass to @dataclass decorator
+
     Returns:
-        The decorated class with dataclass and config methods.
+        The decorated class with dataclass fields and config methods
     """
 
     def wrap(cls):
         # Apply dataclass decorator first
-        dataclass_cls = dataclass(**kwargs)(cls)
+        dataclass_cls = dataclass(**dataclass_kwargs)(cls)
 
         # Add configuration methods only if they don't already exist
         # This allows users to override them in their class definition
-        for method_name in _ADD_METHODS:
-            if hasattr(dataclass_cls, method_name):
-                continue
-            dataclass_cls_method = globals()[method_name]
-            setattr(dataclass_cls, method_name, classmethod(dataclass_cls_method))
+        for method_name, method_func in _CONFIG_METHODS.items():
+            if not hasattr(dataclass_cls, method_name):
+                setattr(dataclass_cls, method_name, classmethod(method_func))
+            else:
+                logger.debug(f"Method {method_name} already defined in {dataclass_cls.__name__}, skipping addition.")
 
         return dataclass_cls
 
+    # Support both @configclass and @configclass()
     if _cls is None:
         return wrap
     else:

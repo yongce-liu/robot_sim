@@ -142,8 +142,8 @@ observation_mapping:
 
 action_mapping:
   action.left_leg:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns: # same as observation mapping, need to ensure correct order
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns: # same as observation mapping, need to ensure correct order
         - left_hip_pitch.*
         - left_hip_roll.*
         - left_hip_yaw.*
@@ -151,8 +151,8 @@ action_mapping:
         - left_ankle_pitch.*
         - left_ankle_roll.*
   action.right_leg:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns:
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns:
         - right_hip_pitch.*
         - right_hip_roll.*
         - right_hip_yaw.*
@@ -160,14 +160,14 @@ action_mapping:
         - right_ankle_pitch.*
         - right_ankle_roll.*
   action.waist:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns:
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns:
         - waist_yaw.*
         - waist_roll.*
         - waist_pitch.*
   action.left_arm:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns:
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns:
         - left_shoulder_pitch.*
         - left_shoulder_roll.*
         - left_shoulder_yaw.*
@@ -176,8 +176,8 @@ action_mapping:
         - left_wrist_pitch.*
         - left_wrist_yaw.*
   action.left_hand:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns:
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns:
         - left_hand_thumb_0.*
         - left_hand_thumb_1.*
         - left_hand_thumb_2.*
@@ -186,8 +186,8 @@ action_mapping:
         - left_hand_index_0.*
         - left_hand_index_1.*
   action.right_arm:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns:
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns:
         - right_shoulder_pitch.*
         - right_shoulder_roll.*
         - right_shoulder_yaw.*
@@ -196,8 +196,8 @@ action_mapping:
         - right_wrist_pitch.*
         - right_wrist_yaw.*
   action.right_hand:
-    - robot_sim.adapters.gr00t.utils.act_joint_mapping
-    - joint_patterns:
+    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - actuator_patterns:
         - right_hand_thumb_0.*
         - right_hand_thumb_1.*
         - right_hand_thumb_2.*
@@ -205,35 +205,39 @@ action_mapping:
         - right_hand_middle_1.*
         - right_hand_index_0.*
         - right_hand_index_1.*
-    ######## EEF ########
-    ######## You can use IK to control the end-effector position and orientation ########
-    # action.left_wrist_pos:
-    #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
-    #   - body_patterns:
-    #       - left_wrist_yaw
-    #     mode: position
-    # action.left_wrist_abs_quat:
-    #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
-    #   - body_patterns:
-    #       - left_wrist_yaw
-    #     mode: quaternion
-    # action.right_wrist_pos:
-    #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
-    #   - body_patterns:
-    #       - right_wrist_yaw
-    #     mode: position
-    # action.right_wrist_abs_quat:
-    - robot_sim.adapters.gr00t.utils.act_eef_mapping
-    - body_patterns:
-        - right_wrist_yaw
-      mode: quaternion
+  ######## EEF ########
+  ######## You can use IK to control the end-effector position and orientation ########
+  # action.left_wrist_pos:
+  #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  #   - body_patterns:
+  #       - left_wrist_yaw
+  #     mode: position
+  # action.left_wrist_abs_quat:
+  #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  #   - body_patterns:
+  #       - left_wrist_yaw
+  #     mode: quaternion
+  # action.right_wrist_pos:
+  #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  #   - body_patterns:
+  #       - right_wrist_yaw
+  #     mode: position
+  # action.right_wrist_abs_quat:
+  # - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  # - body_patterns:
+  #     - right_wrist_yaw
+  #   mode: quaternion
   ######## High-level commands ########
   ######## You need to prepare a motion planner to convert high-level commands to low-level joint commands ########
   action.base_height_command:
-    - robot_sim.adapters.gr00t.utils.act_base_height_mapping
-    - command_patterns:
-        - base_height_command
+    - robot_sim.adapters.gr00t.utils.act_command_space_init
+    - command_dim: 1
+      bound:
+        min: [0.3]
+        max: [0.8]
   action.navigate_command:
-    - robot_sim.adapters.gr00t.utils.act_navigate_mapping
-    - command_patterns:
-        - navigate_command
+    - robot_sim.adapters.gr00t.utils.act_command_space_init
+    - command_dim: 3
+      bound:
+        min: [-1.0, -1.0, -3.14]
+        max: [1.0, 1.0, 3.14]

@@ -185,7 +185,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 2.45
     position_limit: [-1.04719755, 1.04719755]
     default_position: 0.0
@@ -193,7 +193,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-0.61086523, 1.04719755]
     default_position: 0.0
@@ -201,7 +201,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [0.0, 1.74532925]
     default_position: 0.0
@@ -209,7 +209,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.57079632, 0.0]
     default_position: 0.0
@@ -217,7 +217,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
     default_position: 0.0
@@ -225,7 +225,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.57079632, 0.0]
     default_position: 0.0
@@ -233,7 +233,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
     default_position: 0.0
@@ -297,7 +297,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 2.45
     position_limit: [-1.04719755, 1.04719755]
     default_position: 0.0
@@ -305,7 +305,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.04719755, 0.61086523]
     default_position: 0.0
@@ -313,7 +313,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
     default_position: 0.0
@@ -321,7 +321,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [0.0, 1.57079632]
     default_position: 0.0
@@ -329,7 +329,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [0.0, 1.74532925]
     default_position: 0.0
@@ -337,7 +337,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [0.0, 1.57079632]
     default_position: 0.0
@@ -345,7 +345,7 @@ joints:
     control_type: torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: inf
+    velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [0.0, 1.74532925]
     default_position: 0.0

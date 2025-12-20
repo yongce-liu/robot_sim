@@ -36,10 +36,13 @@ def obs_joint_state_split(
         for pattern in joint_patterns:
             rx = re.compile(pattern)
             matched_joint_indices = [joint_names.index(name) for name in joint_names if rx.fullmatch(name)]
+            assert len(matched_joint_indices) == 1, (
+                f"Expected exactly one joint to match pattern '{pattern}', but found {len(matched_joint_indices)}."
+            )
             _BUFFER[group_name].extend(matched_joint_indices)
         # initialize observation space
-        low_val = [env.robot_cfg.joints[name].position_limit[0] for name in joint_names]
-        high_val = [env.robot_cfg.joints[name].position_limit[1] for name in joint_names]
+        low_val = [env.robot_cfg.joints[joint_names[idx]].position_limit[0] for idx in _BUFFER[group_name]]
+        high_val = [env.robot_cfg.joints[joint_names[idx]].position_limit[1] for idx in _BUFFER[group_name]]
         env._observation_space_dict[group_name] = gym.spaces.Box(
             low=np.array(low_val, dtype=np.float32),
             high=np.array(high_val, dtype=np.float32),
@@ -47,11 +50,15 @@ def obs_joint_state_split(
             dtype=np.float32,
         )
         return None
+
     states: ArrayState = kwargs.get("robot_state")
     robot_state = states.objects[env.robot_name]
     if mode == "torque":
         return robot_state.joint_tau[..., _BUFFER[group_name]]
-    return robot_state.joint_pos[..., _BUFFER[group_name]]
+    elif mode == "position":
+        return robot_state.joint_pos[..., _BUFFER[group_name]]
+    else:
+        raise ValueError(f"Unsupported mode '{mode}' for joint_mapping. Available modes are 'position' and 'torque'.")
 
 
 def obs_body_state_split(
@@ -85,6 +92,7 @@ def obs_body_state_split(
         return None
     states: ArrayState = kwargs.get("robot_state")
     robot_state = states.objects[env.robot_name]
+
     if mode == "position":
         return robot_state.body_state[..., _BUFFER[group_name], :3]
     elif mode == "quaternion":  # [w, x, y, z]
@@ -92,7 +100,9 @@ def obs_body_state_split(
     elif mode == "pose":
         return robot_state.body_state[..., _BUFFER[group_name], :7]
     else:
-        raise ValueError(f"Unsupported mode '{mode}' for body_mapping.")
+        raise ValueError(
+            f"Unsupported mode '{mode}' for body_mapping. Available modes are 'position', 'quaternion', and 'pose'."
+        )
 
 
 def obs_video_mapping(
@@ -122,8 +132,8 @@ def obs_video_mapping(
             low=0,
             high=255,
             shape=(
-                env.robot_cfg.sensors[_BUFFER[group_name]].get("height"),
-                env.robot_cfg.sensors[_BUFFER[group_name]].get("width"),
+                env.robot_cfg.sensors[_BUFFER[group_name]].height,
+                env.robot_cfg.sensors[_BUFFER[group_name]].width,
                 3,
             ),  # Assuming fixed camera resolution; adjust as needed
             dtype=np.uint8,
@@ -151,3 +161,56 @@ def obs_annotation_mapping(
         )
         return None
     return _BUFFER[group_name]
+
+
+def act_actuator_space_init(
+    group_name: str,
+    env: Gr00tEnv,
+    actuator_patterns: list[str] | str,
+    **kwargs,
+) -> np.ndarray | None:
+    if not hasattr(env.action_mapping, group_name):
+        # Initialization buffer phase
+        if _BUFFER.get("actuator_names") is None:
+            _BUFFER["actuator_names"] = [
+                actuator.split("/")[-1].split(".")[-1] for actuator in env.backend.get_actuator_names(env.robot_name)
+            ]
+        actuator_names = _BUFFER.get("actuator_names")  # default order of actuators
+        if isinstance(actuator_patterns, str):
+            actuator_patterns = [actuator_patterns]
+        _BUFFER[group_name] = []
+        for pattern in actuator_patterns:
+            rx = re.compile(pattern)
+            matched_actuator_indices = [actuator_names.index(name) for name in actuator_names if rx.fullmatch(name)]
+            assert len(matched_actuator_indices) == 1, (
+                f"Expected exactly one actuator to match pattern '{pattern}', but found {len(matched_actuator_indices)}."
+            )
+            _BUFFER[group_name].extend(matched_actuator_indices)
+        # initialize action space
+        low_val = [env.robot_cfg.joints[actuator_names[idx]].position_limit[0] for idx in _BUFFER[group_name]]
+        high_val = [env.robot_cfg.joints[actuator_names[idx]].position_limit[1] for idx in _BUFFER[group_name]]
+        env._action_space_dict[group_name] = gym.spaces.Box(
+            low=np.array(low_val, dtype=np.float32),
+            high=np.array(high_val, dtype=np.float32),
+            shape=(len(_BUFFER[group_name]),),
+            dtype=np.float32,
+        )
+        return None
+
+
+def act_command_space_init(
+    group_name: str,
+    env: Gr00tEnv,
+    command_dim: int,
+    bound: dict[Literal["min", "max"], float | int | list[float] | list[int]] = {"min": -np.inf, "max": np.inf},
+    **kwargs,
+) -> np.ndarray | None:
+    if not hasattr(env.action_mapping, group_name):
+        # initialize action space
+        env._action_space_dict[group_name] = gym.spaces.Box(
+            low=np.array(bound.get("min"), dtype=np.float32),
+            high=np.array(bound.get("max"), dtype=np.float32),
+            shape=(command_dim,),
+            dtype=np.float32,
+        )
+        return None

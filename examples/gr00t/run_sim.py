@@ -7,6 +7,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 from robot_sim.adapters.gr00t import Gr00tConfig, Gr00tEnv
+from robot_sim.utils.helper import setup_logger
 
 PROJECT_ROOT = Path(__file__).parents[2].resolve()
 
@@ -18,6 +19,7 @@ def main(cfg: DictConfig) -> None:
     Args:
         cfg: Hydra configuration containing simulator_config, observation_mapping, action_mapping
     """
+    setup_logger()
     logger.info("Starting Gr00t simulation...")
 
     # Hydra automatically instantiates all _target_ in the config tree
@@ -28,8 +30,8 @@ def main(cfg: DictConfig) -> None:
     logger.info("Initializing Gr00tEnv...")
     env = Gr00tEnv(config=gr00t_cfg)
 
-    # logger.info(f"Observation space: {env.observation_space}")
-    # logger.info(f"Action space: {env.action_space}")
+    logger.info(f"Observation space: {env.observation_space}")
+    logger.info(f"Action space: {env.action_space}")
 
     # # Reset environment
     # logger.info("Resetting environment...")

@@ -7,14 +7,12 @@ interface to work with robot_sim's backend architecture.
 from typing import Any, Callable
 
 import gymnasium as gym
-import numpy as np
 from loguru import logger
 
 from robot_sim.adapters.gr00t.config import Gr00tConfig
-from robot_sim.adapters.gr00t.policy import Gr00tController
+from robot_sim.adapters.gr00t.controller import Gr00tController
 from robot_sim.backends.types import ActionType, ArrayState
 from robot_sim.configs import ObjectType
-from robot_sim.controllers import PIDController
 from robot_sim.envs.base import BaseEnv
 
 
@@ -36,13 +34,13 @@ class Gr00tEnv(BaseEnv):
     ) -> None:
         _robot_names = [
             obj_name
-            for obj_name, obj_cfg in config.simulator_config.scene.objects.item
+            for obj_name, obj_cfg in config.simulator_config.scene.objects.items()
             if obj_cfg.type == ObjectType.ROBOT
         ]
 
         assert len(_robot_names) == 1, "Only single robot supported in Gr00tEnv"
         assert config.simulator_config.sim.num_envs == 1, "Only single environment supported in Gr00tEnv"
-        super().__init__(config=config.simulator_config, **kwargs)
+        super().__init__(config=config.simulator_config, decimation=config.decimation, **kwargs)
         self.config = config
         self.robot_name = _robot_names[0]
         self.robot_cfg = config.simulator_config.scene.objects[self.robot_name]
@@ -51,6 +49,7 @@ class Gr00tEnv(BaseEnv):
         self._action_mapping: dict[str, Callable[[str, "Gr00tEnv"]]] = {}
         self._observation_space_dict: dict[str, gym.spaces.Space] = {}
         self._action_space_dict: dict[str, gym.spaces.Space] = {}
+        self.num_dofs = len(self.backend.get_actuator_names(self.robot_name))
 
         logger.info(f"{'=' * 20} Initializing Gr00tEnv {'=' * 20}")
 
@@ -60,28 +59,34 @@ class Gr00tEnv(BaseEnv):
 
         logger.info(f"Observation Space: {self.observation_space}\nAction Space: {self.action_space}")
 
-        self.controller = self._init_controller()
+        self.controller: Gr00tController = self._init_controller()
 
         logger.info(f"{'=' * 20} Gr00tEnv Initialized {'=' * 20}")
 
     def _init_observation_mapping_space(self) -> None:
-        for group_name, (Callable_fn, params) in self.config.observation_mapping.items():
-            Callable_fn(group_name, self, **params)
-            self._observation_mapping[group_name] = (Callable_fn, params)
+        for group_name, (callable_fn, params) in self.config.observation_mapping.items():
+            callable_fn(group_name, self, **params)
+            self._observation_mapping[group_name] = (callable_fn, params)
 
     def _init_action_mapping_space(self) -> None:
-        for group_name, (Callable_fn, params) in self.config.action_mapping.items():
-            Callable_fn(group_name, self, **params)
-            self._action_mapping[group_name] = (Callable_fn, params)
+        for group_name, (callable_fn, params) in self.config.action_mapping.items():
+            callable_fn(group_name, self, **params)
+            self._action_mapping[group_name] = (callable_fn, params)
 
-    def _init_controller(self) -> PIDController:
-        controller = Gr00tController()
-        return controller
+    def _init_controller(self) -> Gr00tController:
+        # controller = Gr00tController(self)
+        # return controller
+        pass
 
     def stateArray2observation(self, states: ArrayState) -> gym.spaces.Dict:
         observation_dict = {}
-        for group_name, (Callable_fn, params) in self._observation_mapping.items():
-            observation_dict[group_name] = Callable_fn(group_name, self, **params, states=states)
+        for group_name, (callable_fn, params) in self._observation_mapping.items():
+            observation_dict[group_name] = callable_fn(
+                group_name,
+                self,
+                **params,
+                states=states,
+            )
         return observation_dict
 
     def action2actionArray(self, action: dict[str, Any]) -> ActionType:
@@ -93,29 +98,27 @@ class Gr00tEnv(BaseEnv):
         Returns:
             Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
-        action_array = {}
-
-        # Convert joint position targets
-        if "q" in action:
-            q = np.asarray(action["q"], dtype=np.float32)
-            action_array["q"] = q
-
-        # Add torque if provided (for gravity compensation or additional control)
-        if "tau" in action:
-            tau = np.asarray(action["tau"], dtype=np.float32)
-            action_array["tau"] = tau
-        else:
-            action_array["tau"] = np.zeros(self.num_dofs, dtype=np.float32)
-
-        action_array = self.controller.compute(action_array)
+        action_array = self.controller.compute(action)
         return action_array
 
+    def compute_info(self, observation, action=None):
+        return {}
+
+    def compute_reward(self, observation, action=None):
+        return 0.0
+
+    def compute_terminated(self, observation, action=None):
+        return True
+
+    def compute_truncated(self, observation, action=None):
+        return True
+
     @property
-    def observation_mapping(self) -> dict[str, Callable[[str, "Gr00tEnv"]]]:
+    def observation_mapping(self) -> dict[str, Callable]:
         return self._observation_mapping
 
     @property
-    def action_mapping(self) -> dict[str, Callable[[str, "Gr00tEnv"]]]:
+    def action_mapping(self) -> dict[str, Callable]:
         return self._action_mapping
 
     @property

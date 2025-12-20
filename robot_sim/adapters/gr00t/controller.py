@@ -1,6 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from robot_sim.controllers import BaseController, CompositeController
+
+if TYPE_CHECKING:
+    from robot_sim.adapters.gr00t.env import Gr00tEnv
 
 
 class Gr00tWBCPolicy(BaseController):
@@ -28,13 +31,24 @@ class Gr00tController(CompositeController):
     aspects of the Gr00t robot's behavior.
     """
 
-    def __init__(self, controllers: dict[str, BaseController]) -> None:
+    def __init__(self, env: "Gr00tEnv") -> None:
+        self.env = env
+        controllers = {
+            "wbc": Gr00tWBCPolicy(
+                {
+                    # Initialize sub-controllers here
+                    # e.g., "high_level": HighLevelController(env),
+                    #       "pid": PIDController(env),
+                }
+            ),
+            # Add other controllers as needed
+        }
         super().__init__(controllers)
 
-    def compute(self, *args: Any, **kwargs: Any) -> Any:
+    def compute(self, action: dict[str, Any]) -> Any:
         # Implement routing logic specific to Gr00t here
         # For example, route commands to different sub-controllers
         results = {}
         for name, controller in self.controllers.items():
-            results[name] = controller.compute(*args, **kwargs)
+            results[name] = controller.compute(action)
         return results

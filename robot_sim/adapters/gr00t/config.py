@@ -1,11 +1,8 @@
 from dataclasses import MISSING
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 from robot_sim.configs import SimulatorConfig
 from robot_sim.utils.config import configclass
-
-if TYPE_CHECKING:
-    pass
 
 
 @configclass
@@ -36,6 +33,8 @@ class Gr00tConfig:
     - key (str): Action group name (e.g., "joint_positions", "gripper")
     - value (callable): Function that takes "Gr00tEnv" and returns action dict
     """
+    decimation: int = 1
+    """Number of simulation steps per environment step."""
 
     @staticmethod
     def get_dacite_config():

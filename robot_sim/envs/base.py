@@ -44,7 +44,7 @@ class BaseEnv(ABC, gym.Env):
         assert (render_mode == "human" and not config.sim.headless) or (
             render_mode == "rgb_array" or render_mode is None and not config.sim.headless
         ), f"Incompatible render_mode: {render_mode} and headless: {config.sim.headless} setting."
-        self._backend = BackendFactory.createbackend(config)
+        self._backend = BackendFactory.create_backend(config)
         self.render_mode = render_mode
 
         # Launch the backend if not already launched
@@ -54,6 +54,10 @@ class BaseEnv(ABC, gym.Env):
 
         self._observation_space: gym.Space = None  # to be defined in subclass
         self._action_space: gym.Space = None  # to be defined in subclass
+
+        # constant
+        self._decimation: int = kwargs.get("decimation", 1)
+        logger.info(f"Decimation factor set to: {self._decimation}")
 
     def reset(
         self,
@@ -103,11 +107,12 @@ class BaseEnv(ABC, gym.Env):
             info: Additional information dictionary.
         """
         # Convert action to backend format
-        action_array = self.action2actionArray(action)
+        for _ in range(self.decimation):
+            action_array = self.action2actionArray(action)
 
-        # Set action and simulate
-        self.backend.set_actions(action_array)
-        self.backend.simulate()
+            # Set action and simulate
+            self.backend.set_actions(action_array)
+            self.backend.simulate()
 
         # Get new state and observation
         states = self.backend.get_states()
@@ -239,3 +244,12 @@ class BaseEnv(ABC, gym.Env):
             initial_states: The initial state dictionary for backend.
         """
         return self._initial_states
+
+    @property
+    def decimation(self) -> int:
+        """Get the decimation factor for simulation steps.
+
+        Returns:
+            decimation: The number of simulation steps per environment step.
+        """
+        return self._decimation

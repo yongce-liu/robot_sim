@@ -214,6 +214,10 @@ class BaseBackend(ABC):
         """Get the body indices of all robots and objects."""
         return self._buffer_dict[name].body_names
 
+    def get_actuator_names(self, name: str) -> list[str]:
+        """Get the actuator names of all robots and objects."""
+        return self._buffer_dict[name].actuator_names
+
     # private functions
     # def get_sensors(self, name: str) -> dict[str, SensorConfig]:
     #     """Get the sensor configs of all robots and objects."""

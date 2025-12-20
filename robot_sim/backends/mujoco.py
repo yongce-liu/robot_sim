@@ -300,6 +300,7 @@ class MujocoBackend(BaseBackend):
         """Update joint and body name indices for the given model."""
         all_joints = model.find_all("joint")
         all_bodies = model.find_all("body")
+        actuator_names = [actuator.full_identifier for actuator in model.find_all("actuator")]
 
         for obj_name, obj_cfg in self.objects.items():
             # Only find joints and bodies belonging to this specific object
@@ -317,6 +318,10 @@ class MujocoBackend(BaseBackend):
                         continue
                     elif full_identifier not in self._buffer_dict[obj_name].joint_names:
                         self._buffer_dict[obj_name].joint_names.append(full_identifier)
+                        if full_identifier in actuator_names:
+                            self._buffer_dict[obj_name].actuator_names.append(full_identifier)
+                        else:
+                            logger.warning(f"Joint '{full_identifier}' in object '{obj_name}' is not actuated.")
                     else:
                         logger.error(f"Duplicate joint name detected: {full_identifier} in object {obj_name}")
 
@@ -379,15 +384,15 @@ class MujocoBackend(BaseBackend):
 
     def _get_action_indices(self, name: str) -> np.ndarray:
         if self._buffer_dict[name].action_indices is None:
-            joint_names = self.get_joint_names(name)
+            actuator_names = self.get_actuator_names(name)
             action_indices = []
-            for joint_name in joint_names:
+            for actuator_name in actuator_names:
                 try:
-                    actuator_id = self._mjcf_physics.model.actuator(joint_name).id
+                    actuator_id = self._mjcf_physics.model.actuator(actuator_name).id
                     action_indices.append(actuator_id)
-                    self._buffer_dict[name].actuator_names.append(joint_name)
+                    # self._buffer_dict[name].actuator_names.append(actuator_name)
                 except Exception:
-                    logger.warning(f"Joint '{joint_name}' in object '{name}' has no corresponding actuator.")
+                    logger.warning(f"Actuator '{actuator_name}' in object '{name}' cannot be found in MJCF Physics.")
             action_indices = np.array(action_indices, dtype=np.int32)
             self._buffer_dict[name].action_indices = action_indices
             return action_indices

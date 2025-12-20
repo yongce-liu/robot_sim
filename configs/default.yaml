@@ -5,7 +5,7 @@
 
 defaults:
   - _self_
-  - backends: mujoco.yaml
+  - backends/mujoco@_global_
   - objects/g1@scene.objects.g1
 # Hydra runtime configuration
 hydra:
@@ -39,7 +39,6 @@ scene:
       initial_orientation: [0.707, 0.0, 0.0, 0.707]
     g1:
       initial_position: [-1.0, 0.0, 0.78]
-
 
   # Example of adding a simple plane terrain
   # terrain:

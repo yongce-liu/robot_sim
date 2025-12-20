@@ -1,4 +1,4 @@
-# @package _global_
+# @package _group_
 # MuJoCo backend configuration
 
 backend: mujoco

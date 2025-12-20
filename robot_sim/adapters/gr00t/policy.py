@@ -3,7 +3,7 @@ from typing import Any
 from robot_sim.controllers import BaseController, CompositeController
 
 
-class Gr00tWBCPolicy(CompositeController):
+class Gr00tWBCPolicy(BaseController):
     """Whole-body control policy for Gr00t robot.
 
     This policy combines multiple controllers to produce whole-body commands
@@ -19,3 +19,22 @@ class Gr00tWBCPolicy(CompositeController):
         high_level_cmd = self.controllers["high_level"].compute(*args, **kwargs)
         low_level_cmd = self.controllers["pid"].compute(high_level_cmd)
         return low_level_cmd
+
+
+class Gr00tController(CompositeController):
+    """Composite controller for Gr00t robot.
+
+    This controller combines multiple sub-controllers to manage different
+    aspects of the Gr00t robot's behavior.
+    """
+
+    def __init__(self, controllers: dict[str, BaseController]) -> None:
+        super().__init__(controllers)
+
+    def compute(self, *args: Any, **kwargs: Any) -> Any:
+        # Implement routing logic specific to Gr00t here
+        # For example, route commands to different sub-controllers
+        results = {}
+        for name, controller in self.controllers.items():
+            results[name] = controller.compute(*args, **kwargs)
+        return results

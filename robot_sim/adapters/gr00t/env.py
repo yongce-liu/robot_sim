@@ -4,15 +4,16 @@ This module provides a wrapper environment that adapts gr00t_wbc's control
 interface to work with robot_sim's backend architecture.
 """
 
-from typing import Any
+from typing import Any, Callable
 
 import gymnasium as gym
 import numpy as np
-import regex as re
+from loguru import logger
 
 from robot_sim.adapters.gr00t.config import Gr00tConfig
+from robot_sim.adapters.gr00t.policy import Gr00tController
 from robot_sim.backends.types import ActionType, ArrayState
-from robot_sim.configs import ObjectType, SensorType
+from robot_sim.configs import ObjectType
 from robot_sim.controllers import PIDController
 from robot_sim.envs.base import BaseEnv
 
@@ -46,104 +47,42 @@ class Gr00tEnv(BaseEnv):
         self.robot_name = _robot_names[0]
         self.robot_cfg = config.simulator_config.scene.objects[self.robot_name]
 
-        self._observation_mapping = self._init_observation_mapping()
-        self._action_mapping = self._init_action_mapping()
+        self._observation_mapping: dict[str, Callable[str, Gr00tEnv, ...]] = {}
+        self._action_mapping: dict[str, Callable[str, Gr00tEnv, ...]] = {}
+        self._observation_space_dict: dict[str, gym.spaces.Space] = {}
+        self._action_space_dict: dict[str, gym.spaces.Space] = {}
 
-        self._observation_space = self._init_observation_space()
-        self._action_space = self._init_action_space()
+        logger.info(f"{'=' * 20} Initializing Gr00tEnv {'=' * 20}")
+
+        logger.info("Initializing observation and action mapping...")
+        self._init_observation_mapping_space()
+        self._init_action_mapping_space()
+
+        logger.info(f"Observation Space: {self.observation_space}\nAction Space: {self.action_space}")
 
         self.controller = self._init_controller()
 
-    def _init_observation_mapping(self) -> dict[str, list[int] | str]:
-        # initialize observation group mapping
-        joint_names = [joint.split("/")[-1].split(".")[-1] for joint in self.backend.get_joint_names(self.robot_name)]
-        observation_mapping = {}
-        for group_name, name_patterns in self.config.observation_mapping.items():
-            if group_name.startswith("state."):
-                if isinstance(name_patterns, str):
-                    name_patterns = [name_patterns]
-                observation_mapping[group_name] = []
-                for pattern in name_patterns:
-                    rx = re.compile(pattern)
-                    matched_joint_indices = [joint_names.index(name) for name in joint_names if rx.fullmatch(name)]
-                    observation_mapping[group_name].extend(matched_joint_indices)
-            elif group_name.startswith("video."):
-                if isinstance(name_patterns, str):
-                    name_patterns = [name_patterns]
-                observation_mapping[group_name] = []
-                for pattern in name_patterns:
-                    rx = re.compile(pattern)
-                    available_sensors = [
-                        name for name, cfg in self.robot_cfg.sensors.items() if cfg.type == SensorType.CAMERA
-                    ]
-                    matched_camera_names = [name for name in available_sensors if rx.fullmatch(name)]
-                    observation_mapping[group_name].extend(matched_camera_names)
-            elif group_name.startswith("annotation."):
-                assert isinstance(name_patterns, str), "Annotation pattern must be a string"
-                observation_mapping[group_name] = name_patterns
-            else:
-                raise ValueError(f"Unsupported observation group name: {group_name}")
-        return observation_mapping
+        logger.info(f"{'=' * 20} Gr00tEnv Initialized {'=' * 20}")
 
-    def _init_action_mapping(self) -> dict[str, list[int]]:
-        pass
+    def _init_observation_mapping_space(self) -> None:
+        for group_name, (Callable_fn, params) in self.config.observation_mapping.items():
+            Callable_fn(group_name, self, **params)
+            self._observation_mapping[group_name] = (Callable_fn, params)
 
-    def _init_observation_space(self) -> gym.spaces.Dict:
-        observation_space_dict = {}
-        joint_names = [joint.split("/")[-1].split(".")[-1] for joint in self.backend.get_joint_names(self.robot_name)]
-        for group_name, group_val in self._observation_mapping.items():
-            if group_name.startswith("state."):
-                low_val = [self.robot_cfg.joints[name].position_limit[0] for name in joint_names]
-                high_val = [self.robot_cfg.joints[name].position_limit[1] for name in joint_names]
-                observation_space_dict[group_name] = gym.spaces.Box(
-                    low=np.array(low_val, dtype=np.float32),
-                    high=np.array(high_val, dtype=np.float32),
-                    shape=(len(group_val),),
-                    dtype=np.float32,
-                )
-            elif group_name.startswith("video."):
-                observation_space_dict[group_name] = gym.spaces.Box(
-                    low=0,
-                    high=255,
-                    shape=(
-                        self.robot_cfg.sensors[group_val].get("height"),
-                        self.robot_cfg.sensors[group_val].get("width"),
-                        3,
-                    ),  # Assuming fixed camera resolution; adjust as needed
-                    dtype=np.uint8,
-                )
-            elif group_name.startswith("annotation."):
-                observation_space_dict[group_name] = gym.spaces.Text(
-                    max_length=1024, charset=self.config.allowed_language_charset
-                )
-            else:
-                raise ValueError(f"Unsupported observation group name: {group_name}")
-        return gym.spaces.Dict(observation_space_dict)
-
-    def _init_action_space(self) -> gym.spaces.Dict:
-        pass
+    def _init_action_mapping_space(self) -> None:
+        for group_name, (Callable_fn, params) in self.config.action_mapping.items():
+            Callable_fn(group_name, self, **params)
+            self._action_mapping[group_name] = (Callable_fn, params)
 
     def _init_controller(self) -> PIDController:
-        return PIDController(
-            kp=np.array([100.0] * self.num_dofs, dtype=np.float32),
-            ki=None,
-            kd=np.array([1.0] * self.num_dofs, dtype=np.float32),
-            dt=1.0 / self.config.simulator_config.sim.control_frequency,
-        )
+        controller = Gr00tController()
+        return controller
 
     def stateArray2observation(self, states: ArrayState) -> gym.spaces.Dict:
         observation_dict = {}
-        robot_state = states.objects[self.robot_name]
-        for group_name, group_val in self._observation_mapping.items():
-            if group_name.startswith("state."):
-                observation_dict[group_name] = robot_state.joint_pos[..., group_val]
-            elif group_name.startswith("video."):
-                observation_dict[group_name] = robot_state.sensors[group_val]["rgb"]
-            elif group_name.startswith("annotation."):
-                # For simplicity, return a placeholder annotation
-                observation_dict[group_name] = group_val
-            else:
-                raise ValueError(f"Unsupported observation group name: {group_name}")
+        for group_name, (Callable_fn, params) in self._observation_mapping.items():
+            observation_dict[group_name] = Callable_fn(group_name, self, **params, states=states)
+        return observation_dict
 
     def action2actionArray(self, action: dict[str, Any]) -> ActionType:
         """Convert action to backend format.
@@ -168,7 +107,24 @@ class Gr00tEnv(BaseEnv):
         else:
             action_array["tau"] = np.zeros(self.num_dofs, dtype=np.float32)
 
+        action_array = self.controller.compute(action_array)
         return action_array
+
+    @property
+    def observation_mapping(self) -> dict[str, Callable["Gr00tEnv", dict]]:
+        return self._observation_mapping
+
+    @property
+    def action_mapping(self) -> dict[str, Callable["Gr00tEnv", dict]]:
+        return self._action_mapping
+
+    @property
+    def observation_space(self) -> gym.spaces.Dict:
+        return gym.spaces.Dict(self._observation_space_dict)
+
+    @property
+    def action_space(self) -> gym.spaces.Dict:
+        return gym.spaces.Dict(self._action_space_dict)
 
     #     self.robot_name = robot_name
     #     self.enable_gravity_compensation = enable_gravity_compensation

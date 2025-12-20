@@ -1,7 +1,11 @@
 from dataclasses import MISSING
+from typing import TYPE_CHECKING, Callable
 
 from robot_sim.configs import SimulatorConfig
 from robot_sim.utils.config import configclass
+
+if TYPE_CHECKING:
+    pass
 
 
 @configclass
@@ -17,13 +21,46 @@ class Gr00tConfig:
     simulator_config: SimulatorConfig = MISSING
     """It can be loaded from a yaml file or defined inline."""
 
-    observation_mapping: dict[str, list[str] | str] = MISSING
-    """Mapping of observation groups to joint names, camera, ....; Support regex patterns."""
-    action_mapping: dict[str, list[str]] = MISSING
-    """Mapping of action groups to joint names; Support regex patterns."""
+    observation_mapping: dict[str, tuple[Callable, dict]] = MISSING
+    """
+    Mapping of observation group name to a tuple of (callable, config_dict).
+    - key (str): Observation group name (e.g., "proprio", "camera", "language")
+    - value (tuple): (processing_function, config_parameters)
+        - processing_function: Callable that takes "Gr00tEnv" and... returns processed observation dict
+        - config_parameters: Dict containing configuration for the processing function
+    You can refer to https://huggingface.co/datasets/nvidia/PhysicalAI-Robotics-GR00T-X-Embodiment-Sim/blob/main/unitree_g1.LMPnPAppleToPlateDC/meta/modality.json
+    """
+    action_mapping: dict[str, tuple[Callable, dict]] = MISSING
+    """
+    Mapping of action group name to action processing callable.
+    - key (str): Action group name (e.g., "joint_positions", "gripper")
+    - value (callable): Function that takes "Gr00tEnv" and returns action dict
+    """
 
-    allowed_language_charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.\n\t[]{}()!?'_:"
+    @staticmethod
+    def get_dacite_config():
+        import importlib
+        from enum import Enum
 
-    enable_gravity_compensation: bool = False
-    gravity_compensation_joints: list[str] = None
+        import dacite
 
+        def tuple_with_callable_hook(_data: list) -> tuple:
+            """Hook to handle tuple[Callable, dict] format in YAML."""
+            if isinstance(_data, list) and len(_data) == 2:
+                fn, params = _data
+                # Check if first item is a Callable spec with _target_
+                if isinstance(fn, str):
+                    module_path, func_name = fn.rsplit(".", 1)
+                    module = importlib.import_module(module_path)
+                    func = getattr(module, func_name)
+                    return (func, params)
+            return tuple(_data)
+
+        dacite_config = dacite.Config(
+            type_hooks={
+                tuple[Callable, dict]: tuple_with_callable_hook,
+            },
+            cast=[Enum],
+            strict=True,
+        )
+        return dacite_config

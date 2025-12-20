@@ -1,21 +1,67 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from os import PathLike
-from typing import Any
+from typing import Any, Union, get_args, get_origin
 
 import yaml
 from loguru import logger
 
 
-def _to_dict(cls) -> dict[str, Any]:
-    """Convert dataclass instance to dictionary."""
-    return asdict(cls)
+def _process_field_value(value, field_type):
+    """Recursively process field value based on its type.
+
+    If the field type has a from_dict method, use it to convert the value.
+    Otherwise, handle List/Dict/Union types recursively.
+    """
+    # If value is None, return as is
+    if value is None:
+        return value
+
+    # Get the origin type (e.g., list, dict, Union)
+    origin = get_origin(field_type)
+
+    # Handle Optional[T] (which is Union[T, None])
+    if origin is Union:
+        args = get_args(field_type)
+        # Try each type in the union (skip NoneType)
+        for arg in args:
+            if arg is type(None):
+                continue
+            try:
+                return _process_field_value(value, arg)
+            except Exception:
+                continue
+        return value
+
+    # Handle List[T]
+    if origin is list:
+        args = get_args(field_type)
+        if args and isinstance(value, list):
+            item_type = args[0]
+            return [_process_field_value(item, item_type) for item in value]
+        return value
+
+    # Handle Dict[K, V]
+    if origin is dict:
+        args = get_args(field_type)
+        if len(args) == 2 and isinstance(value, dict):
+            value_type = args[1]
+            return {k: _process_field_value(v, value_type) for k, v in value.items()}
+        return value
+
+    # Handle classes with from_dict method (recursive call)
+    if isinstance(value, dict) and hasattr(field_type, "from_dict") and callable(getattr(field_type, "from_dict")):
+        return field_type.from_dict(value)
+
+    return value
 
 
+# class method
 def _from_dict(cls, cfg_dict: dict):
     """Load dataclass from dictionary using dacite with custom hooks support.
 
-    Uses dacite library for robust dictionary-to-dataclass conversion.
+    First recursively processes nested config classes with from_dict method,
+    then uses dacite library for robust dictionary-to-dataclass conversion.
 
     Supports custom type hooks via class method:
         @classmethod
@@ -35,6 +81,19 @@ def _from_dict(cls, cfg_dict: dict):
     """
     import dacite
 
+    # Get type hints for the class
+    type_hints = cls.__annotations__ if hasattr(cls, "__annotations__") else {}
+
+    # Process nested config classes with from_dict method recursively
+    processed_dict = {}
+    for key, value in cfg_dict.items():
+        if key not in type_hints:
+            processed_dict[key] = value
+            continue
+
+        field_type = type_hints[key]
+        processed_dict[key] = _process_field_value(value, field_type)
+
     # Get custom dacite config from subclass if provided
     # Default configuration
     dacite_config = dacite.Config(
@@ -49,10 +108,10 @@ def _from_dict(cls, cfg_dict: dict):
                 setattr(dacite_config, key, value)
 
     # Use dacite to convert dictionary to dataclass
-    # dacite automatically handles nested classes with from_dict methods
+    # dacite handles remaining type conversions
     return dacite.from_dict(
         data_class=cls,
-        data=cfg_dict,
+        data=processed_dict,
         config=dacite_config,
     )
 
@@ -64,9 +123,15 @@ def _from_yaml(cls, path: PathLike):
     return cls.from_dict(cfg_dict)
 
 
-def _save(cls, path: PathLike, save_type: str = "yaml") -> None:
+# instance method
+def _to_dict(self) -> dict[str, Any]:
+    """Convert dataclass instance to dictionary."""
+    return asdict(self)
+
+
+def _save(self, path: PathLike, save_type: str = "yaml") -> None:
     """Save configuration to file."""
-    cfg_dict = cls.to_dict()
+    cfg_dict = self.to_dict()
     with open(path, "w") as f:
         if save_type == "yaml":
             yaml.dump(cfg_dict, f, default_flow_style=False)
@@ -74,17 +139,20 @@ def _save(cls, path: PathLike, save_type: str = "yaml") -> None:
             raise ValueError(f"Unsupported save type: {save_type}")
 
 
-def _print(cls) -> None:
+def _print(self) -> None:
     """Print configuration as YAML."""
-    cfg_dict = cls.to_dict()
+    cfg_dict = self.to_dict()
     yaml_str = yaml.dump(cfg_dict, default_flow_style=False)
     logger.info(f"Configuration:\n{yaml_str}")
 
 
-_CONFIG_METHODS = {
-    "to_dict": _to_dict,
+_CLASS_METHODS = {
     "from_dict": _from_dict,
     "from_yaml": _from_yaml,
+}
+
+_INSTANCE_METHODS = {
+    "to_dict": _to_dict,
     "save": _save,
     "print": _print,
 }
@@ -136,12 +204,17 @@ def configclass(_cls=None, **dataclass_kwargs):
 
         # Add configuration methods only if they don't already exist
         # This allows users to override them in their class definition
-        for method_name, method_func in _CONFIG_METHODS.items():
+        for method_name, method_func in _CLASS_METHODS.items():
             if not hasattr(dataclass_cls, method_name):
                 setattr(dataclass_cls, method_name, classmethod(method_func))
             else:
                 logger.debug(f"Method {method_name} already defined in {dataclass_cls.__name__}, skipping addition.")
 
+        for method_name, method_func in _INSTANCE_METHODS.items():
+            if not hasattr(dataclass_cls, method_name):
+                setattr(dataclass_cls, method_name, method_func)
+            else:
+                logger.debug(f"Method {method_name} already defined in {dataclass_cls.__name__}, skipping addition.")
         return dataclass_cls
 
     # Support both @configclass and @configclass()

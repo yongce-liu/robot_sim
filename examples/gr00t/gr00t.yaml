@@ -46,7 +46,7 @@ simulator_config:
 
 observation_mapping:
   state.left_leg:
-    - _target_: robot_sim.adapters.gr00t.utils.joint_mapping
+    - robot_sim.adapters.gr00t.utils.joint_mapping
     - joint_patterns:
         - left_hip_x
         - left_hip_y
@@ -54,10 +54,11 @@ observation_mapping:
         - left_knee
         - left_ankle_y
         - left_ankle_x
+      tmp: 0
 
 action_mapping:
   action.left_leg:
-    - _target_: robot_sim.adapters.gr00t.utils.joint_mapping
+    - robot_sim.adapters.gr00t.utils.joint_mapping
     - joint_patterns:
         - left_hip_x
         - left_hip_y

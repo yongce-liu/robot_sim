@@ -4,50 +4,19 @@ This module provides a wrapper environment that adapts gr00t_wbc's control
 interface to work with robot_sim's backend architecture.
 """
 
-from dataclasses import MISSING
 from typing import Any
 
 import gymnasium as gym
 import numpy as np
 import regex as re
 
+from robot_sim.adapters.gr00t.config import Gr00tConfig
 from robot_sim.backends.types import ActionType, ArrayState
-from robot_sim.configs import ObjectType, SensorType, SimulatorConfig
+from robot_sim.configs import ObjectType, SensorType
 from robot_sim.controllers import PIDController
 from robot_sim.envs.base import BaseEnv
-from robot_sim.utils.config import configclass
 
 
-#################################################
-############### Gr00tEnv Config ################
-#################################################
-@configclass
-class Gr00tEnvConfig:
-    """Configuration for Gr00tEnv.
-
-    Attributes:
-        robot_name: Name of the robot (e.g., "g1", "gr1")
-        enable_gravity_compensation: Whether to enable gravity compensation
-        gravity_compensation_joints: List of joint groups for gravity compensation
-    """
-
-    simulator_config: SimulatorConfig = MISSING
-    """It can be loaded from a yaml file or defined inline."""
-
-    observation_mapping: dict[str, list[str] | str] = MISSING
-    """Mapping of observation groups to joint names, camera, ....; Support regex patterns."""
-    action_mapping: dict[str, list[str]] = MISSING
-    """Mapping of action groups to joint names; Support regex patterns."""
-
-    allowed_language_charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.\n\t[]{}()!?'_:"
-
-    enable_gravity_compensation: bool = False
-    gravity_compensation_joints: list[str] = None
-
-
-#################################################
-############### Gr00tEnv ################
-#################################################
 class Gr00tEnv(BaseEnv):
     """Environment wrapper for gr00t experiments.
 
@@ -61,7 +30,7 @@ class Gr00tEnv(BaseEnv):
 
     def __init__(
         self,
-        config: Gr00tEnvConfig | None = None,
+        config: Gr00tConfig | None = None,
         **kwargs,
     ) -> None:
         _robot_names = [

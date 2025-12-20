@@ -6,7 +6,7 @@ import hydra
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-from robot_sim.adapters.gr00t import Gr00tConfig
+from robot_sim.adapters.gr00t import Gr00tConfig, Gr00tEnv
 
 PROJECT_ROOT = Path(__file__).parents[2].resolve()
 
@@ -24,9 +24,9 @@ def main(cfg: DictConfig) -> None:
     gr00t_cfg = Gr00tConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
     gr00t_cfg.print()
 
-    # # Initialize Gr00tEnv
-    # logger.info("Initializing Gr00tEnv...")
-    # env = Gr00tEnv(config=gr00t_cfg)
+    # Initialize Gr00tEnv
+    logger.info("Initializing Gr00tEnv...")
+    env = Gr00tEnv(config=gr00t_cfg)
 
     # logger.info(f"Observation space: {env.observation_space}")
     # logger.info(f"Action space: {env.action_space}")

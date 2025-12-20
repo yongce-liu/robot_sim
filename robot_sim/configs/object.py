@@ -36,6 +36,8 @@ class JointConfig:
     """Position limits of the actuator [min, max]."""
     control_type: ControlType | None = MISSING
     """Control type of the actuator."""
+    default_position: float = MISSING
+    """Default position of the actuator."""
     stiffness: float | None = None
     """Stiffness of the actuator."""
     damping: float | None = None

@@ -47,8 +47,8 @@ class Gr00tEnv(BaseEnv):
         self.robot_name = _robot_names[0]
         self.robot_cfg = config.simulator_config.scene.objects[self.robot_name]
 
-        self._observation_mapping: dict[str, Callable[str, Gr00tEnv, ...]] = {}
-        self._action_mapping: dict[str, Callable[str, Gr00tEnv, ...]] = {}
+        self._observation_mapping: dict[str, Callable[[str, "Gr00tEnv"]]] = {}
+        self._action_mapping: dict[str, Callable[[str, "Gr00tEnv"]]] = {}
         self._observation_space_dict: dict[str, gym.spaces.Space] = {}
         self._action_space_dict: dict[str, gym.spaces.Space] = {}
 

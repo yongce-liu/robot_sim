@@ -6,7 +6,7 @@
 defaults:
   - _self_
   - backends/mujoco@_global_
-  - objects/g1@scene.objects.g1
+  - robots/unitree_g1@scene.objects.g1
 # Hydra runtime configuration
 hydra:
   run:

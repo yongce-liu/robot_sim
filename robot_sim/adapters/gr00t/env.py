@@ -88,10 +88,10 @@ class Gr00tEnv(BaseEnv):
         """Convert action to backend format.
 
         Args:
-            action: Action dictionary with 'q' (target joint positions) and optionally 'tau'
+            action: Action dictionary with key group names and values
 
         Returns:
-            Action dictionary in backend format
+            Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
         action_array = {}
 
@@ -111,11 +111,11 @@ class Gr00tEnv(BaseEnv):
         return action_array
 
     @property
-    def observation_mapping(self) -> dict[str, Callable["Gr00tEnv", dict]]:
+    def observation_mapping(self) -> dict[str, Callable[[str, "Gr00tEnv"]]]:
         return self._observation_mapping
 
     @property
-    def action_mapping(self) -> dict[str, Callable["Gr00tEnv", dict]]:
+    def action_mapping(self) -> dict[str, Callable[[str, "Gr00tEnv"]]]:
         return self._action_mapping
 
     @property

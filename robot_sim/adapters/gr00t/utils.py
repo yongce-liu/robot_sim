@@ -1,18 +1,22 @@
+from typing import Literal
+
 import gymnasium as gym
 import numpy as np
 import regex as re
 
 from robot_sim.adapters.gr00t.env import Gr00tEnv
+from robot_sim.backends.types import ArrayState
 from robot_sim.configs.sensor import SensorType
 
 _ALLOWED_LANGUAGE_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.\n\t[]{}()!?'_:"
 _BUFFER: dict[str, any] = {}
 
 
-def joint_mapping(
+def obs_joint_state_split(
     group_name: str,
     env: Gr00tEnv,
     joint_patterns: list[str] | str,
+    mode: Literal["position", "torque"] = "position",
     **kwargs,
 ) -> np.ndarray | None:
     """Two Phases:
@@ -43,21 +47,64 @@ def joint_mapping(
             dtype=np.float32,
         )
         return None
-    states = kwargs.get("robot_state")
+    states: ArrayState = kwargs.get("robot_state")
     robot_state = states.objects[env.robot_name]
+    if mode == "torque":
+        return robot_state.joint_tau[..., _BUFFER[group_name]]
     return robot_state.joint_pos[..., _BUFFER[group_name]]
 
 
-def video_mapping(
+def obs_body_state_split(
     group_name: str,
     env: Gr00tEnv,
-    camera_pattern: str,
+    body_patterns: list[str] | str,
+    mode: Literal["position", "quaternion", "pose"] = "pose",
     **kwargs,
 ) -> np.ndarray | None:
     if not hasattr(env.observation_mapping, group_name):
-        assert isinstance(camera_pattern, str), "Camera pattern must be a string"
         # Initialization buffer phase
-        rx = re.compile(camera_pattern)
+        if _BUFFER.get("body_names") is None:
+            _BUFFER["body_names"] = [
+                body.split("/")[-1].split(".")[-1] for body in env.backend.get_body_names(env.robot_name)
+            ]
+        body_names = _BUFFER.get("body_names")
+        if isinstance(body_patterns, str):
+            body_patterns = [body_patterns]
+        _BUFFER[group_name] = []
+        for pattern in body_patterns:
+            rx = re.compile(pattern)
+            matched_body_indices = [body_names.index(name) for name in body_names if rx.fullmatch(name)]
+            _BUFFER[group_name].extend(matched_body_indices)
+        # initialize observation space
+        env._observation_space_dict[group_name] = gym.spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(len(_BUFFER[group_name]), 7),  # Assuming position (3) + orientation (4 as quaternion)
+            dtype=np.float32,
+        )
+        return None
+    states: ArrayState = kwargs.get("robot_state")
+    robot_state = states.objects[env.robot_name]
+    if mode == "position":
+        return robot_state.body_state[..., _BUFFER[group_name], :3]
+    elif mode == "quaternion":  # [w, x, y, z]
+        return robot_state.body_quat[..., _BUFFER[group_name], 3:7]
+    elif mode == "pose":
+        return robot_state.body_state[..., _BUFFER[group_name], :7]
+    else:
+        raise ValueError(f"Unsupported mode '{mode}' for body_mapping.")
+
+
+def obs_video_mapping(
+    group_name: str,
+    env: Gr00tEnv,
+    camera_name: str,
+    **kwargs,
+) -> np.ndarray | None:
+    if not hasattr(env.observation_mapping, group_name):
+        assert isinstance(camera_name, str), "Camera name must be a string"
+        # Initialization buffer phase
+        rx = re.compile(camera_name)
         if _BUFFER.get("camera_names") is None:
             _BUFFER["camera_names"] = [
                 name.split("/")[-1].split(".")[-1]
@@ -67,7 +114,7 @@ def video_mapping(
         available_cameras = _BUFFER["camera_names"]
         matched_camera_names = [name for name in available_cameras if rx.fullmatch(name)]
         assert len(matched_camera_names) == 1, (
-            f"Expected exactly one camera to match pattern '{camera_pattern}', but found {len(matched_camera_names)}."
+            f"Expected exactly one camera to match camera '{camera_name}', but found {len(matched_camera_names)}."
         )
         _BUFFER[group_name] = matched_camera_names[0]
         # initialize observation space
@@ -88,16 +135,16 @@ def video_mapping(
     return robot_state.sensors[_BUFFER[group_name]]["rgb"]
 
 
-def annotation_mapping(
+def obs_annotation_mapping(
     group_name: str,
     env: Gr00tEnv,
-    annotation_text: str,
+    description: str,
     **kwargs,
 ) -> str | None:
     if not hasattr(env.observation_mapping, group_name):
         # Initialization buffer phase
-        assert isinstance(annotation_text, str), "Annotation text must be a string"
-        _BUFFER[group_name] = annotation_text
+        assert isinstance(description, str), "Annotation text must be a string"
+        _BUFFER[group_name] = description
         # initialize observation space
         env._observation_space_dict[group_name] = gym.spaces.Text(
             max_length=kwargs.get("max_length", 1024), charset=kwargs.get("charset", _ALLOWED_LANGUAGE_CHARSET)

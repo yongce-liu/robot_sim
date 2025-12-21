@@ -14,8 +14,7 @@ from robot_sim.utils.helper import setup_logger
 PROJECT_ROOT = Path(__file__).parents[2].resolve()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_ROOT), config_name="/examples/gr00t/pick_place")
-def main(cfg: DictConfig) -> None:
+def run(cfg: DictConfig) -> None:
     """Run Gr00t simulation.
 
     Args:
@@ -61,6 +60,20 @@ def main(cfg: DictConfig) -> None:
 
     # logger.info("Gr00t simulation completed successfully!")
     # env.close()
+
+
+@hydra.main(version_base=None, config_path=str(PROJECT_ROOT), config_name="/examples/gr00t/pick_place")
+def main(cfg: DictConfig) -> None:
+    """Main function to run Gr00t simulation with Hydra configuration.
+
+    Args:
+        cfg: Hydra configuration
+    """
+    try:
+        run(cfg)
+    except Exception as e:
+        logger.exception(f"An error occurred in main: {e}")
+        raise e
 
 
 if __name__ == "__main__":

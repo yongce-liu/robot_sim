@@ -1,7 +1,7 @@
-from .config import Gr00tEnvConfig, Gr00tTaskConfig
-from .controller import Gr00tController
-from .env import Gr00tEnv
-from .tasks import registered_tasks
+from .controller import Gr00tWBCController
+from .gr00t_env import Gr00tWBCEnv
 
-registered_tasks()
-__all__ = ["Gr00tEnvConfig", "Gr00tTaskConfig", "Gr00tEnv", "Gr00tController"]
+# Import tasks to trigger registration with gym.registry
+from . import tasks  # noqa: F401
+
+__all__ = ["Gr00tWBCEnv", "Gr00tWBCController"]

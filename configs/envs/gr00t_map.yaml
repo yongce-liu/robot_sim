@@ -5,33 +5,11 @@
 
 defaults:
   - _self_
-  - /configs/backends/mujoco.yaml@simulator_config
-  - /configs/robots/unitree_g1_dex3.yaml@simulator_config.scene.objects.g1
 
-simulator_config:
-  scene:
-    path: assets/scenes/gear_lab/gear_lab.xml
-    objects:
-      apple:
-        path: assets/objects/apple_0/model.xml
-        # initial_position: [0.4, 0.0, 0.684446]
-        initial_position: [0.4, 0.0, 0.7]
-        # initial_orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
-      plate:
-        path: assets/objects/plate_1/model.xml
-        initial_position: [0.4, 1.2, 0.7]
-      object_table:
-        path: assets/objects/lab_table/model.xml
-        initial_position: [0.5, 0.0, 0.0]
-        initial_orientation: [0.707, 0.0, 0.0, 0.707]
-      target_table:
-        path: assets/objects/lab_table/model.xml
-        initial_position: [0.5, 1.2, 0.0]
-        initial_orientation: [0.707, 0.0, 0.0, 0.707]
-      g1:
-        initial_position: [-1.0, 0.0, 0.78]
+decimation: 4
+max_episode_steps: 1000
 
-observation_mapping:
+observation_map:
   state.left_leg:
     - robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns: # Need to ensure correct order, so provide full names here
@@ -120,17 +98,17 @@ observation_mapping:
       mode: quaternion
   ######## Video ########
   video.ego_view:
-    - robot_sim.adapters.gr00t.utils.obs_video_mapping
+    - robot_sim.adapters.gr00t.utils.obs_video_map
     - camera_name: head_camera
   ######## Task Description ########
   annotation.human.task_description:
-    - robot_sim.adapters.gr00t.utils.obs_annotation_mapping
+    - robot_sim.adapters.gr00t.utils.obs_annotation_map
     - description: pick up the apple, walk left, and place the apple on the plate
 
-action_mapping:
+action_map:
   action.left_leg:
     - robot_sim.adapters.gr00t.utils.act_actuator_space_init
-    - actuator_patterns: # same as observation mapping, need to ensure correct order
+    - actuator_patterns: # same as observation map, need to ensure correct order
         - left_hip_pitch.*
         - left_hip_roll.*
         - left_hip_yaw.*
@@ -195,22 +173,22 @@ action_mapping:
   ######## EEF ########
   ######## You can use IK to control the end-effector position and orientation ########
   # action.left_wrist_pos:
-  #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  #   - robot_sim.adapters.gr00t.utils.act_eef_map
   #   - body_patterns:
   #       - left_wrist_yaw
   #     mode: position
   # action.left_wrist_abs_quat:
-  #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  #   - robot_sim.adapters.gr00t.utils.act_eef_map
   #   - body_patterns:
   #       - left_wrist_yaw
   #     mode: quaternion
   # action.right_wrist_pos:
-  #   - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  #   - robot_sim.adapters.gr00t.utils.act_eef_map
   #   - body_patterns:
   #       - right_wrist_yaw
   #     mode: position
   # action.right_wrist_abs_quat:
-  # - robot_sim.adapters.gr00t.utils.act_eef_mapping
+  # - robot_sim.adapters.gr00t.utils.act_eef_map
   # - body_patterns:
   #     - right_wrist_yaw
   #   mode: quaternion

@@ -1,0 +1,49 @@
+# @package _global_
+
+# Hydra runtime configuration
+
+hydra:
+  run:
+    dir: outputs/debug
+  sweep:
+    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false
+
+defaults:
+  - _self_
+  - /configs/envs/gr00t_map.yaml@env_config
+  - /configs/backends/mujoco.yaml@env_config.simulator_config
+  - /configs/robots/unitree_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1
+
+env_config:
+  simulator_config:
+    scene:
+      path: assets/scenes/gear_lab/gear_lab.xml
+      objects:
+        apple:
+          path: assets/objects/apple_0/model.xml
+          # initial_position: [0.4, 0.0, 0.684446]
+          initial_position: [0.4, 0.0, 0.7]
+          # initial_orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
+        plate:
+          path: assets/objects/plate_1/model.xml
+          initial_position: [0.4, 1.2, 0.7]
+        object_table:
+          path: assets/objects/lab_table/model.xml
+          initial_position: [0.5, 0.0, 0.0]
+          initial_orientation: [0.707, 0.0, 0.0, 0.707]
+        target_table:
+          path: assets/objects/lab_table/model.xml
+          initial_position: [0.5, 1.2, 0.0]
+          initial_orientation: [0.707, 0.0, 0.0, 0.707]
+        g1:
+          initial_position: [-1.0, 0.0, 0.78]
+
+task: Gr00tPickAndPlace-v0
+
+params:
+  object_name: apple
+  target_name: plate
+  success_threshold: 0.05

@@ -4,9 +4,9 @@ import gymnasium as gym
 import numpy as np
 import regex as re
 
-from robot_sim.adapters.gr00t.env import Gr00tEnv
 from robot_sim.backends.types import ArrayState
 from robot_sim.configs.sensor import SensorType
+from robot_sim.envs import MapEnv
 
 _ALLOWED_LANGUAGE_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.\n\t[]{}()!?'_:"
 _BUFFER: dict[str, any] = {}
@@ -14,7 +14,7 @@ _BUFFER: dict[str, any] = {}
 
 def obs_joint_state_split(
     group_name: str,
-    env: Gr00tEnv,
+    env: MapEnv,
     joint_patterns: list[str] | str,
     mode: Literal["position", "torque"] = "position",
     **kwargs,
@@ -23,7 +23,7 @@ def obs_joint_state_split(
     1. Initialize _BUFFER through the key
     2. Output the observation value of the corresponding group once called
     """
-    if not hasattr(env.observation_mapping, group_name):
+    if not hasattr(env.observation_map, group_name):
         # Initialization buffer phase
         if _BUFFER.get("joint_names") is None:
             _BUFFER["joint_names"] = [
@@ -58,17 +58,17 @@ def obs_joint_state_split(
     elif mode == "position":
         return robot_state.joint_pos[..., _BUFFER[group_name]]
     else:
-        raise ValueError(f"Unsupported mode '{mode}' for joint_mapping. Available modes are 'position' and 'torque'.")
+        raise ValueError(f"Unsupported mode '{mode}' for joint_map. Available modes are 'position' and 'torque'.")
 
 
 def obs_body_state_split(
     group_name: str,
-    env: Gr00tEnv,
+    env: MapEnv,
     body_patterns: list[str] | str,
     mode: Literal["position", "quaternion", "pose"] = "pose",
     **kwargs,
 ) -> np.ndarray | None:
-    if not hasattr(env.observation_mapping, group_name):
+    if not hasattr(env.observation_map, group_name):
         # Initialization buffer phase
         if _BUFFER.get("body_names") is None:
             _BUFFER["body_names"] = [
@@ -90,6 +90,7 @@ def obs_body_state_split(
             dtype=np.float32,
         )
         return None
+
     states: ArrayState = kwargs.get("robot_state")
     robot_state = states.objects[env.robot_name]
 
@@ -101,17 +102,17 @@ def obs_body_state_split(
         return robot_state.body_state[..., _BUFFER[group_name], :7]
     else:
         raise ValueError(
-            f"Unsupported mode '{mode}' for body_mapping. Available modes are 'position', 'quaternion', and 'pose'."
+            f"Unsupported mode '{mode}' for body_map. Available modes are 'position', 'quaternion', and 'pose'."
         )
 
 
-def obs_video_mapping(
+def obs_video_map(
     group_name: str,
-    env: Gr00tEnv,
+    env: MapEnv,
     camera_name: str,
     **kwargs,
 ) -> np.ndarray | None:
-    if not hasattr(env.observation_mapping, group_name):
+    if not hasattr(env.observation_map, group_name):
         assert isinstance(camera_name, str), "Camera name must be a string"
         # Initialization buffer phase
         rx = re.compile(camera_name)
@@ -145,13 +146,13 @@ def obs_video_mapping(
     return robot_state.sensors[_BUFFER[group_name]]["rgb"]
 
 
-def obs_annotation_mapping(
+def obs_annotation_map(
     group_name: str,
-    env: Gr00tEnv,
+    env: MapEnv,
     description: str,
     **kwargs,
 ) -> str | None:
-    if not hasattr(env.observation_mapping, group_name):
+    if not hasattr(env.observation_map, group_name):
         # Initialization buffer phase
         assert isinstance(description, str), "Annotation text must be a string"
         _BUFFER[group_name] = description
@@ -165,11 +166,11 @@ def obs_annotation_mapping(
 
 def act_actuator_space_init(
     group_name: str,
-    env: Gr00tEnv,
+    env: MapEnv,
     actuator_patterns: list[str] | str,
     **kwargs,
 ) -> np.ndarray | None:
-    if not hasattr(env.action_mapping, group_name):
+    if not hasattr(env.action_map, group_name):
         # Initialization buffer phase
         if _BUFFER.get("actuator_names") is None:
             _BUFFER["actuator_names"] = [
@@ -200,12 +201,12 @@ def act_actuator_space_init(
 
 def act_command_space_init(
     group_name: str,
-    env: Gr00tEnv,
+    env: MapEnv,
     command_dim: int,
     bound: dict[Literal["min", "max"], float | int | list[float] | list[int]] = {"min": -np.inf, "max": np.inf},
     **kwargs,
 ) -> np.ndarray | None:
-    if not hasattr(env.action_mapping, group_name):
+    if not hasattr(env.action_map, group_name):
         # initialize action space
         env._action_space_dict[group_name] = gym.spaces.Box(
             low=np.array(bound.get("min"), dtype=np.float32),

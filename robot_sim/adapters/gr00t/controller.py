@@ -24,7 +24,7 @@ class Gr00tWBCPolicy(BaseController):
         return low_level_cmd
 
 
-class Gr00tController(CompositeController):
+class Gr00tWBCController(CompositeController):
     """Composite controller for Gr00t robot.
 
     This controller combines multiple sub-controllers to manage different

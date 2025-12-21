@@ -29,6 +29,8 @@ class Gr00tController(CompositeController):
 
     This controller combines multiple sub-controllers to manage different
     aspects of the Gr00t robot's behavior.
+    For example, it can include a trained whole-body controller (WBC) and a PD controller.
+    In another example, you can implement a unitree-sdk message interface and then use the sdk to control the robot.
     """
 
     def __init__(self, env: "Gr00tEnv") -> None:

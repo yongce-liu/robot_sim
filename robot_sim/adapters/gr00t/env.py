@@ -9,7 +9,7 @@ from typing import Any, Callable
 import gymnasium as gym
 from loguru import logger
 
-from robot_sim.adapters.gr00t.config import Gr00tConfig
+from robot_sim.adapters.gr00t.config import Gr00tEnvConfig
 from robot_sim.adapters.gr00t.controller import Gr00tController
 from robot_sim.backends.types import ActionType, ArrayState
 from robot_sim.configs import ObjectType
@@ -29,7 +29,7 @@ class Gr00tEnv(BaseEnv):
 
     def __init__(
         self,
-        config: Gr00tConfig | None = None,
+        config: Gr00tEnvConfig | None = None,
         **kwargs,
     ) -> None:
         _robot_names = [
@@ -100,18 +100,6 @@ class Gr00tEnv(BaseEnv):
         """
         action_array = self.controller.compute(action)
         return action_array
-
-    def compute_info(self, observation, action=None):
-        return {}
-
-    def compute_reward(self, observation, action=None):
-        return 0.0
-
-    def compute_terminated(self, observation, action=None):
-        return True
-
-    def compute_truncated(self, observation, action=None):
-        return True
 
     @property
     def observation_mapping(self) -> dict[str, Callable]:

@@ -6,13 +6,13 @@ import hydra
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-from robot_sim.adapters.gr00t import Gr00tConfig, Gr00tEnv
+from robot_sim.adapters.gr00t import Gr00tEnvConfig, Gr00tTaskConfig
 from robot_sim.utils.helper import setup_logger
 
 PROJECT_ROOT = Path(__file__).parents[2].resolve()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_ROOT / "examples" / "gr00t"), config_name="gr00t")
+@hydra.main(version_base=None, config_path=str(PROJECT_ROOT), config_name="/examples/gr00t/configs/tasks/pick_place")
 def main(cfg: DictConfig) -> None:
     """Run Gr00t simulation.
 
@@ -22,16 +22,24 @@ def main(cfg: DictConfig) -> None:
     setup_logger()
     logger.info("Starting Gr00t simulation...")
 
-    # Hydra automatically instantiates all _target_ in the config tree
-    gr00t_cfg = Gr00tConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
-    gr00t_cfg.print()
+    if not hasattr(cfg, "task"):
+        gr00t_env_cfg: Gr00tEnvConfig = Gr00tEnvConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
+        gr00t_env_cfg.print()
+    else:
+        # Hydra automatically instantiates all _target_ in the config tree
+        gr00t_task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
+    gr00t_task_cfg.print()
 
-    # Initialize Gr00tEnv
-    logger.info("Initializing Gr00tEnv...")
-    env = Gr00tEnv(config=gr00t_cfg)
+    # # Initialize Gr00tEnv
+    # logger.info("Initializing Gr00tEnv...")
+    # pnp_task = gym.make(
+    #     gr00t_task_cfg.task,
+    #     env_config=gr00t_task_cfg.env_config,
+    #     **gr00t_task_cfg.params
+    # )
 
-    logger.info(f"Observation space: {env.observation_space}")
-    logger.info(f"Action space: {env.action_space}")
+    # logger.info(f"Observation space: {pnp_task.observation_space}")
+    # logger.info(f"Action space: {pnp_task.action_space}")
 
     # # Reset environment
     # logger.info("Resetting environment...")

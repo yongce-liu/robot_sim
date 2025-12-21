@@ -3,10 +3,6 @@
 # Default configuration for robot simulation using Hydra
 # Override with: python scripts/run_sim.py backends=isaac robots=h1 objects=sphere
 
-defaults:
-  - _self_
-  - backends/mujoco@_global_
-  - robots/unitree_g1@scene.objects.g1
 # Hydra runtime configuration
 hydra:
   run:
@@ -17,6 +13,11 @@ hydra:
     subdir: ${hydra.job.num}
   job:
     chdir: false
+
+defaults:
+  - _self_
+  - backends/mujoco@_global_
+  - robots/unitree_g1@scene.objects.g1
 
 scene:
   path: assets/scenes/gear_lab/gear_lab.xml

@@ -1,25 +1,12 @@
-# @package _global_
+# @package _group_
 
 # Default configuration for robot simulation using Hydra
 # Override with: python scripts/run_sim.py backends=isaac robots=h1 objects=sphere
 
 defaults:
   - _self_
-  - backends/mujoco@simulator_config
-  - robots/unitree_g1_dex3@simulator_config.scene.objects.g1
-
-# Hydra runtime configuration
-hydra:
-  searchpath:
-    - file://configs
-  run:
-    # dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    dir: outputs/debug
-  sweep:
-    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    subdir: ${hydra.job.num}
-  job:
-    chdir: false
+  - /configs/backends/mujoco.yaml@simulator_config
+  - /configs/robots/unitree_g1_dex3.yaml@simulator_config.scene.objects.g1
 
 simulator_config:
   scene:

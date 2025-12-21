@@ -6,7 +6,7 @@ from robot_sim.utils.config import configclass
 
 
 @configclass
-class Gr00tConfig:
+class Gr00tEnvConfig:
     """Configuration for Gr00t Experiments.
 
     Attributes:
@@ -63,3 +63,15 @@ class Gr00tConfig:
             strict=True,
         )
         return dacite_config
+
+
+@configclass
+class Gr00tTaskConfig:
+    """Configuration for Gr00t pick-and-place task."""
+
+    task: str = MISSING
+    """Task name for Gr00t environment."""
+    env_config: Gr00tEnvConfig = MISSING
+    """Gr00t environment configuration."""
+    params: dict = MISSING
+    """Parameters for the specific task."""

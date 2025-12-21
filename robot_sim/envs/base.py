@@ -1,21 +1,20 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-import gymnasium as gym
 import numpy as np
 from loguru import logger
 
 from robot_sim.backends import BackendFactory, BaseBackend
-from robot_sim.backends.types import ActionType, ArrayState
+from robot_sim.backends.types import ActionType, ArrayState, ObjectState
 from robot_sim.configs import SimulatorConfig
 
 
-class BaseEnv(ABC, gym.Env):
+class BaseEnv(ABC):
     """Base environment class for robot simulation environments.
 
     This class serves as a foundation for all robot simulation environments,
     providing common functionality and structure. It integrates the backend
-    simulator and provides the gym.Env interface.
+    simulator and provides the Env interface.
     """
 
     metadata = {
@@ -34,16 +33,15 @@ class BaseEnv(ABC, gym.Env):
         Args:
             config: Simulator configuration. If provided, a backend will be created.
             render_mode: The mode for rendering the environment.
-        Note:
-            You should define the properties
-            observation_space: gym.Space
-            action_space: gym.Space
         """
         super().__init__()
 
-        assert (render_mode == "human" and not config.sim.headless) or (
-            render_mode == "rgb_array" or render_mode is None and not config.sim.headless
+        assert (
+            (render_mode == "human" and not config.sim.headless)
+            or (render_mode == "rgb_array" and not config.sim.headless)
+            or render_mode is None
         ), f"Incompatible render_mode: {render_mode} and headless: {config.sim.headless} setting."
+
         self._backend = BackendFactory.create_backend(config)
         self.render_mode = render_mode
 
@@ -52,8 +50,8 @@ class BaseEnv(ABC, gym.Env):
             self.backend.launch()
         self._initial_states: ArrayState = self.backend.get_states()
 
-        self._observation_space: gym.Space = None  # to be defined in subclass
-        self._action_space: gym.Space = None  # to be defined in subclass
+        self._observation_space: Any = None  # to be defined in subclass
+        self._action_space: Any = None  # to be defined in subclass
 
         # constant
         self._decimation: int = kwargs.get("decimation", 1)
@@ -78,7 +76,10 @@ class BaseEnv(ABC, gym.Env):
         super().reset(seed=seed)
 
         # Reset the backend state
-        states = options.get("initial_states", self._initial_states)
+        if options is not None:
+            states = options.get("initial_states", self._initial_states)
+        else:
+            states = self._initial_states
         self.backend.set_states(states)
 
         # FIXME: Whether need to resimulate?
@@ -221,22 +222,22 @@ class BaseEnv(ABC, gym.Env):
         """
         raise NotImplementedError
 
-    def get_states(self, name: str) -> ArrayState:
+    def get_states(self, name: str) -> ObjectState:
         """Get the current states from the backend.
 
         Returns:
             states: The current state dictionary from backend.
         """
-        return self.backend.get_states(name)
+        return self.backend.get_states().objects[name]
 
     @property
-    def observation_space(self) -> gym.Space:
-        """Required by gymnasium."""
+    def observation_space(self) -> Any:
+        """It can be any type that constrains the observation."""
         return self._observation_space
 
     @property
-    def action_space(self) -> gym.Space:
-        """Required by gymnasium."""
+    def action_space(self) -> Any:
+        """It can be any type that constrains the action."""
         return self._action_space
 
     @property

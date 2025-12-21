@@ -106,7 +106,7 @@ class ObjectState(BaseState):
     # """Joint effort targets. Shape is (num_envs, num_joints)."""
     joint_action: ArrayTypes | None = None
     """Joint actions. Shape is (num_envs, num_joints). If it is None, no action is applied."""
-    sensors: dict[str, ArrayTypes] = field(default_factory=dict)
+    sensors: dict[str, Any] = field(default_factory=dict)
     """Sensor readings. Each sensor has shape (num_envs, sensor_dim)."""
     extras: dict[str, Any] = field(default_factory=dict)
     """Extra information."""

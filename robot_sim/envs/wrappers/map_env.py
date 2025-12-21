@@ -10,7 +10,7 @@ from robot_sim.controllers import CompositeController
 from robot_sim.envs.base import BaseEnv
 
 
-class MapEnv(BaseEnv):
+class MapEnv(BaseEnv, gym.Env):
     """Environment wrapper for BaseEnv.
 
     This environment wraps the backend simulator and provides an interface
@@ -75,10 +75,11 @@ class MapEnv(BaseEnv):
 
     def stateArray2observation(self, states: ArrayState) -> gym.spaces.Dict:
         observation_dict = {}
-        for group_name, (map_func, params) in self._observation_map.items():
+        for group_name, (map_func, params) in self.observation_map.items():
             res = map_func(states=states, **params)
-            if res is not None:
-                observation_dict[group_name] = res
+            assert res is not None, f"Observation map function for group '{group_name}' returned None."
+            observation_dict[group_name] = res
+
         return observation_dict
 
     def action2actionArray(self, action: dict[str, Any]) -> ActionType:
@@ -90,7 +91,7 @@ class MapEnv(BaseEnv):
         Returns:
             Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
-        for group_name, (map_func, params) in self._action_map.items():
+        for group_name, (map_func, params) in self.action_map.items():
             res = map_func(action=action, **params)
             if res is not None:
                 action[group_name] = res
@@ -99,7 +100,7 @@ class MapEnv(BaseEnv):
 
     def compute_reward(self, observation, action=None):
         reward = 0.0
-        for group_name, (map_func, params) in self.config.reward_map.items():
+        for group_name, (map_func, params) in self.reward_map.items():
             res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 reward += res
@@ -107,7 +108,7 @@ class MapEnv(BaseEnv):
 
     def compute_terminated(self, observation, action=None):
         terminated = False
-        for group_name, (map_func, params) in self.config.termination_map.items():
+        for group_name, (map_func, params) in self.termination_map.items():
             res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 terminated |= res
@@ -115,7 +116,7 @@ class MapEnv(BaseEnv):
 
     def compute_truncated(self, observation, action=None):
         truncated = self.episode_step >= self.max_episode_steps
-        for group_name, (map_func, params) in self.config.truncation_map.items():
+        for group_name, (map_func, params) in self.truncation_map.items():
             res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 truncated |= res
@@ -123,7 +124,7 @@ class MapEnv(BaseEnv):
 
     def compute_info(self, observation, action=None):
         info = {}
-        for group_name, (map_func, params) in self.config.info_map.items():
+        for group_name, (map_func, params) in self.info_map.items():
             res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 info.update(res)

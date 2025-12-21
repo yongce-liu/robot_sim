@@ -56,9 +56,9 @@ class obs_joint_state_split(MapFunc):
     ) -> np.ndarray:
         robot_state = states.objects[self.env.robot_name]
         if mode == "torque":
-            return robot_state.joint_tau[..., self.group_joint_indices]
+            return robot_state.joint_action[0, self.group_joint_indices]
         elif mode == "position":
-            return robot_state.joint_pos[..., self.group_joint_indices]
+            return robot_state.joint_pos[0, self.group_joint_indices]
         else:
             raise ValueError(f"Unsupported mode '{mode}' for joint_map. Available modes are 'position' and 'torque'.")
 
@@ -82,10 +82,12 @@ class obs_body_state_split(MapFunc):
             buffer.extend(matched_body_indices)
         self.group_body_indices = buffer
         # initialize observation space
+        mode = kwargs.get("mode", "pose")
+        vec_dim = 7 if mode == "pose" else 3 if mode == "position" else 4 if mode == "quaternion" else None
         env._observation_space_dict[group_name] = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(len(self.group_body_indices), 7),  # Assuming position (3) + orientation (4 as quaternion)
+            shape=(len(self.group_body_indices), vec_dim),  # Assuming position (3) + orientation (4 as quaternion)
             dtype=np.float32,
         )
         return super().init(env, group_name, **kwargs)
@@ -96,11 +98,11 @@ class obs_body_state_split(MapFunc):
         robot_state = states.objects[self.env.robot_name]
 
         if mode == "position":
-            return robot_state.body_state[..., self.group_body_indices, :3]
+            return robot_state.body_state[0, self.group_body_indices, :3]
         elif mode == "quaternion":  # [w, x, y, z]
-            return robot_state.body_quat[..., self.group_body_indices, 3:7]
+            return robot_state.body_state[0, self.group_body_indices, 3:7]
         elif mode == "pose":
-            return robot_state.body_state[..., self.group_body_indices, :7]
+            return robot_state.body_state[0, self.group_body_indices, :7]
         else:
             raise ValueError(
                 f"Unsupported mode '{mode}' for body_map. Available modes are 'position', 'quaternion', and 'pose'."
@@ -141,7 +143,7 @@ class obs_video_map(MapFunc):
         )
         return super().init(env, group_name, **kwargs)
 
-    def __call__(self, states: ArrayState, **kwargs) -> np.ndarray:
+    def __call__(self, states: ArrayState, **kwargs) -> np.ndarray | dict:
         robot_state = states.objects[self.env.robot_name]
 
         return robot_state.sensors[self.camera_name]["rgb"]

@@ -62,10 +62,11 @@ class BaseBackend(ABC):
 
     def launch(self) -> None:
         """Launch the simulation."""
+        self._sim_cnt = 0
         self._init_backend()
         self._bind_sensors_queries()
         self._launch()
-        self._sim_cnt = 0
+        self._refresh_sensors(self._sim_cnt)
         self.is_launched = True
 
     def _bind_sensors_queries(self) -> None:
@@ -86,13 +87,16 @@ class BaseBackend(ABC):
 
     def simulate(self):
         """Simulate the environment."""
+        self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
         self._state_cache_expire = True
         self._simulate()
+        self._refresh_sensors(self._sim_cnt)
+        self.render()
+
+    def _refresh_sensors(self, cnt: int) -> None:
         for sensor_dict in self._buffer_dict.values():
             for sensor in sensor_dict.sensors.values():
-                sensor(self._sim_cnt)
-        self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq
-        self.render()
+                sensor(cnt)
 
     def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
         """Set the states of the environment."""

@@ -102,19 +102,19 @@ class Camera(BaseSensor):
         # logger.info(f"euler angles (rad): roll={roll.item()}, pitch={pitch.item()}, yaw={yaw.item()}")
         target_body.add("camera", name=self.sensor_name, **camera_params)
 
-    def _update_mujoco(self) -> None:
+    def _update_mujoco(self, dtype=np.uint8) -> None:
         """Capture camera data from mujoco."""
         physics = self._backend._mjcf_physics
 
         if "rgb" in self.config.data_types:
             self._data["rgb"] = physics.render(
                 width=self.config.width, height=self.config.height, camera_id=self._camera_id, depth=False
-            )
+            ).astype(dtype)
 
         if "depth" in self.config.data_types:
             self._data["depth"] = physics.render(
                 width=self.config.width, height=self.config.height, camera_id=self._camera_id, depth=True
-            )
+            ).astype(dtype)
 
         if "segmentation" in self.config.data_types:
             seg = physics.render(
@@ -127,4 +127,4 @@ class Camera(BaseSensor):
             # Extract geom IDs (first channel if multi-channel)
             if seg.ndim == 3:
                 seg = seg[..., 0]
-            self._data["segmentation"] = seg
+            self._data["segmentation"] = seg.astype(np.int32)

@@ -126,7 +126,7 @@ class MujocoBackend(BaseBackend):
             # Here, we also use the default order index when adding a object/robot
             self._mjcf_physics.data.ctrl[action_indices] = obj_action[env_ids]
 
-    def _get_states(self) -> ArrayState:
+    def _get_states(self, dtype=np.float32) -> ArrayState:
         """Get states of all objects and robots."""
 
         obj_states: dict[str, ObjectState] = {}
@@ -135,10 +135,10 @@ class MujocoBackend(BaseBackend):
             joint_names = self.get_joint_names(obj_name)
             _root_state, _body_state = self._pack_state(obj_name)
             state = ObjectState(
-                root_state=_root_state,
-                body_state=_body_state,
-                joint_pos=None if len(joint_names) == 0 else _pnd.qpos[joint_names].copy()[None, ...],
-                joint_vel=None if len(joint_names) == 0 else _pnd.qvel[joint_names].copy()[None, ...],
+                root_state=_root_state.astype(dtype),
+                body_state=_body_state.astype(dtype),
+                joint_pos=None if len(joint_names) == 0 else _pnd.qpos[joint_names].copy()[None, ...].astype(dtype),
+                joint_vel=None if len(joint_names) == 0 else _pnd.qvel[joint_names].copy()[None, ...].astype(dtype),
                 joint_action=None,
                 sensors={k: v.data for k, v in self._buffer_dict[obj_name].sensors.items()},
             )

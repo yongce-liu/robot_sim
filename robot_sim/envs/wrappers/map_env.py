@@ -1,11 +1,11 @@
 from abc import abstractmethod
-from typing import Any, Callable
+from typing import Any
 
 import gymnasium as gym
 from loguru import logger
 
 from robot_sim.backends.types import ActionType, ArrayState
-from robot_sim.configs import MapEnvConfig, ObjectType
+from robot_sim.configs import MapEnvConfig, MapFunc, ObjectType
 from robot_sim.controllers import CompositeController
 from robot_sim.envs.base import BaseEnv
 
@@ -41,22 +41,27 @@ class MapEnv(BaseEnv):
         self._max_episode_steps = config.max_episode_steps
         self._episode_step = 0
 
-        ############# Initialize observation and action map #############
-        self._observation_map: dict[str, Callable[[str, "MapEnv"]]] = {}
-        self._action_map: dict[str, Callable[[str, "MapEnv"]]] = {}
-        self._reward_map: dict[str, Callable[[str, "MapEnv"]]] = {}
-        self._termination_map: dict[str, Callable[[str, "MapEnv"]]] = {}
-        self._truncation_map: dict[str, Callable[[str, "MapEnv"]]] = {}
-        self._info_map: dict[str, Callable[[str, "MapEnv"]]] = {}
         #################################################################
         self._observation_space_dict: dict[str, gym.spaces.Space] = {}
         self._action_space_dict: dict[str, gym.spaces.Space] = {}
         self._num_dofs = len(self.backend.get_actuator_names(self.robot_name))
 
-        logger.info("Initializing observation and action map...")
-        self._init_observation_map_space()
-        self._init_action_map_space()
-        logger.info(f"Observation Space: {self.observation_space}\nAction Space: {self.action_space}")
+        ############# Initialize observation and action map #############
+        logger.info("Initializing maps of observation, action, reward, termination, truncation, and info...")
+        for _map_dict in [
+            self.observation_map,
+            self.action_map,
+            self.reward_map,
+            self.termination_map,
+            self.truncation_map,
+            self.info_map,
+        ]:
+            for _group_name, (_map_func, _params) in _map_dict.items():
+                _map_func.init(self, _group_name, **_params)
+
+        logger.info(
+            f"Maps initialized.\nObservation Space: {self.observation_space}\nAction Space: {self.action_space}"
+        )
 
         self.controller: CompositeController = self._init_controller()
 
@@ -70,8 +75,8 @@ class MapEnv(BaseEnv):
 
     def stateArray2observation(self, states: ArrayState) -> gym.spaces.Dict:
         observation_dict = {}
-        for group_name, (callable_fn, params) in self._observation_map.items():
-            res = callable_fn(group_name, self, **params, states=states)
+        for group_name, (map_func, params) in self._observation_map.items():
+            res = map_func(states=states, **params)
             if res is not None:
                 observation_dict[group_name] = res
         return observation_dict
@@ -85,8 +90,8 @@ class MapEnv(BaseEnv):
         Returns:
             Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
-        for group_name, (callable_fn, params) in self._action_map.items():
-            res = callable_fn(group_name, self, **params, action=action)
+        for group_name, (map_func, params) in self._action_map.items():
+            res = map_func(action=action, **params)
             if res is not None:
                 action[group_name] = res
         action_array = self.controller.compute(action)
@@ -94,57 +99,39 @@ class MapEnv(BaseEnv):
 
     def compute_reward(self, observation, action=None):
         reward = 0.0
-        for group_name, (callable_fn, params) in self.config.reward_map.items():
-            res = callable_fn(group_name, self, **params, observation=observation, action=action)
+        for group_name, (map_func, params) in self.config.reward_map.items():
+            res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 reward += res
         return reward
 
     def compute_terminated(self, observation, action=None):
         terminated = False
-        for group_name, (callable_fn, params) in self.config.termination_map.items():
-            res = callable_fn(group_name, self, **params, observation=observation, action=action)
+        for group_name, (map_func, params) in self.config.termination_map.items():
+            res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 terminated |= res
         return terminated
 
     def compute_truncated(self, observation, action=None):
         truncated = self.episode_step >= self.max_episode_steps
-        for group_name, (callable_fn, params) in self.config.truncation_map.items():
-            res = callable_fn(group_name, self, **params, observation=observation, action=action)
+        for group_name, (map_func, params) in self.config.truncation_map.items():
+            res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 truncated |= res
         return truncated
 
     def compute_info(self, observation, action=None):
         info = {}
-        for group_name, (callable_fn, params) in self.config.info_map.items():
-            res = callable_fn(group_name, self, **params, observation=observation, action=action)
+        for group_name, (map_func, params) in self.config.info_map.items():
+            res = map_func(observation=observation, action=action, **params)
             if res is not None:
                 info.update(res)
         return info
 
-    def _init_observation_map_space(self) -> None:
-        for group_name, (callable_fn, params) in self.config.observation_map.items():
-            callable_fn(group_name, self, **params)
-            self._observation_map[group_name] = (callable_fn, params)
-
-    def _init_action_map_space(self) -> None:
-        for group_name, (callable_fn, params) in self.config.action_map.items():
-            callable_fn(group_name, self, **params)
-            self._action_map[group_name] = (callable_fn, params)
-
     @abstractmethod
     def _init_controller(self) -> CompositeController:
         raise NotImplementedError("CompositeController initialization not implemented yet.")
-
-    @property
-    def observation_map(self) -> dict[str, Callable]:
-        return self._observation_map
-
-    @property
-    def action_map(self) -> dict[str, Callable]:
-        return self._action_map
 
     @property
     def observation_space(self) -> gym.spaces.Dict:
@@ -173,3 +160,27 @@ class MapEnv(BaseEnv):
     @property
     def num_dofs(self) -> int:
         return self._num_dofs
+
+    @property
+    def observation_map(self) -> dict[str, tuple[MapFunc, dict]]:
+        return self.config.observation_map if self.config.observation_map is not None else {}
+
+    @property
+    def action_map(self) -> dict[str, tuple[MapFunc, dict]]:
+        return self.config.action_map if self.config.action_map is not None else {}
+
+    @property
+    def reward_map(self) -> dict[str, tuple[MapFunc, dict]]:
+        return self.config.reward_map if self.config.reward_map is not None else {}
+
+    @property
+    def termination_map(self) -> dict[str, tuple[MapFunc, dict]]:
+        return self.config.termination_map if self.config.termination_map is not None else {}
+
+    @property
+    def truncation_map(self) -> dict[str, tuple[MapFunc, dict]]:
+        return self.config.truncation_map if self.config.truncation_map is not None else {}
+
+    @property
+    def info_map(self) -> dict[str, tuple[MapFunc, dict]]:
+        return self.config.info_map if self.config.info_map is not None else {}

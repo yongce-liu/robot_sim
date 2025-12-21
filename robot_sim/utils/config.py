@@ -41,6 +41,16 @@ def _process_field_value(value, field_type):
             return [_process_field_value(item, item_type) for item in value]
         return value
 
+    if origin is tuple:
+        args = get_args(field_type)
+        if args and isinstance(value, (list, tuple)):
+            item_types = args
+            return tuple(
+                _process_field_value(item, item_types[i]) if i < len(item_types) else item
+                for i, item in enumerate(value)
+            )
+        return value
+
     # Handle Dict[K, V]
     if origin is dict:
         args = get_args(field_type)

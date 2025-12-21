@@ -11,7 +11,7 @@ max_episode_steps: 1000
 
 observation_map:
   state.left_leg:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns: # Need to ensure correct order, so provide full names here
         - left_hip_pitch.*
         - left_hip_roll.*
@@ -20,7 +20,7 @@ observation_map:
         - left_ankle_pitch.*
         - left_ankle_roll.*
   state.right_leg:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns:
         - right_hip_pitch.*
         - right_hip_roll.*
@@ -29,13 +29,13 @@ observation_map:
         - right_ankle_pitch.*
         - right_ankle_roll.*
   state.waist:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns:
         - waist_yaw.*
         - waist_roll.*
         - waist_pitch.*
   state.left_arm:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns:
         - left_shoulder_pitch.*
         - left_shoulder_roll.*
@@ -45,7 +45,7 @@ observation_map:
         - left_wrist_pitch.*
         - left_wrist_yaw.*
   state.left_hand:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns:
         - left_hand_thumb_0.*
         - left_hand_thumb_1.*
@@ -55,7 +55,7 @@ observation_map:
         - left_hand_index_0.*
         - left_hand_index_1.*
   state.right_arm:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns:
         - right_shoulder_pitch.*
         - right_shoulder_roll.*
@@ -65,7 +65,7 @@ observation_map:
         - right_wrist_pitch.*
         - right_wrist_yaw.*
   state.right_hand:
-    - robot_sim.adapters.gr00t.utils.obs_joint_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split
     - joint_patterns:
         - right_hand_thumb_0.*
         - right_hand_thumb_1.*
@@ -77,37 +77,37 @@ observation_map:
   # I don't know whether the gr00t model need this observation or not, so provide it here
   ######## EEF ########
   state.left_wrist_pos:
-    - robot_sim.adapters.gr00t.utils.obs_body_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_body_state_split
     - body_patterns:
         - left_wrist_yaw.*
       mode: position
   state.left_wrist_abs_quat:
-    - robot_sim.adapters.gr00t.utils.obs_body_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_body_state_split
     - body_patterns:
         - left_wrist_yaw.*
       mode: quaternion
   state.right_wrist_pos:
-    - robot_sim.adapters.gr00t.utils.obs_body_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_body_state_split
     - body_patterns:
         - right_wrist_yaw.*
       mode: position
   state.right_wrist_abs_quat:
-    - robot_sim.adapters.gr00t.utils.obs_body_state_split
+    - _target_: robot_sim.adapters.gr00t.utils.obs_body_state_split
     - body_patterns:
         - right_wrist_yaw.*
       mode: quaternion
   ######## Video ########
   video.ego_view:
-    - robot_sim.adapters.gr00t.utils.obs_video_map
+    - _target_: robot_sim.adapters.gr00t.utils.obs_video_map
     - camera_name: head_camera
   ######## Task Description ########
   annotation.human.task_description:
-    - robot_sim.adapters.gr00t.utils.obs_annotation_map
+    - _target_: robot_sim.adapters.gr00t.utils.obs_annotation_map
     - description: pick up the apple, walk left, and place the apple on the plate
 
 action_map:
   action.left_leg:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns: # same as observation map, need to ensure correct order
         - left_hip_pitch.*
         - left_hip_roll.*
@@ -116,7 +116,7 @@ action_map:
         - left_ankle_pitch.*
         - left_ankle_roll.*
   action.right_leg:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns:
         - right_hip_pitch.*
         - right_hip_roll.*
@@ -125,13 +125,13 @@ action_map:
         - right_ankle_pitch.*
         - right_ankle_roll.*
   action.waist:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns:
         - waist_yaw.*
         - waist_roll.*
         - waist_pitch.*
   action.left_arm:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns:
         - left_shoulder_pitch.*
         - left_shoulder_roll.*
@@ -141,7 +141,7 @@ action_map:
         - left_wrist_pitch.*
         - left_wrist_yaw.*
   action.left_hand:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns:
         - left_hand_thumb_0.*
         - left_hand_thumb_1.*
@@ -151,7 +151,7 @@ action_map:
         - left_hand_index_0.*
         - left_hand_index_1.*
   action.right_arm:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns:
         - right_shoulder_pitch.*
         - right_shoulder_roll.*
@@ -161,7 +161,7 @@ action_map:
         - right_wrist_pitch.*
         - right_wrist_yaw.*
   action.right_hand:
-    - robot_sim.adapters.gr00t.utils.act_actuator_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_space_init
     - actuator_patterns:
         - right_hand_thumb_0.*
         - right_hand_thumb_1.*
@@ -173,35 +173,35 @@ action_map:
   ######## EEF ########
   ######## You can use IK to control the end-effector position and orientation ########
   # action.left_wrist_pos:
-  #   - robot_sim.adapters.gr00t.utils.act_eef_map
+  #   - _target_: robot_sim.adapters.gr00t.utils.act_eef_map
   #   - body_patterns:
   #       - left_wrist_yaw
   #     mode: position
   # action.left_wrist_abs_quat:
-  #   - robot_sim.adapters.gr00t.utils.act_eef_map
+  #   - _target_: robot_sim.adapters.gr00t.utils.act_eef_map
   #   - body_patterns:
   #       - left_wrist_yaw
   #     mode: quaternion
   # action.right_wrist_pos:
-  #   - robot_sim.adapters.gr00t.utils.act_eef_map
+  #   - _target_: robot_sim.adapters.gr00t.utils.act_eef_map
   #   - body_patterns:
   #       - right_wrist_yaw
   #     mode: position
   # action.right_wrist_abs_quat:
-  # - robot_sim.adapters.gr00t.utils.act_eef_map
+  # - _target_: robot_sim.adapters.gr00t.utils.act_eef_map
   # - body_patterns:
   #     - right_wrist_yaw
   #   mode: quaternion
   ######## High-level commands ########
   ######## You need to prepare a motion planner to convert high-level commands to low-level joint commands ########
   action.base_height_command:
-    - robot_sim.adapters.gr00t.utils.act_command_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_command_space_init
     - command_dim: 1
       bound:
         min: [0.3]
         max: [0.8]
   action.navigate_command:
-    - robot_sim.adapters.gr00t.utils.act_command_space_init
+    - _target_: robot_sim.adapters.gr00t.utils.act_command_space_init
     - command_dim: 3
       bound:
         min: [-1.0, -1.0, -3.14]

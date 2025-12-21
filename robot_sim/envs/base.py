@@ -221,6 +221,14 @@ class BaseEnv(ABC, gym.Env):
         """
         raise NotImplementedError
 
+    def get_states(self, name: str) -> ArrayState:
+        """Get the current states from the backend.
+
+        Returns:
+            states: The current state dictionary from backend.
+        """
+        return self.backend.get_states(name)
+
     @property
     def observation_space(self) -> gym.Space:
         """Required by gymnasium."""

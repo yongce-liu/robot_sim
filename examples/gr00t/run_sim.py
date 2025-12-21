@@ -23,6 +23,7 @@ def main(cfg: DictConfig) -> None:
     """
     setup_logger()
     logger.info("Starting Gr00t simulation...")
+    cfg = hydra.utils.instantiate(cfg, _recursive_=True)
 
     # Hydra automatically instantiates all _target_ in the config tree
     task_cfg: MapTaskConfig = MapTaskConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))

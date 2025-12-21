@@ -1,6 +1,6 @@
 """Configuration system."""
 
-from .env import MapEnvConfig, MapTaskConfig
+from .env import MapEnvConfig, MapFunc, MapTaskConfig
 from .object import ObjectConfig, ObjectType
 from .scene import SceneConfig
 from .sensor import CameraConfig, SensorConfig, SensorType
@@ -20,4 +20,5 @@ __all__ = [
     "SensorType",
     "MapEnvConfig",
     "MapTaskConfig",
+    "MapFunc",
 ]

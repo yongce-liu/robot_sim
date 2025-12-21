@@ -10,4 +10,4 @@ class Gr00tWBCEnv(MapEnv):
     """
 
     def _init_controller(self):
-        return super()._init_controller()
+        return None

@@ -51,18 +51,33 @@ class PickAndPlaceTask(Gr00tWBCEnv):
             return value.detach().cpu().numpy()
         return np.asarray(value)
 
-    def get_object_state(self, states: ArrayState) -> ObjectState:
+    def compute_info(self, observation, action=None):
+        info = super().compute_info(observation, action)
+        is_success = info.get("is_success", None)
+        if is_success is None:
+            object_pos = self.get_object_state().root_state[:3]
+            target_pos = self.get_target_state().root_state[:3]
+            distance = np.linalg.norm(object_pos - target_pos, axis=-1)
+            is_success = distance < self.success_threshold
+            info["is_success"] = is_success
+        return info
+
+    def get_object_state(self, states: ArrayState | None = None) -> ObjectState:
         """Get the object position used in the task.
 
         Returns:
             Object position as a numpy array.
         """
+        if states is None:
+            states = self.get_states(self.object_name)
         return states.objects[self.object_name]
 
-    def get_target_state(self, states: ArrayState) -> ObjectState:
+    def get_target_state(self, states: ArrayState | None = None) -> ObjectState:
         """Get the target position used in the task.
 
         Returns:
             Target position as a numpy array, or None if not specified.
         """
+        if states is None:
+            states = self.get_states(self.target_name)
         return states.objects[self.target_name]

@@ -195,7 +195,7 @@ joints:
     damping: 1.0
     velocity_limit: 1e15
     torque_limit: 1.4
-    position_limit: [-0.61086523, 1.04719755]
+    position_limit: [-0.724312, 1.04719755]
     default_position: 0.0
   left_hand_thumb_2_joint:
     control_type: torque
@@ -307,7 +307,8 @@ joints:
     damping: 1.0
     velocity_limit: 1e15
     torque_limit: 1.4
-    position_limit: [-1.04719755, 0.61086523]
+    position_limit: [-1.04719755, 1.04719755]
+    # position_limit: [-1.04719755, 0.61086523]
     default_position: 0.0
   right_hand_thumb_2_joint:
     control_type: torque

@@ -63,7 +63,7 @@ class CompositeController:
             c.reset()
 
     @abstractmethod
-    def compute(self, state: StatesType, action: dict[str, Any]) -> ActionsType:
+    def compute(self, states: StatesType, targets: Any, **kwargs: Any) -> ActionsType:
         """Override in subclasses to implement routing logic."""
 
         raise NotImplementedError

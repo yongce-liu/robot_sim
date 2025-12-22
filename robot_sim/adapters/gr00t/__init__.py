@@ -1,7 +1,6 @@
-from .controller import Gr00tWBCController
-from .gr00t_env import Gr00tWBCEnv
-
 # Import tasks to trigger registration with gym.registry
-from . import tasks  # noqa: F401
+from . import tasks
+from .controller import DecoupledWBCPolicy, InterpolationPolicy, LowerBodyPolicy
+from .env import Gr00tWBCEnv
 
-__all__ = ["Gr00tWBCEnv", "Gr00tWBCController"]
+__all__ = ["Gr00tWBCEnv", "DecoupledWBCPolicy", "LowerBodyPolicy", "InterpolationPolicy"]

@@ -74,7 +74,7 @@ class MapEnv(BaseEnv, gym.Env):
         self._episode_step += 1
         return super().step(action)
 
-    def statesArray2observation(self, states: StatesType) -> gym.spaces.Dict:
+    def statesType2observation(self, states: StatesType) -> gym.spaces.Dict:
         observation_dict = {}
         for group_name, (map_func, params) in self.observation_map.items():
             res = map_func(states=states, **params)
@@ -83,7 +83,7 @@ class MapEnv(BaseEnv, gym.Env):
 
         return observation_dict
 
-    def action2actionArray(self, action: dict[str, Any]) -> ActionsType:
+    def action2actionsType(self, action: dict[str, Any]) -> ActionsType:
         """Convert action to backend format.
 
         Args:
@@ -100,8 +100,8 @@ class MapEnv(BaseEnv, gym.Env):
             if res is not None:
                 action[group_name] = res
         states = self.get_states(self.robot_name)
-        action_array = self.controller.compute(states=states, action=action)
-        return action_array
+        actions = self.controller.compute(states=states, targets=action)
+        return actions
 
     def compute_reward(self, observation, action=None):
         reward = 0.0

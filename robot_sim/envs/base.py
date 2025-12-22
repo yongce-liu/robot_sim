@@ -100,7 +100,7 @@ class BaseEnv(ABC):
 
         # Get observation from backend state
         states = self.backend.get_states()
-        self._mdp_cache.observation = self.statesArray2observation(states)
+        self._mdp_cache.observation = self.statesType2observation(states)
 
         # Get extra info
         self._mdp_cache.info = self.compute_info(self.observation, None)
@@ -121,17 +121,17 @@ class BaseEnv(ABC):
         """
         # Convert action to backend format
         for _ in range(self.decimation):
-            action_array = self.action2actionArray(action)
+            action_array = self.action2actionsType(action)
 
             # Set action and simulate
             self.backend.set_actions(action_array)
             self.backend.simulate()
+
         # Get new state and observation
         states = self.backend.get_states()
-
         ######### assign to mdp cache #########
         self._mdp_cache.action = action
-        self._mdp_cache.observation = self.statesArray2observation(states)
+        self._mdp_cache.observation = self.statesType2observation(states)
         # Calculate reward and done flags
         self._mdp_cache.reward = self.compute_reward(self.observation, self.action)
         self._mdp_cache.terminated = self.compute_terminated(self.observation, self.action)
@@ -162,7 +162,7 @@ class BaseEnv(ABC):
 
     # Abstract methods to be implemented by subclasses
     @abstractmethod
-    def statesArray2observation(self, states: StatesType) -> Any:
+    def statesType2observation(self, states: StatesType) -> Any:
         """Convert backend state array to observation.
 
         Args:
@@ -174,7 +174,7 @@ class BaseEnv(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def action2actionArray(self, action: Any) -> ActionsType:
+    def action2actionsType(self, action: Any) -> ActionsType:
         """Convert action to backend action array format.
 
         Args:
@@ -240,7 +240,7 @@ class BaseEnv(ABC):
         Returns:
             states: The current state dictionary from backend.
         """
-        return self.backend.get_states().objects[name]
+        return self.backend.get_states()[name]
 
     @property
     def observation_space(self) -> Any:

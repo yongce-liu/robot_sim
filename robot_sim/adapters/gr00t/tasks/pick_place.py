@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 from loguru import logger
 
-from robot_sim.adapters.gr00t import Gr00tWBCEnv
+from robot_sim.adapters.gr00t.env import Gr00tWBCEnv
 from robot_sim.backends.types import ObjectState
 from robot_sim.configs import MapTaskConfig
 from robot_sim.utils.helper import task_register

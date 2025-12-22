@@ -1,6 +1,6 @@
 from robot_sim.envs import MapEnv
 
-from .controller import Gr00tWBCController
+from .controller import DecoupledWBCPolicy
 
 
 class Gr00tWBCEnv(MapEnv):
@@ -11,5 +11,5 @@ class Gr00tWBCEnv(MapEnv):
     tailored for Gr00t simulations.
     """
 
-    def _init_controller(self) -> Gr00tWBCController:
+    def _init_controller(self) -> DecoupledWBCPolicy:
         return None

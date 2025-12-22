@@ -42,6 +42,8 @@ class JointConfig:
     """Stiffness of the actuator."""
     damping: float | None = None
     """Damping of the actuator."""
+    properties: dict[str, Any] = field(default_factory=dict)
+    """Additional properties specific to the robot."""
 
     def __post_init__(self):
         if ControlType(self.control_type) in [ControlType.POSITION]:

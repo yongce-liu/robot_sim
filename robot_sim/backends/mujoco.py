@@ -237,6 +237,10 @@ class MujocoBackend(BaseBackend):
                     if joint.tag == "joint" and joint.type == "free":
                         joint.remove()
                 """
+                # add armature
+                for joint in obj_mjcf.find_all("joint"):
+                    if joint.type != "free":
+                        joint.armature = obj_cfg.joints[joint.name].properties.get("armature", 0.0)
             else:
                 xml_str = self._create_builtin_xml(obj_cfg)
                 obj_mjcf = mjcf.from_xml_string(xml_str)
@@ -299,7 +303,7 @@ class MujocoBackend(BaseBackend):
         """Update joint and body name indices for the given model."""
         all_joints = model.find_all("joint")
         all_bodies = model.find_all("body")
-        actuator_names = [actuator.full_identifier for actuator in model.find_all("actuator")]
+        all_actuators = model.find_all("actuator")
 
         for obj_name, obj_cfg in self.objects.items():
             # Only find joints and bodies belonging to this specific object
@@ -317,10 +321,6 @@ class MujocoBackend(BaseBackend):
                         continue
                     elif full_identifier not in self._buffer_dict[obj_name].joint_names:
                         self._buffer_dict[obj_name].joint_names.append(full_identifier)
-                        if full_identifier in actuator_names:
-                            self._buffer_dict[obj_name].actuator_names.append(full_identifier)
-                        else:
-                            logger.warning(f"Joint '{full_identifier}' in object '{obj_name}' is not actuated.")
                     else:
                         logger.error(f"Duplicate joint name detected: {full_identifier} in object {obj_name}")
 
@@ -337,6 +337,19 @@ class MujocoBackend(BaseBackend):
                         self._buffer_dict[obj_name].body_names.append(full_identifier)
                     else:
                         logger.error(f"Duplicate body name detected: {full_identifier} in object {obj_name}")
+
+            for actuator in all_actuators:
+                # Check if actuator belongs to this object
+                full_identifier = actuator.full_identifier
+                if full_identifier and full_identifier.startswith(obj_prefix):
+                    # Extract the actuator name without the prefix
+                    # actuator_name = getattr(actuator, "name", full_identifier.split("/")[-1])
+                    if len(full_identifier) == 0 or len(full_identifier.split("/")[-1]) == 0:
+                        continue
+                    elif full_identifier not in self._buffer_dict[obj_name].actuator_names:
+                        self._buffer_dict[obj_name].actuator_names.append(full_identifier)
+                    else:
+                        logger.error(f"Duplicate actuator name detected: {full_identifier} in object {obj_name}")
 
             # Add sensors if configured for this object
             if hasattr(obj_cfg, "sensors") and obj_cfg.sensors:

@@ -26,6 +26,7 @@ dependencies = [
     "loguru>=0.7.3",
     "mujoco>=3.4.0",
     "numpy==1.26.4",
+    "onnxruntime>=1.23.2",
     "opencv-python>=4.11.0.86",
     "regex>=2025.11.3",
     "torch==2.7.0",

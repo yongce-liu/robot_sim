@@ -6,11 +6,15 @@
 defaults:
   - _self_
 
-decimation: 4
+simulator_config:
+  sim:
+    dt: 0.002
+
+decimation: 10
 max_episode_steps: 1000
 
 controller_config:
-  actuators_order:
+  target_actuator_names:
     [
       left_hip_pitch_joint,
       left_hip_roll_joint,
@@ -56,38 +60,56 @@ controller_config:
       right_hand_index_0_joint,
       right_hand_index_1_joint,
     ]
-  upper_actuator_indices: # ORDER MATTERS
-    [
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-    ]
-  lower_actuator_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+  upper_policy:
+    actuator_indices:
+      [
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+      ]
+  lower_policy:
+    actuator_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    hand_indices: [22, 23, 24, 25, 26, 27, 28, 36, 37, 38, 39, 40, 41, 42]
+    stand_mode_threshold: 0.05
+    model_path:
+      stand: "examples/gr00t/policy/g1/GR00T-WholeBodyControl-Balance.onnx"
+      walk: "examples/gr00t/policy/g1/GR00T-WholeBodyControl-Walk.onnx"
+    observation_params:
+      gravity_vec: [0, 0, -1.0]
+      single_obs_dim: 86
+      obs_history_len: 6
+      action_scale: 0.25
+      command_scale: [2.0, 2.0, 0.25]
+      height_command: 0.74
+      rpy_command: [0.0, 0.0, 0.0]
+      ang_vel_scale: 0.25
+      joint_pos_scale: 1.0
+      joint_vel_scale: 0.05
 
 observation_map:
   state.left_leg:
@@ -290,12 +312,12 @@ action_map:
   #   mode: quaternion
   ######## High-level commands ########
   ######## You need to prepare a motion planner to convert high-level commands to low-level joint commands ########
-  action.base_height_command:
-    - _target_: robot_sim.adapters.gr00t.utils.act_command_map
-    - command_dim: 1
-      bound:
-        min: [0.3]
-        max: [0.8]
+  # action.base_height_command:
+  #   - _target_: robot_sim.adapters.gr00t.utils.act_command_map
+  #   - command_dim: 1
+  #     bound:
+  #       min: [0.3]
+  #       max: [0.8]
   action.navigate_command:
     - _target_: robot_sim.adapters.gr00t.utils.act_command_map
     - command_dim: 3

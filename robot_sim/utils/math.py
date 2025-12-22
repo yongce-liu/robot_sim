@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 
@@ -88,3 +89,42 @@ def euler_xyz_from_quat(
     if wrap_to_2pi:
         return roll % (2 * torch.pi), pitch % (2 * torch.pi), yaw % (2 * torch.pi)
     return roll, pitch, yaw
+
+
+@torch.jit.script
+def quat_apply_inverse(quat: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
+    """Apply an inverse quaternion rotation to a vector.
+
+    Args:
+        quat: The quaternion in (w, x, y, z). Shape is (..., 4).
+        vec: The vector in (x, y, z). Shape is (..., 3).
+
+    Returns:
+        The rotated vector in (x, y, z). Shape is (..., 3).
+    """
+    # store shape
+    shape = vec.shape
+    # reshape to (N, 3) for multiplication
+    quat = quat.reshape(-1, 4)
+    vec = vec.reshape(-1, 3)
+    # extract components from quaternions
+    xyz = quat[:, 1:]
+    t = xyz.cross(vec, dim=-1) * 2
+    return (vec - quat[:, 0:1] * t + xyz.cross(t, dim=-1)).view(shape)
+
+
+def quat_apply_inverse_numpy(quat: np.ndarray, vec: np.ndarray) -> np.ndarray:
+    # Store original shape of vec
+    shape = vec.shape
+    # Reshape to (-1, 4) and (-1, 3)
+    quat = quat.reshape(-1, 4)
+    vec = vec.reshape(-1, 3)
+    # Extract xyz part (imaginary components)
+    xyz = quat[:, 1:]  # shape: (N, 3)
+    w = quat[:, 0:1]  # shape: (N, 1)
+    # Compute t = 2 * cross(xyz, vec)
+    t = 2.0 * np.cross(xyz, vec)  # shape: (N, 3)
+    # Compute result: vec - w * t + cross(xyz, t)
+    result = vec - w * t + np.cross(xyz, t)
+    # Restore original shape
+    return result.reshape(shape)

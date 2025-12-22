@@ -35,11 +35,11 @@ class BasePolicy(BaseController):
     """
 
     @abstractmethod
-    def load_policy(self, policy_path: os.PathLike) -> None:
+    def load_policy(self, path: os.PathLike) -> None:
         """Load policy parameters from a file.
 
         Args:
-            policy_path (str): Path to the policy file.
+            path (str): Path to the policy file.
         """
         raise NotImplementedError
 
@@ -63,7 +63,7 @@ class CompositeController:
             c.reset()
 
     @abstractmethod
-    def compute(self, states: StatesType, targets: Any, **kwargs: Any) -> ActionsType:
+    def compute(self, name: str, states: StatesType, targets: Any, **kwargs: Any) -> ActionsType:
         """Override in subclasses to implement routing logic."""
 
         raise NotImplementedError

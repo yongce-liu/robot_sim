@@ -23,7 +23,7 @@ def check_observation_space(task: gym.Env, obs: gym.spaces.Dict) -> None:
         # )
         if not space.contains(v):
             logger.warning(f"[DEBUG] Observation '{k}' out of space!\nValue: {v}\nSpace: {space}")
-            input("Press Enter to continue...")
+            # input("Press Enter to continue...")
 
 
 def run(cfg: DictConfig) -> None:
@@ -51,13 +51,15 @@ def run(cfg: DictConfig) -> None:
     check_observation_space(task, obs)
 
     # Run a few simulation steps
-    num_steps = 10
+    num_steps = 1000
     logger.info(f"Running {num_steps} simulation steps...")
 
     for step in range(num_steps):
         # Create a simple random action
         # For now, just use zeros for all action groups
         action = task.action_space.sample()
+        for k, v in action.items():
+            action[k] = 0 * v  # Zero action
 
         # Step environment
         obs, reward, terminated, truncated, info = task.step(action)

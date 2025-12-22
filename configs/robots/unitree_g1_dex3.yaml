@@ -363,5 +363,5 @@ sensors:
     orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
 
 properties:
-  fix_base_link: true
+  fix_base_link: false
   # imu: it is built in the xml model

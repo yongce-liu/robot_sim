@@ -100,7 +100,7 @@ class MapEnv(BaseEnv, gym.Env):
             res = map_func(action=action, **params)
             if res is not None:
                 action[group_name] = res
-        actions = self.controller.compute(states=self.states, targets=action)
+        actions = self.controller.compute(name=self.robot_name, states=self.states, targets=action)
         return actions
 
     def compute_reward(self, observation, action=None):

@@ -2,6 +2,8 @@
 assets
 datasets
 uv.lock
+*.onnx
+*.pt
 
 # C extensions
 *.so

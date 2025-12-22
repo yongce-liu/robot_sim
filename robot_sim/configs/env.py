@@ -1,18 +1,20 @@
 from dataclasses import MISSING
-from typing import TYPE_CHECKING
+from typing import Any
 
 from robot_sim.utils.config import configclass
 
 from .simulator import SimulatorConfig
 
-if TYPE_CHECKING:
-    from robot_sim.envs import MapEnv
-
 
 class MapFunc:
-    env: "MapEnv | None" = None
+    env: Any = None
 
-    def init(self, env: "MapEnv", group_name: str, **kwargs):
+    def init(self, env: Any, group_name: str, **kwargs):
+        """
+        Args:
+            env: The environment instance handler.
+            group_name: Name of the observation/action/reward group.
+        """
         if self.env is None:
             self.env = env
         self.group_name = group_name
@@ -31,6 +33,8 @@ class MapEnvConfig:
     """Number of simulation steps per environment step."""
     max_episode_steps: int = MISSING
     """Maximum number of steps per episode."""
+    controller: Any = MISSING
+    """Composite controller for the robot in the Map environment."""
     observation_map: dict[str, tuple[MapFunc, dict]] = MISSING
     """
     Mapping of observation group name to a tuple of (callable, config_dict).

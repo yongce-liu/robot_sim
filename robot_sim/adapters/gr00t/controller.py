@@ -1,11 +1,8 @@
 import os
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from robot_sim.backends.types import ActionsType, StatesType
+from robot_sim.backends.types import ActionsType
 from robot_sim.controllers import BaseController, BasePolicy
-
-if TYPE_CHECKING:
-    from robot_sim.adapters.gr00t import Gr00tWBCEnv
 
 
 class InterpolationPolicy(BaseController):
@@ -25,20 +22,13 @@ class DecoupledWBCPolicy(BasePolicy):
 
     def __init__(
         self,
-        env: "Gr00tWBCEnv",
         upper_body_policy: BasePolicy | None = None,
         lower_body_policy: LowerBodyPolicy | None = None,
     ) -> None:
-        self.env = env
+        pass
 
     def load_policy(self, policy_path: os.PathLike) -> None:
         pass
-
-    def get_states(self) -> StatesType:
-        pass
-
-    def get_observation(self) -> dict[str, Any]:
-        return self.env.observation
 
     def compute(self, *args: Any, **kwargs: Any) -> ActionsType:
         # Implement routing logic specific to Gr00t here
@@ -47,11 +37,11 @@ class DecoupledWBCPolicy(BasePolicy):
         low_level_cmd = self.controllers["pid"].compute(high_level_cmd)
         return low_level_cmd
 
-    # def reset(self, **kwargs):
-    #     obs, info = self.env.reset(**kwargs)
-    #     self.wbc_policy = self.setup_wbc_policy()
-    #     self.wbc_policy.set_observation(obs)
-    #     return obs, info
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self.wbc_policy = self.setup_wbc_policy()
+        self.wbc_policy.set_observation(obs)
+        return obs, info
 
     # def step(self, action: dict[str, Any]) -> tuple[Any, float, bool, bool, dict[str, Any]]:
     #     action_dict = concat_action(self.robot_model, action)

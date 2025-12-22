@@ -9,6 +9,9 @@ defaults:
 decimation: 4
 max_episode_steps: 1000
 
+controller:
+  _target_: robot_sim.adapters.gr00t.controller.DecoupledWBCPolicy
+
 observation_map:
   state.left_leg:
     - _target_: robot_sim.adapters.gr00t.utils.obs_joint_state_split

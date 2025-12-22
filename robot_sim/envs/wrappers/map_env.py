@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from typing import Any
 
 import gymnasium as gym
@@ -64,7 +63,8 @@ class MapEnv(BaseEnv, gym.Env):
             f"Maps initialized.\nObservation Space: {self.observation_space}\nAction Space: {self.action_space}"
         )
 
-        self.controller: CompositeController = self._init_controller()
+        self.controller: CompositeController = self.config.controller
+        #################################################################
 
     def reset(self, *, seed=None, options=None):
         self._episode_step = 0
@@ -134,10 +134,6 @@ class MapEnv(BaseEnv, gym.Env):
             if res is not None:
                 info.update(res)
         return info
-
-    @abstractmethod
-    def _init_controller(self) -> CompositeController:
-        raise NotImplementedError("CompositeController initialization not implemented yet.")
 
     @property
     def observation_space(self) -> gym.spaces.Dict:

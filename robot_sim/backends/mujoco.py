@@ -10,14 +10,14 @@ from loguru import logger
 
 from robot_sim.backends.base import BaseBackend
 from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY
-from robot_sim.backends.types import ActionType, ArrayState, ArrayTypes, ObjectState
+from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig
 
 
 class MujocoBackend(BaseBackend):
     def __init__(self, config: SimulatorConfig, optional_queries: dict[str, Any] | None = None):
         super().__init__(config, optional_queries)
-        self._actions_cache: ActionType = {}  # robot: action
+        self._actions_cache: ActionsType = {}  # robot: action
         assert self.num_envs == 1, f"Mujoco only supports single env, got {self.num_envs}."
         assert self.device == "cpu", f"Mujoco only supports CPU device, got {self.device}."
 
@@ -105,16 +105,16 @@ class MujocoBackend(BaseBackend):
 
         self._mjcf_physics.step()
 
-    def _set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None):
+    def _set_states(self, states: StatesType, env_ids: ArrayType | None = None):
         """Set the states of all objects and robots."""
         if env_ids is None:
             env_ids = self._full_env_ids
-        for obj_name, obj_state in states.objects.items():
+        for obj_name, obj_state in states.items():
             self._set_root_state(obj_name, obj_state, env_ids)
             self._set_joint_state(obj_name, obj_state, env_ids)
         self._mjcf_physics.forward()
 
-    def _set_actions(self, actions: ActionType, env_ids: ArrayTypes | None = None) -> None:
+    def _set_actions(self, actions: ActionsType, env_ids: ArrayType | None = None) -> None:
         """Set actions for all robots/objects with ctrl entrypoint."""
         self._actions_cache = actions  # dict[str, np.ndarray (num_envs, num_dofs)]
 
@@ -126,10 +126,10 @@ class MujocoBackend(BaseBackend):
             # Here, we also use the default order index when adding a object/robot
             self._mjcf_physics.data.ctrl[action_indices] = obj_action[env_ids]
 
-    def _get_states(self, dtype=np.float32) -> ArrayState:
+    def _get_states(self, dtype=np.float32) -> StatesType:
         """Get states of all objects and robots."""
 
-        obj_states: dict[str, ObjectState] = {}
+        states: dict[str, ObjectState] = {}
         _pnd = self._mjcf_physics.named.data
         for obj_name in self._buffer_dict.keys():
             joint_names = self.get_joint_names(obj_name)
@@ -142,10 +142,9 @@ class MujocoBackend(BaseBackend):
                 joint_action=None,
                 sensors={k: v.data for k, v in self._buffer_dict[obj_name].sensors.items()},
             )
-            obj_states[obj_name] = state
+            states[obj_name] = state
 
-        extras = self.get_extra()
-        return ArrayState(objects=obj_states, extras=extras)
+        return states
 
     def _pack_state(self, obj_name: str):
         """
@@ -353,7 +352,7 @@ class MujocoBackend(BaseBackend):
                         )
             self._buffer_dict[obj_name].config = obj_cfg
 
-    def _set_root_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
+    def _set_root_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set root position and rotation."""
 
         identifier = obj_name + "/"  # MuJoCo joint/body names are prefixed with model name
@@ -369,7 +368,7 @@ class MujocoBackend(BaseBackend):
             # body quat
             self._mjcf_physics.named.model.body_quat[identifier] = obj_state.root_state[env_ids, 3:7]
 
-    def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayTypes):
+    def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set joint positions."""
         joint_names = self.get_joint_names(obj_name)
         if len(joint_names) > 0:

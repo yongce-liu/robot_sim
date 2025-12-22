@@ -3,7 +3,7 @@ from typing import Any
 
 import msgpack
 
-from robot_sim.backends.types import ActionType, ArrayState
+from robot_sim.backends.types import ActionsType, StatesType
 
 
 ########################### Virtual Classes ##########################
@@ -40,13 +40,13 @@ class BaseInterface(ABC):
 
     @abstractmethod
     @staticmethod
-    def stateArray2stateMsg(state_array: ArrayState) -> Any:
-        """Convert the ArrayState to a structured observation dictionary."""
+    def stateArray2stateMsg(state_array: StatesType) -> Any:
+        """Convert the StatesType to a structured observation dictionary."""
         raise NotImplementedError
 
     @abstractmethod
     @staticmethod
-    def actionMsg2actionArray(action: Any) -> ActionType:
+    def actionMsg2actionArray(action: Any) -> ActionsType:
         """Convert a structured action dictionary to an array of actions."""
         raise NotImplementedError
 

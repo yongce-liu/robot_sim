@@ -10,8 +10,7 @@ from robot_sim.configs import ObjectConfig
 
 ########################## Data Structures ##########################
 
-ArrayTypes = torch.Tensor | np.ndarray
-ActionType = dict[str, ArrayTypes]
+ArrayType = torch.Tensor | np.ndarray
 
 
 class BaseState(ABC):
@@ -90,21 +89,21 @@ class BaseState(ABC):
 class ObjectState(BaseState):
     """State of a single robot/object."""
 
-    root_state: ArrayTypes
+    root_state: ArrayType
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_state: ArrayTypes
+    body_state: ArrayType
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
-    joint_pos: ArrayTypes | None = None
+    joint_pos: ArrayType | None = None
     """Joint positions. Shape is (num_envs, num_joints). If it is None, the object has no joints."""
-    joint_vel: ArrayTypes | None = None
+    joint_vel: ArrayType | None = None
     """Joint velocities. Shape is (num_envs, num_joints). If it is None, same as above."""
-    # joint_pos_target: ArrayTypes | None = None
+    # joint_pos_target: ArrayType | None = None
     # """Joint positions target. Shape is (num_envs, num_joints)."""
-    # joint_vel_target: ArrayTypes | None = None
+    # joint_vel_target: ArrayType | None = None
     # """Joint velocities target. Shape is (num_envs, num_joints)."""
-    # joint_effort_target: ArrayTypes | None = None
+    # joint_effort_target: ArrayType | None = None
     # """Joint effort targets. Shape is (num_envs, num_joints)."""
-    joint_action: ArrayTypes | None = None
+    joint_action: ArrayType | None = None
     """Joint actions. Shape is (num_envs, num_joints). If it is None, no action is applied."""
     sensors: dict[str, Any] = field(default_factory=dict)
     """Sensor readings. Each sensor has shape (num_envs, sensor_dim)."""
@@ -112,16 +111,20 @@ class ObjectState(BaseState):
     """Extra information."""
 
 
-@dataclass
-class ArrayState(BaseState):
-    """A dictionary that holds the states of all robots and objects in tensor format.
+StatesType = dict[str, ObjectState]
+ActionsType = dict[str, ArrayType]
 
-    The keys are the names of the robots and objects, and the values are tensors representing their states.
-    The tensor shape is (num_envs, state_dim), where num_envs is the number of environments, and state_dim is the dimension of the state for each robot or object.
-    """
 
-    objects: dict[str, ObjectState]
-    extras: dict[str, Any] = field(default_factory=dict)
+# @dataclass
+# class StatesType(BaseState):
+#     """A dictionary that holds the states of all robots and objects in tensor format.
+
+#     The keys are the names of the robots and objects, and the values are tensors representing their states.
+#     The tensor shape is (num_envs, state_dim), where num_envs is the number of environments, and state_dim is the dimension of the state for each robot or object.
+#     """
+
+#     objects: dict[str, ObjectState]
+#     extras: dict[str, Any] = field(default_factory=dict)
 
 
 # robot/object name

@@ -5,7 +5,7 @@ import gymnasium as gym
 import numpy as np
 from loguru import logger
 
-from robot_sim.backends.types import ActionType, ArrayState
+from robot_sim.backends.types import ActionsType, StatesType
 from robot_sim.configs import MapEnvConfig, MapFunc, ObjectType
 from robot_sim.controllers import CompositeController
 from robot_sim.envs.base import BaseEnv
@@ -74,7 +74,7 @@ class MapEnv(BaseEnv, gym.Env):
         self._episode_step += 1
         return super().step(action)
 
-    def stateArray2observation(self, states: ArrayState) -> gym.spaces.Dict:
+    def statesArray2observation(self, states: StatesType) -> gym.spaces.Dict:
         observation_dict = {}
         for group_name, (map_func, params) in self.observation_map.items():
             res = map_func(states=states, **params)
@@ -83,7 +83,7 @@ class MapEnv(BaseEnv, gym.Env):
 
         return observation_dict
 
-    def action2actionArray(self, action: dict[str, Any]) -> ActionType:
+    def action2actionArray(self, action: dict[str, Any]) -> ActionsType:
         """Convert action to backend format.
 
         Args:
@@ -94,12 +94,13 @@ class MapEnv(BaseEnv, gym.Env):
         """
         action[self.robot_name] = np.zeros(
             shape=(1, self.num_dofs), dtype=np.float32
-        )  # It is used to output the final action array (ActionType) for the backend
+        )  # It is used to output the final action array (ActionsType) for the backend
         for group_name, (map_func, params) in self.action_map.items():
             res = map_func(action=action, **params)
             if res is not None:
                 action[group_name] = res
-        action_array = self.controller.compute(action)
+        states = self.get_states(self.robot_name)
+        action_array = self.controller.compute(states=states, action=action)
         return action_array
 
     def compute_reward(self, observation, action=None):

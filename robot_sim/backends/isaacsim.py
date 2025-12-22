@@ -289,7 +289,7 @@
 #                     obj_inst = self.scene.rigid_objects[obj.name]
 
 #                 # Set root state (fix_base_link only affects physics, not manual state setting)
-#                 root_state = states.objects[obj.name].root_state.clone()
+#                 root_state = states[obj.name].root_state.clone()
 #                 root_state[:, :3] += self.scene.env_origins
 #                 obj_inst.write_root_pose_to_sim(root_state[env_ids, :7], env_ids=env_ids)
 #                 obj_inst.write_root_velocity_to_sim(root_state[env_ids, 7:], env_ids=env_ids)
@@ -297,10 +297,10 @@
 #                 if isinstance(obj, ArticulationObjCfg):
 #                     joint_ids_reindex = self.get_joint_reindex(obj.name, inverse=True)
 #                     obj_inst.write_joint_position_to_sim(
-#                         states.objects[obj.name].joint_pos[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
+#                         states[obj.name].joint_pos[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
 #                     )
 #                     obj_inst.write_joint_velocity_to_sim(
-#                         states.objects[obj.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
+#                         states[obj.name].joint_vel[env_ids, :][:, joint_ids_reindex], env_ids=env_ids
 #                     )
 
 #                 # For kinematic objects (fix_base_link=True), force update to sync visual mesh

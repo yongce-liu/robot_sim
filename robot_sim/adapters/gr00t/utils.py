@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 import regex as re
 
-from robot_sim.backends.types import ArrayState
+from robot_sim.backends.types import StatesType
 from robot_sim.configs import MapFunc, SensorType
 from robot_sim.envs import MapEnv
 
@@ -50,11 +50,11 @@ class obs_joint_state_split(MapFunc):
 
     def __call__(
         self,
-        states: ArrayState,
+        states: StatesType,
         mode: Literal["position", "torque"] = "position",
         **kwargs,
     ) -> np.ndarray:
-        robot_state = states.objects[self.env.robot_name]
+        robot_state = states[self.env.robot_name]
         if mode == "torque":
             return robot_state.joint_action[0, self.group_joint_indices]
         elif mode == "position":
@@ -93,9 +93,9 @@ class obs_body_state_split(MapFunc):
         return super().init(env, group_name, **kwargs)
 
     def __call__(
-        self, states: ArrayState, mode: Literal["position", "quaternion", "pose"] = "pose", **kwargs
+        self, states: StatesType, mode: Literal["position", "quaternion", "pose"] = "pose", **kwargs
     ) -> np.ndarray:
-        robot_state = states.objects[self.env.robot_name]
+        robot_state = states[self.env.robot_name]
 
         if mode == "position":
             return robot_state.body_state[0, self.group_body_indices, :3]
@@ -143,8 +143,8 @@ class obs_video_map(MapFunc):
         )
         return super().init(env, group_name, **kwargs)
 
-    def __call__(self, states: ArrayState, **kwargs) -> np.ndarray | dict:
-        robot_state = states.objects[self.env.robot_name]
+    def __call__(self, states: StatesType, **kwargs) -> np.ndarray | dict:
+        robot_state = states[self.env.robot_name]
 
         return robot_state.sensors[self.camera_name]["rgb"]
 

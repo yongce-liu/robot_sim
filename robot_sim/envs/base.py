@@ -1,12 +1,24 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
-import numpy as np
 from loguru import logger
 
 from robot_sim.backends import BackendFactory, BaseBackend
-from robot_sim.backends.types import ActionType, ArrayState, ObjectState
+from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import SimulatorConfig
+
+
+@dataclass
+class MDPCache:
+    """Cache for MDP related information."""
+
+    observation: Any | None = None
+    action: Any | None = None
+    reward: float | ArrayType | None = None
+    terminated: bool | ArrayType | None = None
+    truncated: bool | ArrayType | None = None
+    info: dict[str, Any] | None = None
 
 
 class BaseEnv(ABC):
@@ -48,10 +60,11 @@ class BaseEnv(ABC):
         # Launch the backend if not already launched
         if not self.backend.is_launched:
             self.backend.launch()
-        self._initial_states: ArrayState = self.backend.get_states()
+        self._initial_states: StatesType = self.backend.get_states()
 
         self._observation_space: Any = None  # to be defined in subclass
         self._action_space: Any = None  # to be defined in subclass
+        self._mdp_cache: MDPCache = MDPCache()
 
         # constant
         self._decimation: int = kwargs.get("decimation", 1)
@@ -87,12 +100,11 @@ class BaseEnv(ABC):
 
         # Get observation from backend state
         states = self.backend.get_states()
-        observation = self.stateArray2observation(states)
+        self._mdp_cache.observation = self.statesArray2observation(states)
 
         # Get extra info
-        info = self.compute_info(observation, None)
-
-        return observation, info
+        self._mdp_cache.info = self.compute_info(self.observation, None)
+        return self.observation, self.info
 
     def step(self, action: Any) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         """Run one timestep of the environment's dynamics.
@@ -114,20 +126,20 @@ class BaseEnv(ABC):
             # Set action and simulate
             self.backend.set_actions(action_array)
             self.backend.simulate()
-
         # Get new state and observation
         states = self.backend.get_states()
-        observation = self.stateArray2observation(states)
 
+        ######### assign to mdp cache #########
+        self._mdp_cache.action = action
+        self._mdp_cache.observation = self.statesArray2observation(states)
         # Calculate reward and done flags
-        reward = self.compute_reward(observation, action)
-        terminated = self.compute_terminated(observation, action)
-        truncated = self.compute_truncated(observation, action)
-
+        self._mdp_cache.reward = self.compute_reward(self.observation, self.action)
+        self._mdp_cache.terminated = self.compute_terminated(self.observation, self.action)
+        self._mdp_cache.truncated = self.compute_truncated(self.observation, self.action)
         # Get extra info
-        info = self.compute_info(observation, action)
+        self._mdp_cache.info = self.compute_info(self.observation, self.action)
 
-        return observation, reward, terminated, truncated, info
+        return self.observation, self.reward, self.terminated, self.truncated, self.info
 
     def render(self) -> Any | None:
         """Render the environment.
@@ -150,7 +162,7 @@ class BaseEnv(ABC):
 
     # Abstract methods to be implemented by subclasses
     @abstractmethod
-    def stateArray2observation(self, states: ArrayState) -> Any:
+    def statesArray2observation(self, states: StatesType) -> Any:
         """Convert backend state array to observation.
 
         Args:
@@ -162,7 +174,7 @@ class BaseEnv(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def action2actionArray(self, action: Any) -> ActionType:
+    def action2actionArray(self, action: Any) -> ActionsType:
         """Convert action to backend action array format.
 
         Args:
@@ -174,7 +186,7 @@ class BaseEnv(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_reward(self, observation: Any, action: Any | None = None) -> float | np.ndarray:
+    def compute_reward(self, observation: Any, action: Any | None = None) -> float | ArrayType:
         """Compute the reward for the current step.
 
         Args:
@@ -187,7 +199,7 @@ class BaseEnv(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_terminated(self, observation: Any, action: Any | None = None) -> bool | np.ndarray:
+    def compute_terminated(self, observation: Any, action: Any | None = None) -> bool | ArrayType:
         """Compute whether the episode has terminated.
 
         Args:
@@ -199,7 +211,7 @@ class BaseEnv(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_truncated(self, observation: Any, action: Any | None = None) -> bool | np.ndarray:
+    def compute_truncated(self, observation: Any, action: Any | None = None) -> bool | ArrayType:
         """Compute whether the episode should be truncated.
 
         Args:
@@ -246,7 +258,7 @@ class BaseEnv(ABC):
         return self._backend
 
     @property
-    def initial_states(self) -> ArrayState:
+    def initial_states(self) -> StatesType:
         """Get the initial states for environment reset.
 
         Returns:
@@ -262,3 +274,67 @@ class BaseEnv(ABC):
             decimation: The number of simulation steps per environment step.
         """
         return self._decimation
+
+    ######################## MDP Cache Properties ########################
+    @property
+    def mdp_cache(self) -> MDPCache:
+        """Get the MDP cache instance.
+
+        Returns:
+            mdp_cache: The MDP cache storing observation, action, reward, done flags, and info.
+        """
+        return self._mdp_cache
+
+    @property
+    def observation(self) -> Any:
+        """Get the latest observation.
+
+        Returns:
+            observation: The latest observation from the MDP cache.
+        """
+        return self._mdp_cache.observation
+
+    @property
+    def action(self) -> Any:
+        """Get the latest action.
+
+        Returns:
+            action: The latest action from the MDP cache.
+        """
+        return self._mdp_cache.action
+
+    @property
+    def reward(self) -> float | ArrayType | None:
+        """Get the latest reward.
+
+        Returns:
+            reward: The latest reward from the MDP cache.
+        """
+        return self._mdp_cache.reward
+
+    @property
+    def terminated(self) -> bool | ArrayType | None:
+        """Get the latest terminated flag.
+
+        Returns:
+            terminated: The latest terminated flag from the MDP cache.
+        """
+        return self._mdp_cache.terminated
+
+    @property
+    def truncated(self) -> bool | ArrayType | None:
+        """Get the latest truncated flag.
+
+        Returns:
+            truncated: The latest truncated flag from the MDP cache.
+        """
+        return self._mdp_cache.truncated
+
+    @property
+    def info(self) -> dict[str, Any] | None:
+        """Get the latest info dictionary.
+
+        Returns:
+            info: The latest info dictionary from the MDP cache.
+        """
+        return self._mdp_cache.info

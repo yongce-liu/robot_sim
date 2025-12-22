@@ -8,7 +8,7 @@ from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
 
 from robot_sim.backends import BackendFactory
-from robot_sim.backends.types import ArrayState, ObjectState
+from robot_sim.backends.types import ObjectState, StatesType
 from robot_sim.configs import SimulatorConfig
 
 
@@ -121,8 +121,8 @@ def obj_state(num_joint: int, num_envs: int = 1) -> ObjectState:
 
 
 @pytest.fixture
-def array_state() -> ArrayState:
-    return ArrayState(
+def array_state() -> StatesType:
+    return StatesType(
         objects={
             "g1": obj_state(43),
             "cube": obj_state(0),

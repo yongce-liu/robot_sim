@@ -1,9 +1,8 @@
-from os import PathLike
+import os
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
-
-from robot_sim.controllers import BaseController, CompositeController
+from robot_sim.backends.types import ActionsType, StatesType
+from robot_sim.controllers import BaseController, BasePolicy
 
 if TYPE_CHECKING:
     from robot_sim.adapters.gr00t import Gr00tWBCEnv
@@ -13,26 +12,40 @@ class InterpolationPolicy(BaseController):
     pass
 
 
-class LowerBodyPolicy(BaseController):
+class LowerBodyPolicy(BasePolicy):
     pass
 
 
-class DecoupledWBCPolicy(BaseController):
+class DecoupledWBCPolicy(BasePolicy):
     """Whole-body control policy for Gr00t robot.
 
     This policy combines multiple controllers to produce whole-body commands
     for the Gr00t robot.
     """
 
-    def __init__(self, model_path: PathLike, output_indices: list[int] | np.ndarray) -> None:
+    def __init__(
+        self,
+        env: "Gr00tWBCEnv",
+        upper_body_policy: BasePolicy | None = None,
+        lower_body_policy: LowerBodyPolicy | None = None,
+    ) -> None:
+        self.env = env
+
+    def load_policy(self, policy_path: os.PathLike) -> None:
         pass
 
-    # def compute(self, *args: Any, **kwargs: Any) -> Any:
-    #     # Implement routing logic specific to Gr00t here
-    #     # For example, route high-level commands to low-level PID controllers
-    #     high_level_cmd = self.controllers["high_level"].compute(*args, **kwargs)
-    #     low_level_cmd = self.controllers["pid"].compute(high_level_cmd)
-    #     return low_level_cmd
+    def get_states(self) -> StatesType:
+        pass
+
+    def get_observation(self) -> dict[str, Any]:
+        return self.env.observation
+
+    def compute(self, *args: Any, **kwargs: Any) -> ActionsType:
+        # Implement routing logic specific to Gr00t here
+        # For example, route high-level commands to low-level PID controllers
+        high_level_cmd = self.controllers["high_level"].compute(*args, **kwargs)
+        low_level_cmd = self.controllers["pid"].compute(high_level_cmd)
+        return low_level_cmd
 
     # def reset(self, **kwargs):
     #     obs, info = self.env.reset(**kwargs)
@@ -148,33 +161,33 @@ class DecoupledWBCPolicy(BaseController):
 #     return action_dict
 
 
-class Gr00tWBCController(CompositeController):
-    """Composite controller for Gr00t robot.
+# class Gr00tWBCController(CompositeController):
+#     """Composite controller for Gr00t robot.
 
-    This controller combines multiple sub-controllers to manage different
-    aspects of the Gr00t robot's behavior.
-    For example, it can include a trained whole-body controller (WBC) and a PD controller.
-    In another example, you can implement a unitree-sdk message interface and then use the sdk to control the robot.
-    """
+#     This controller combines multiple sub-controllers to manage different
+#     aspects of the Gr00t robot's behavior.
+#     For example, it can include a trained whole-body controller (WBC) and a PD controller.
+#     In another example, you can implement a unitree-sdk message interface and then use the sdk to control the robot.
+#     """
 
-    def __init__(self, env: "Gr00tWBCEnv") -> None:
-        self.env = env
-        controllers = {
-            "wbc": DecoupledWBCPolicy(
-                {
-                    # Initialize sub-controllers here
-                    # e.g., "high_level": HighLevelController(env),
-                    #       "pid": PIDController(env),
-                }
-            ),
-            # Add other controllers as needed
-        }
-        super().__init__(controllers)
+#     def __init__(self, env: "Gr00tWBCEnv") -> None:
+#         self.env = env
+#         controllers = {
+#             "wbc": DecoupledWBCPolicy(
+#                 {
+#                     # Initialize sub-controllers here
+#                     # e.g., "high_level": HighLevelController(env),
+#                     #       "pid": PIDController(env),
+#                 }
+#             ),
+#             # Add other controllers as needed
+#         }
+#         super().__init__(controllers)
 
-    def compute(self, action: dict[str, Any]) -> Any:
-        # Implement routing logic specific to Gr00t here
-        # For example, route commands to different sub-controllers
-        results = {}
-        for name, controller in self.controllers.items():
-            results[name] = controller.compute(action)
-        return results
+#     def compute(self, action: dict[str, Any]) -> Any:
+#         # Implement routing logic specific to Gr00t here
+#         # For example, route commands to different sub-controllers
+#         results = {}
+#         for name, controller in self.controllers.items():
+#             results[name] = controller.compute(action)
+#         return results

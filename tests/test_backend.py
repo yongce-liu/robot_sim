@@ -3,7 +3,7 @@
 import numpy as np
 
 from robot_sim.backends import MujocoBackend
-from robot_sim.backends.types import ArrayState
+from robot_sim.backends.types import StatesType
 
 
 class TestMuJoCoBackend:
@@ -13,26 +13,26 @@ class TestMuJoCoBackend:
         """Test a single simulation step."""
         mujoco_backend.simulate()
 
-    def test_set_root_state(self, mujoco_backend: MujocoBackend, array_state: ArrayState, robot_name: str) -> None:
+    def test_set_root_state(self, mujoco_backend: MujocoBackend, array_state: StatesType, robot_name: str) -> None:
         """Test setting root state of an object."""
 
         mujoco_backend._set_root_state(robot_name, array_state.objects[robot_name], env_ids=np.array([0]))
         mujoco_backend.simulate()
 
-    def test_set_joint_state(self, mujoco_backend: MujocoBackend, array_state: ArrayState, robot_name: str) -> None:
+    def test_set_joint_state(self, mujoco_backend: MujocoBackend, array_state: StatesType, robot_name: str) -> None:
         """Test setting joint state of an object."""
         mujoco_backend._set_joint_state(robot_name, array_state.objects[robot_name], env_ids=np.array([0]))
         mujoco_backend.simulate()
 
-    def test_set_actions(self, mujoco_backend: MujocoBackend, array_state: ArrayState, robot_name: str) -> None:
+    def test_set_actions(self, mujoco_backend: MujocoBackend, array_state: StatesType, robot_name: str) -> None:
         """Test setting actions for an object."""
         actions = {robot_name: array_state.objects[robot_name].joint_pos}
         mujoco_backend._set_actions(actions, env_ids=np.array([0]))
         mujoco_backend.simulate()
 
-    def test_get_state(self, mujoco_backend: MujocoBackend, array_state: ArrayState, robot_name: str) -> None:
+    def test_get_state(self, mujoco_backend: MujocoBackend, array_state: StatesType, robot_name: str) -> None:
         mujoco_backend.set_states(array_state, env_ids=np.array([0]))
-        new_state: ArrayState = mujoco_backend.get_states()
+        new_state: StatesType = mujoco_backend.get_states()
         for key in array_state.objects[robot_name].keys():
             np.testing.assert_allclose(
                 new_state.objects[robot_name][key],

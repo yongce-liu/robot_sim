@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from robot_sim.backends.types import ActionType, ArrayState, ArrayTypes, Buffer
+from robot_sim.backends.types import ActionsType, ArrayType, Buffer, StatesType
 from robot_sim.configs import (
     BackendType,
     ObjectConfig,
@@ -40,7 +40,7 @@ class BaseBackend(ABC):
         # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
 
         self._state_cache_expire = True
-        self._states: ArrayState = None
+        self._states: StatesType = None
 
         # Constants
         self.is_launched = False
@@ -98,21 +98,21 @@ class BaseBackend(ABC):
             for sensor in sensor_dict.sensors.values():
                 sensor(cnt)
 
-    def set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
+    def set_states(self, states: StatesType, env_ids: ArrayType | None = None) -> None:
         """Set the states of the environment."""
         self._state_cache_expire = True
         self._set_states(states, env_ids)
 
-    def set_actions(self, actions: ActionType) -> None:
+    def set_actions(self, actions: ActionsType) -> None:
         """Set the dof targets of the robot.
 
         Args:
             obj_name (str): The name of the robot
-            actions (dict[str, ActionType]): The target actions for the robot
+            actions (dict[str, ActionsType]): The target actions for the robot
         """
         self._set_actions(actions)
 
-    def get_states(self) -> ArrayState:
+    def get_states(self) -> StatesType:
         """Get the states of the environment.
         It will return all env state
         """
@@ -153,7 +153,7 @@ class BaseBackend(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _set_states(self, states: ArrayState, env_ids: ArrayTypes | None = None) -> None:
+    def _set_states(self, states: StatesType, env_ids: ArrayType | None = None) -> None:
         """Set the states of the environment.
         For a new simulator, you should implement this method.
 
@@ -164,14 +164,14 @@ class BaseBackend(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _set_actions(self, actions: ActionType) -> None:
+    def _set_actions(self, actions: ActionsType) -> None:
         """Set the dof targets of the environment.
         For a new simulator, you should implement this method.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def _get_states(self) -> ArrayState:
+    def _get_states(self) -> StatesType:
         """Get the states of the environment.
         For a new simulator, you should implement this method.
 

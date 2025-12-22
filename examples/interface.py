@@ -6,7 +6,7 @@ class Gr00tInterface:
     message: Any
 
     def stateArray2stateMsg(self) -> dict:
-        """Convert the ArrayState to a structured observation dictionary.
+        """Convert the StatesType to a structured observation dictionary.
         It denpends on the definition/structure of the observation space of Gr00t robot.
         """
         return {

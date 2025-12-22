@@ -112,7 +112,7 @@ class DualImageViewer:
         return self.stop_event.is_set()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default")
+@hydra.main(version_base=None, config_path=str(PROJECT_DIR), config_name="/configs/simulator.yaml")
 def main(cfg: DictConfig) -> None:
     """Main entry point with threaded visualization.
 
@@ -146,13 +146,13 @@ def main(cfg: DictConfig) -> None:
         while not viewer.is_stopped():
             sim_backend.set_states(default_state)
             sim_backend.simulate()
-            state = sim_backend.get_states()
+            states = sim_backend.get_states()
             try:
-                image1 = state.objects["g1"].sensors["head_camera"]["rgb"]
+                image1 = states["g1"].sensors["head_camera"]["rgb"]
             except KeyError:
                 image1 = np.zeros((480, 640, 3), dtype=np.uint8)
             try:
-                image2 = state.objects["g2"].sensors["head_camera"]["rgb"]
+                image2 = states["g2"].sensors["head_camera"]["rgb"]
             except KeyError:
                 image2 = np.zeros((480, 640, 3), dtype=np.uint8)
             # Send both images to the dual viewer

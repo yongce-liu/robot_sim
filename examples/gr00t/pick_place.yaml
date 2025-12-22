@@ -25,7 +25,7 @@ env_config:
         apple:
           path: assets/objects/apple_0/model.xml
           # initial_position: [0.4, 0.0, 0.684446]
-          initial_position: [0.4, 0.0, 0.7]
+          initial_position: [0.4, 0.0, 0.73]
           # initial_orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
         plate:
           path: assets/objects/plate_1/model.xml

@@ -25,7 +25,7 @@ class obs_joint_state_split(MapFunc):
     ) -> None:
         # Initialization buffer phase
         self.group_name = group_name
-        joint_names = [joint.split("/")[-1].split(".")[-1] for joint in env.backend.get_joint_names(env.robot_name)]
+        joint_names = [joint for joint in env.get_joint_names(env.robot_name)]
         if isinstance(joint_patterns, str):
             joint_patterns = [joint_patterns]
         buffer = []
@@ -72,7 +72,7 @@ class obs_body_state_split(MapFunc):
         **kwargs,
     ) -> np.ndarray | None:
         # Initialization buffer phase
-        body_names = [body.split("/")[-1].split(".")[-1] for body in env.backend.get_body_names(env.robot_name)]
+        body_names = [body for body in env.get_body_names(env.robot_name)]
         if isinstance(body_patterns, str):
             body_patterns = [body_patterns]
         buffer = []
@@ -120,11 +120,7 @@ class obs_video_map(MapFunc):
         assert isinstance(camera_name, str), "Camera name must be a string"
         # Initialization buffer phase
         rx = re.compile(camera_name)
-        available_cameras = [
-            name.split("/")[-1].split(".")[-1]
-            for name, cfg in env.robot_cfg.sensors.items()
-            if cfg.type == SensorType.CAMERA
-        ]
+        available_cameras = [name for name, cfg in env.robot_cfg.sensors.items() if cfg.type == SensorType.CAMERA]
         matched_camera_names = [name for name in available_cameras if rx.fullmatch(name)]
         assert len(matched_camera_names) == 1, (
             f"Expected exactly one camera to match camera '{camera_name}', but found {len(matched_camera_names)}."
@@ -180,9 +176,7 @@ class act_actuator_map(MapFunc):
         **kwargs,
     ) -> np.ndarray | None:
         # Initialization buffer phase
-        actuator_names = [
-            actuator.split("/")[-1].split(".")[-1] for actuator in env.backend.get_actuator_names(env.robot_name)
-        ]
+        actuator_names = [actuator for actuator in env.get_actuator_names(env.robot_name)]
         if isinstance(actuator_patterns, str):
             actuator_patterns = [actuator_patterns]
         buffer = []

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import gymnasium as gym
 import hydra
-import numpy as np
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
@@ -14,6 +13,17 @@ from robot_sim.configs import MapTaskConfig
 from robot_sim.utils.helper import setup_logger
 
 PROJECT_DIR = Path(robot_sim.__file__).parents[1].resolve()
+
+
+def check_observation_space(task: gym.Env, obs: gym.spaces.Dict) -> None:
+    for k, v in obs.items():
+        space = task.observation_space.spaces[k]
+        # logger.info(
+        #     f"{k}: value shape={np.shape(v)}, dtype={getattr(v, 'dtype', type(v))}, space shape={space.shape}, space dtype={space.dtype}"
+        # )
+        if not space.contains(v):
+            logger.warning(f"[DEBUG] Observation '{k}' out of space!\nValue: {v}\nSpace: {space}")
+            input("Press Enter to continue...")
 
 
 def run(cfg: DictConfig) -> None:
@@ -38,13 +48,7 @@ def run(cfg: DictConfig) -> None:
     logger.info("Resetting environment...")
     obs, info = task.reset()
     logger.info(f"Initial observation keys: {obs.keys() if isinstance(obs, dict) else 'N/A'}")
-    for k, v in obs.items():
-        space = task.observation_space.spaces[k]
-        logger.info(
-            f"{k}: value shape={np.shape(v)}, dtype={getattr(v, 'dtype', type(v))}, space shape={space.shape}, space dtype={space.dtype}"
-        )
-        if not space.contains(v):
-            logger.warning(f"[DEBUG] Observation '{k}' out of space!\nValue: {v}\nSpace: {space}")
+    check_observation_space(task, obs)
 
     # Run a few simulation steps
     num_steps = 10
@@ -57,6 +61,7 @@ def run(cfg: DictConfig) -> None:
 
         # Step environment
         obs, reward, terminated, truncated, info = task.step(action)
+        check_observation_space(task, obs)
 
         if step % 5 == 0:
             logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")

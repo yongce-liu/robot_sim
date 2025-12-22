@@ -5,14 +5,13 @@ from typing import Any
 import numpy as np
 from loguru import logger
 
-from robot_sim.backends.types import ObjectState
+from robot_sim.adapters.gr00t.env import Gr00tWBCEnv
 from robot_sim.configs import MapTaskConfig
-from robot_sim.envs import MapEnv
 from robot_sim.utils.helper import task_register
 
 
 @task_register("Gr00tPickAndPlace-v0")
-class PickAndPlaceTask(MapEnv):
+class PickAndPlaceTask(Gr00tWBCEnv):
     """Pick-and-place task wrapper.
 
     This wrapper computes task-specific reward, termination, truncation, and info
@@ -25,6 +24,7 @@ class PickAndPlaceTask(MapEnv):
         object_name: str,
         target_name: str,
         success_threshold: float = 1e-2,
+        reward_scale: float = 1.0,
     ) -> None:
         super().__init__(env_config)
         logger.info(f"PickAndPlaceTask with object: {object_name}, target: {target_name}, robot: {self.robot_name}")
@@ -32,6 +32,7 @@ class PickAndPlaceTask(MapEnv):
         self.object_name = object_name
         self.target_name = target_name
         self.success_threshold = float(success_threshold)
+        self.reward_scale = float(reward_scale)
 
         self._distance_cache: np.ndarray | None = None
         self._distance_cache_expire: bool = True
@@ -61,28 +62,6 @@ class PickAndPlaceTask(MapEnv):
             info["is_success"] = is_success
         return info
 
-    def get_object_state(self, name: str | None = None) -> ObjectState:
-        """Get the object position used in the task.
-
-        Returns:
-            Object position as a numpy array.
-        """
-        if name is None:
-            name = self.object_name
-        states = self.get_states(name)
-        return states
-
-    def get_target_state(self, name: str | None = None) -> ObjectState:
-        """Get the target position used in the task.
-
-        Returns:
-            Target position as a numpy array, or None if not specified.
-        """
-        if name is None:
-            name = self.target_name
-        states = self.get_states(name)
-        return states
-
     @staticmethod
     def _to_numpy(value: Any) -> np.ndarray:
         if hasattr(value, "detach"):
@@ -97,8 +76,8 @@ class PickAndPlaceTask(MapEnv):
             Distance as a numpy array.
         """
         if self._distance_cache_expire:
-            object_pos = self.get_object_state().root_state[:3]
-            target_pos = self.get_target_state().root_state[:3]
+            object_pos = self.get_object_state(self.object_name).root_state[:3]
+            target_pos = self.get_object_state(self.target_name).root_state[:3]
             self._distance_cache = np.linalg.norm(object_pos - target_pos, axis=-1)
             self._distance_cache_expire = False
-        return self._distance_cache
+        return self._distance_cache[0]

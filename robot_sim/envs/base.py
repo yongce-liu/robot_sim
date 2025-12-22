@@ -234,13 +234,46 @@ class BaseEnv(ABC):
         """
         raise NotImplementedError
 
-    def get_states(self, name: str) -> ObjectState:
+    def get_object_state(self, name: str) -> ObjectState:
         """Get the current states from the backend.
 
         Returns:
             states: The current state dictionary from backend.
         """
         return self.backend.get_states()[name]
+
+    def get_actuator_names(self, name: str) -> list[str]:
+        """Get the actuator names from the backend.
+
+        Returns:
+            actuator_names: List of actuator names.
+        """
+        return [name.split("/")[-1].split(".")[-1] for name in self.backend.get_actuator_names(name)]
+
+    def get_joint_names(self, name: str) -> list[str]:
+        """Get the joint names from the backend.
+
+        Returns:
+            joint_names: List of joint names.
+        """
+        return [name.split("/")[-1].split(".")[-1] for name in self.backend.get_joint_names(name)]
+
+    def get_body_names(self, name: str) -> list[str]:
+        """Get the body names from the backend.
+
+        Returns:
+            body_names: List of body names.
+        """
+        return [name.split("/")[-1].split(".")[-1] for name in self.backend.get_body_names(name)]
+
+    @property
+    def states(self) -> StatesType:
+        """Get the current states from the backend.
+
+        Returns:
+            states: The current state dictionary from backend.
+        """
+        return self.backend.get_states()
 
     @property
     def observation_space(self) -> Any:

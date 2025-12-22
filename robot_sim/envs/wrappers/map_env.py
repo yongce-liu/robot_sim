@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Any
 
 import gymnasium as gym
@@ -63,7 +64,7 @@ class MapEnv(BaseEnv, gym.Env):
             f"Maps initialized.\nObservation Space: {self.observation_space}\nAction Space: {self.action_space}"
         )
 
-        self.controller: CompositeController = self.config.controller
+        self.controller: CompositeController = self._init_controller(**config.controller_config)
         #################################################################
 
     def reset(self, *, seed=None, options=None):
@@ -99,8 +100,7 @@ class MapEnv(BaseEnv, gym.Env):
             res = map_func(action=action, **params)
             if res is not None:
                 action[group_name] = res
-        states = self.get_states(self.robot_name)
-        actions = self.controller.compute(states=states, targets=action)
+        actions = self.controller.compute(states=self.states, targets=action)
         return actions
 
     def compute_reward(self, observation, action=None):
@@ -134,6 +134,15 @@ class MapEnv(BaseEnv, gym.Env):
             if res is not None:
                 info.update(res)
         return info
+
+    @abstractmethod
+    def _init_controller(self, **kwargs) -> CompositeController:
+        """Initialize the composite controller for the robot.
+
+        Returns:
+            An instance of CompositeController.
+        """
+        raise NotImplementedError
 
     @property
     def observation_space(self) -> gym.spaces.Dict:

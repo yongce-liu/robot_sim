@@ -33,7 +33,7 @@ class MapEnvConfig:
     """Number of simulation steps per environment step."""
     max_episode_steps: int = MISSING
     """Maximum number of steps per episode."""
-    controller: Any = MISSING
+    controller_config: dict = MISSING
     """Composite controller for the robot in the Map environment."""
     observation_map: dict[str, tuple[MapFunc, dict]] = MISSING
     """

@@ -55,8 +55,8 @@ class CompositeController:
     This class is backend-agnostic; adapters can wrap env-specific I/O.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.controllers: dict[str, BaseController] | None = None
+    def __init__(self, controllers: dict[str, BaseController]) -> None:
+        self.controllers = controllers
 
     def reset(self) -> None:
         for c in self.controllers.values():

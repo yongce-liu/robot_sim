@@ -15,6 +15,84 @@ Two Phases:
 """
 
 
+def rpy_to_rotmat(rpy):
+    """
+    Convert roll, pitch, yaw (RPY) angles to a 3x3 rotation matrix.
+    Uses ZYX (yaw-pitch-roll) intrinsic rotation order, which is standard in robotics.
+
+    Parameters:
+        rpy : array-like, shape (3,)
+            [roll, pitch, yaw] in radians.
+
+    Returns:
+        R : np.ndarray, shape (3, 3)
+            Rotation matrix (float64).
+    """
+    roll, pitch, yaw = rpy
+
+    # Precompute sines and cosines
+    cr = np.cos(roll)
+    sr = np.sin(roll)
+    cp = np.cos(pitch)
+    sp = np.sin(pitch)
+    cy = np.cos(yaw)
+    sy = np.sin(yaw)
+
+    # R = R_z(yaw) @ R_y(pitch) @ R_x(roll)
+    R = np.array(
+        [
+            [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
+            [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
+            [-sp, cp * sr, cp * cr],
+        ],
+        dtype=np.float64,
+    )
+
+    return R
+
+
+def rotmat_to_rpy(R):
+    """
+    Convert rotation matrix to roll, pitch, yaw (ZYX convention).
+    Returns: np.array([roll, pitch, yaw])
+    """
+    sy = np.sqrt(R[0, 0] ** 2 + R[1, 0] ** 2)
+
+    singular = sy < 1e-6
+
+    if not singular:
+        roll = np.arctan2(R[2, 1], R[2, 2])
+        pitch = np.arctan2(-R[2, 0], sy)
+        yaw = np.arctan2(R[1, 0], R[0, 0])
+    else:
+        # Gimbal lock
+        roll = np.arctan2(-R[1, 2], R[1, 1])
+        pitch = np.arctan2(-R[2, 0], sy)
+        yaw = 0.0
+
+    return np.array([roll, pitch, yaw], dtype=np.float64)
+
+
+def quat_wxyz_to_rotmat(quat: np.ndarray) -> np.ndarray:
+    """Convert a WXYZ quaternion to a 3x3 rotation matrix."""
+    w, x, y, z = quat
+    norm = np.sqrt(w * w + x * x + y * y + z * z)
+    if norm == 0:
+        return np.eye(3, dtype=np.float32)
+    w /= norm
+    x /= norm
+    y /= norm
+    z /= norm
+    return np.array(
+        [
+            [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)],
+            [2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)],
+            [2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)],
+        ],
+        dtype=np.float32,
+    )
+
+
 class obs_joint_state_split(MapFunc):
     def init(
         self,
@@ -221,3 +299,28 @@ class act_command_map(MapFunc):
             dtype=np.float32,
         )
         return super().init(env, group_name, **kwargs)
+
+    def __call__(self, action: dict[str, np.ndarray], **kwargs) -> None:
+        if self.group_name == "action.base_height_command":
+            return None
+        elif self.group_name == "action.navigate_command":
+            return None
+        elif self.group_name == "action.rpy_command":
+            # Compute torso orientation relative to waist, to pass to lower body policy
+            body_state = self.env.states[self.env.robot_name].body_state
+            # Get torso and waist indices
+            torso_index = self.env.get_body_names(self.env.robot_name).index("torso_link")
+            pelvis_index = self.env.get_body_names(self.env.robot_name).index("pelvis")
+            torso_orientation = quat_wxyz_to_rotmat(body_state[0, torso_index, 3:7])
+            waist_orientation = quat_wxyz_to_rotmat(body_state[0, pelvis_index, 3:7])
+            # Extract yaw from rotation matrix and create a rotation with only yaw
+            # The rotation property is a 3x3 numpy array
+            waist_yaw = np.arctan2(waist_orientation[1, 0], waist_orientation[0, 0])
+            # Create a rotation matrix with only yaw using Pinocchio's rpy functions
+            waist_yaw_only_rotation = rpy_to_rotmat([0, 0, float(waist_yaw)])
+            yaw_only_waist_from_torso = waist_yaw_only_rotation.T @ torso_orientation
+            torso_orientation_rpy = rotmat_to_rpy(yaw_only_waist_from_torso)
+
+            return torso_orientation_rpy
+        else:
+            raise ValueError(f"Unsupported command group '{self.group_name}' in act_command_map.")

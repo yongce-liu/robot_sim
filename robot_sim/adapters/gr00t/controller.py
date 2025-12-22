@@ -59,7 +59,7 @@ class LowerBodyPolicy(BasePolicy):
 
     def compute(self, name: str, states: StatesType, targets: ActionsType) -> ArrayType:
         if self.model_path is None:
-            return targets[..., self.actuator_indices]
+            return targets[name][..., self.actuator_indices]
 
         with torch.no_grad():
             self._obs_buffer.append(self.compose_observation(name, states, targets))
@@ -101,9 +101,9 @@ class LowerBodyPolicy(BasePolicy):
         quat = states[name].root_state[..., 3:7]  # [w, x, y, z]
         omega = states[name].root_state[..., 10:13]  # angular velocity in world frame
 
-        nav_cmd = targets.get("action.navigate_command", np.zeros((1, 3))) * self.command_scale
-        height_cmd = np.array([[targets.get("action.base_height_command", self.height_command)]])
-        rpy_cmd = targets.get("action.rpy_cmd", self.rpy_command)
+        nav_cmd = targets.get("action.navigate_command", self.default_nav_command) * self.command_scale
+        height_cmd = np.array([[targets.get("action.base_height_command", self.default_height_cmd)]])
+        rpy_cmd = targets.get("action.rpy_cmd", self.default_rpy_cmd)
         omega_scaled = omega * self.ang_vel_scale
         gravity_orientation = quat_apply_inverse_numpy(quat, self.gravity_vec)
         joint_pos_scaled = (states[name].joint_pos - self.default_joint_position) * self.joint_pos_scale
@@ -134,8 +134,9 @@ class LowerBodyPolicy(BasePolicy):
         self.obs_history_len = self.obs_cfg["obs_history_len"]
         self.action_scale = self.obs_cfg["action_scale"]
         self.command_scale = np.array(self.obs_cfg["command_scale"], dtype=np.float32)[np.newaxis, :]
-        self.height_command = self.obs_cfg["height_command"]
-        self.rpy_command = np.array(self.obs_cfg["rpy_command"], dtype=np.float32)[np.newaxis, :]
+        self.default_nav_command = np.array(self.obs_cfg["nav_command"], dtype=np.float32)[np.newaxis, :]
+        self.default_height_cmd = self.obs_cfg["height_command"]
+        self.default_rpy_cmd = np.array(self.obs_cfg["rpy_command"], dtype=np.float32)[np.newaxis, :]
         self.ang_vel_scale = self.obs_cfg["ang_vel_scale"]
         self.joint_pos_scale = self.obs_cfg["joint_pos_scale"]
         self.joint_vel_scale = self.obs_cfg["joint_vel_scale"]
@@ -178,7 +179,7 @@ class DecoupledWBCPolicy(CompositeController):
     def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
         upper_target = self.upper_body_policy.compute(name=name, states=states, targets=targets)
         lower_target = self.lower_body_policy.compute(name=name, states=states, targets=targets)
-        output = np.concatenate([upper_target, lower_target], axis=-1)[..., self.output_redices]
+        output = np.concatenate([lower_target, upper_target], axis=-1)[..., self.output_redices]
         return output
 
 

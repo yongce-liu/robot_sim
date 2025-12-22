@@ -104,6 +104,9 @@ class Gr00tWBCEnv(MapEnv):
             target=self.default_actuator_names,
             use_regex=True,
         )
+        assert len(output_indices) == len(upper_body_policy.actuator_indices) + len(
+            lower_body_policy.actuator_indices
+        ), "The total number of output indices must match the sum of upper and lower body policy actuator indices."
         wbc_policy = DecoupledWBCPolicy(
             upper_body_policy=upper_body_policy,
             lower_body_policy=lower_body_policy,
@@ -113,10 +116,10 @@ class Gr00tWBCEnv(MapEnv):
 
     def _init_pd_controller(self) -> PIDController:
         robot_cfg = self.backend.objects[self.robot_name]
-        kp = np.array([robot_cfg.joints[name].stiffness for name in self.target_actuator_names], dtype=np.float32)
-        kd = np.array([robot_cfg.joints[name].damping for name in self.target_actuator_names], dtype=np.float32)
+        kp = np.array([robot_cfg.joints[name].stiffness for name in self.default_actuator_names], dtype=np.float32)
+        kd = np.array([robot_cfg.joints[name].damping for name in self.default_actuator_names], dtype=np.float32)
         pd_controller = PIDController(kp=kp, kd=kd, dt=self.config.simulator_config.sim.dt)
-        
+
         return pd_controller
 
     def get_joint_reindex(self, default: list[str], target: list[str], use_regex: bool = True) -> list[int]:

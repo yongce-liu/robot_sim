@@ -93,8 +93,8 @@ class MapEnv(BaseEnv, gym.Env):
         Returns:
             Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
-        action[self.robot_name] = np.zeros(
-            shape=(1, self.num_dofs), dtype=np.float32
+        action[self.robot_name] = np.full(
+            shape=(self.backend.num_envs, self.num_dofs), fill_value=np.nan, dtype=np.float32
         )  # It is used to output the final action array (ActionsType) for the backend
         for group_name, (map_func, params) in self.action_map.items():
             res = map_func(action=action, **params)

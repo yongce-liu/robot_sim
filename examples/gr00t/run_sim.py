@@ -60,12 +60,13 @@ def run(cfg: DictConfig) -> None:
         action = task.action_space.sample()
         for k, v in action.items():
             action[k] = 0 * v  # Zero action
+        action["action.base_height_command"] = 0.74
 
         # Step environment
         obs, reward, terminated, truncated, info = task.step(action)
         check_observation_space(task, obs)
 
-        if step % 5 == 0:
+        if step % 50 == 0:
             logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
 
         if terminated or truncated:

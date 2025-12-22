@@ -1,5 +1,7 @@
 from robot_sim.envs import MapEnv
 
+from .controller import Gr00tWBCController
+
 
 class Gr00tWBCEnv(MapEnv):
     """Gr00t Environment Wrapper.
@@ -9,5 +11,5 @@ class Gr00tWBCEnv(MapEnv):
     tailored for Gr00t simulations.
     """
 
-    def _init_controller(self):
+    def _init_controller(self) -> Gr00tWBCController:
         return None

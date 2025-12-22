@@ -2,6 +2,7 @@ from abc import abstractmethod
 from typing import Any
 
 import gymnasium as gym
+import numpy as np
 from loguru import logger
 
 from robot_sim.backends.types import ActionType, ArrayState
@@ -91,6 +92,9 @@ class MapEnv(BaseEnv, gym.Env):
         Returns:
             Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
+        action[self.robot_name] = np.zeros(
+            shape=(1, self.num_dofs), dtype=np.float32
+        )  # It is used to output the final action array (ActionType) for the backend
         for group_name, (map_func, params) in self.action_map.items():
             res = map_func(action=action, **params)
             if res is not None:

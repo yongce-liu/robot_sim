@@ -171,7 +171,7 @@ class obs_annotation_map(MapFunc):
         return self.description
 
 
-class act_actuator_space_init(MapFunc):
+class act_actuator_map(MapFunc):
     def init(
         self,
         env: MapEnv,
@@ -205,8 +205,12 @@ class act_actuator_space_init(MapFunc):
         self.group_actuator_indices = buffer
         return super().init(env, group_name, **kwargs)
 
+    def __call__(self, action: dict[str, np.ndarray], **kwargs) -> None:
+        # Set the corresponding actuator commands in the backend action array
+        action[self.env.robot_name][..., self.group_actuator_indices] = action[self.group_name]
 
-class act_command_space_init(MapFunc):
+
+class act_command_map(MapFunc):
     def init(
         self,
         env: MapEnv,

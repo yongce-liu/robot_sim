@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from robot_sim.backends.types import ActionType
+
 
 class BaseController(ABC):
     """Base class for controllers.
@@ -24,7 +26,7 @@ class BaseController(ABC):
         raise NotImplementedError
 
 
-class CompositeController(BaseController):
+class CompositeController:
     """A controller that routes/combines multiple low-level controllers.
 
     Typical usage:
@@ -35,15 +37,15 @@ class CompositeController(BaseController):
     This class is backend-agnostic; adapters can wrap env-specific I/O.
     """
 
-    def __init__(self, controllers: dict[str, BaseController]) -> None:
-        self.controllers: dict[str, BaseController] = controllers
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.controllers: dict[str, BaseController] | None = None
 
     def reset(self) -> None:
         for c in self.controllers.values():
             c.reset()
 
     @abstractmethod
-    def compute(self, *args: Any, **kwargs: Any) -> Any:
+    def compute(self, *args: Any, **kwargs: Any) -> ActionType:
         """Override in subclasses to implement routing logic."""
 
         raise NotImplementedError

@@ -8,11 +8,12 @@ import numpy as np
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
+import robot_sim
 import robot_sim.adapters.gr00t  # noqa: F401 - triggers task registration
 from robot_sim.configs import MapTaskConfig
 from robot_sim.utils.helper import setup_logger
 
-PROJECT_ROOT = Path(__file__).parents[2].resolve()
+PROJECT_DIR = Path(robot_sim.__file__).parents[1].resolve()
 
 
 def run(cfg: DictConfig) -> None:
@@ -68,7 +69,7 @@ def run(cfg: DictConfig) -> None:
     task.close()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_ROOT), config_name="/examples/gr00t/pick_place")
+@hydra.main(version_base=None, config_path=str(PROJECT_DIR), config_name="/examples/gr00t/pick_place")
 def main(cfg: DictConfig) -> None:
     """Main function to run Gr00t simulation with Hydra configuration.
 

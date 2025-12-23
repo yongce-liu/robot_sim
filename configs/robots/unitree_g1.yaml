@@ -13,6 +13,9 @@ joints:
     torque_limit: 88.0
     position_limit: [-2.5307, 2.8798]
     default_position: -0.1
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_hip_roll_joint:
     control_type: torque
     stiffness: 100.0
@@ -21,6 +24,9 @@ joints:
     torque_limit: 139.0
     position_limit: [-0.5236, 2.9671]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_hip_yaw_joint:
     control_type: torque
     stiffness: 100.0
@@ -29,6 +35,9 @@ joints:
     torque_limit: 88.0
     position_limit: [-2.7576, 2.7576]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_knee_joint:
     control_type: torque
     stiffness: 100.0
@@ -37,6 +46,9 @@ joints:
     torque_limit: 139.0
     position_limit: [-0.087267, 2.8798]
     default_position: 0.3
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_ankle_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -45,6 +57,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-0.87267, 0.5236]
     default_position: -0.2
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_ankle_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -53,6 +68,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-0.2618, 0.2618]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   right_hip_pitch_joint:
     control_type: torque
     stiffness: 100.0
@@ -61,6 +79,9 @@ joints:
     torque_limit: 88.0
     position_limit: [-2.5307, 2.8798]
     default_position: -0.1
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   right_hip_roll_joint:
     control_type: torque
     stiffness: 100.0
@@ -69,6 +90,9 @@ joints:
     torque_limit: 139.0
     position_limit: [-2.9671, 0.5236]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   right_hip_yaw_joint:
     control_type: torque
     stiffness: 100.0
@@ -77,6 +101,9 @@ joints:
     torque_limit: 88.0
     position_limit: [-2.7576, 2.7576]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   right_knee_joint:
     control_type: torque
     stiffness: 100.0
@@ -85,6 +112,9 @@ joints:
     torque_limit: 139.0
     position_limit: [-0.087267, 2.8798]
     default_position: 0.3
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   right_ankle_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -93,6 +123,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-0.87267, 0.5236]
     default_position: -0.2
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   right_ankle_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -101,6 +134,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-0.2618, 0.2618]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   waist_yaw_joint:
     control_type: torque
     stiffness: 200.0
@@ -109,6 +145,9 @@ joints:
     torque_limit: 88.0
     position_limit: [-2.618, 2.618]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   waist_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -117,6 +156,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-0.52, 0.52]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   waist_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -125,6 +167,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-0.52, 0.52]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_shoulder_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -133,6 +178,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-3.0892, 2.6704]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_shoulder_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -141,6 +189,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-1.5882, 2.2515]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_shoulder_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -149,6 +200,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-2.618, 2.618]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_elbow_joint:
     control_type: torque
     stiffness: 40.0
@@ -157,6 +211,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-1.0472, 2.0944]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.2
   left_wrist_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -165,6 +222,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-1.972222054, 1.972222054]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   left_wrist_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -173,6 +233,9 @@ joints:
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   left_wrist_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -181,6 +244,9 @@ joints:
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_shoulder_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -189,6 +255,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-3.0892, 2.6704]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_shoulder_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -197,6 +266,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-2.2515, 1.5882]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_shoulder_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -205,6 +277,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-2.618, 2.618]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_elbow_joint:
     control_type: torque
     stiffness: 40.0
@@ -213,6 +288,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-1.0472, 2.0944]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_wrist_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -221,6 +299,9 @@ joints:
     torque_limit: 25.0
     position_limit: [-1.972222054, 1.972222054]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_wrist_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -229,6 +310,9 @@ joints:
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
   right_wrist_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -237,6 +321,10 @@ joints:
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
     default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.1
+
 sensors:
   head_camera:
     type: camera
@@ -247,6 +335,7 @@ sensors:
     mount_to: torso_link
     position: [0.06, 0.0, 0.45]
     orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
+
 properties:
   fix_base_link: false
   # imu: it is built in the xml model

@@ -240,7 +240,11 @@ class MujocoBackend(BaseBackend):
                 # add armature
                 for joint in obj_mjcf.find_all("joint"):
                     if joint.type != "free":
-                        joint.armature = obj_cfg.joints[joint.name].properties.get("armature", 0.0)
+                        for prop_key, prop_val in obj_cfg.joints[joint.name].properties.items():
+                            try:
+                                setattr(joint, prop_key, prop_val)
+                            except AttributeError as e:
+                                logger.warning(f"Joint {joint.name} does not support property '{prop_key}': {e}")
             else:
                 xml_str = self._create_builtin_xml(obj_cfg)
                 obj_mjcf = mjcf.from_xml_string(xml_str)

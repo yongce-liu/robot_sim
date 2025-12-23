@@ -22,6 +22,7 @@ class obs_joint_state_split(MapFunc):
         env: MapEnv,
         group_name: str,
         joint_patterns: list[str] | str,
+        epsilon: float = 1e-3,
         **kwargs,
     ) -> None:
         # Initialization buffer phase
@@ -41,8 +42,8 @@ class obs_joint_state_split(MapFunc):
         low_val = [env.robot_cfg.joints[joint_names[idx]].position_limit[0] for idx in buffer]
         high_val = [env.robot_cfg.joints[joint_names[idx]].position_limit[1] for idx in buffer]
         env._observation_space_dict[group_name] = gym.spaces.Box(
-            low=np.array(low_val, dtype=np.float32),
-            high=np.array(high_val, dtype=np.float32),
+            low=np.array(low_val, dtype=np.float32) - epsilon,
+            high=np.array(high_val, dtype=np.float32) + epsilon,
             shape=(len(buffer),),
             dtype=np.float32,
         )
@@ -70,6 +71,7 @@ class obs_body_state_split(MapFunc):
         env: MapEnv,
         group_name: str,
         body_patterns: list[str] | str,
+        epsilon: float = 1e-3,
         **kwargs,
     ) -> np.ndarray | None:
         # Initialization buffer phase
@@ -174,6 +176,7 @@ class act_actuator_map(MapFunc):
         env: MapEnv,
         group_name: str,
         actuator_patterns: list[str] | str,
+        epsilon: float = 1e-3,
         **kwargs,
     ) -> np.ndarray | None:
         # Initialization buffer phase
@@ -192,8 +195,8 @@ class act_actuator_map(MapFunc):
         low_val = [env.robot_cfg.joints[actuator_names[idx]].position_limit[0] for idx in buffer]
         high_val = [env.robot_cfg.joints[actuator_names[idx]].position_limit[1] for idx in buffer]
         env._action_space_dict[group_name] = gym.spaces.Box(
-            low=np.array(low_val, dtype=np.float32),
-            high=np.array(high_val, dtype=np.float32),
+            low=np.array(low_val, dtype=np.float32) - epsilon,
+            high=np.array(high_val, dtype=np.float32) + epsilon,
             shape=(len(buffer),),
             dtype=np.float32,
         )
@@ -250,7 +253,7 @@ class act_command_map(MapFunc):
             waist_yaw_quat = rmath.yaw_quat(waist_quat)  # (B, 4)
             waist_yaw_quat_inv = rmath.quat_conjugate(waist_yaw_quat)  # (B, 4)
             yaw_only_waist_from_torso_quat = rmath.quat_mul(waist_yaw_quat_inv, torso_quat)
-            rpy_cmd = rmath.euler_xyz_from_quat(yaw_only_waist_from_torso_quat)
+            rpy_cmd = np.array(rmath.euler_xyz_from_quat(yaw_only_waist_from_torso_quat))
 
             return rpy_cmd
         else:

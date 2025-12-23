@@ -15,6 +15,7 @@ joints:
     default_position: -0.1
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_hip_roll_joint:
     control_type: torque
     stiffness: 100.0
@@ -25,6 +26,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_hip_yaw_joint:
     control_type: torque
     stiffness: 100.0
@@ -35,6 +37,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_knee_joint:
     control_type: torque
     stiffness: 100.0
@@ -45,6 +48,7 @@ joints:
     default_position: 0.3
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_ankle_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -55,6 +59,7 @@ joints:
     default_position: -0.2
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_ankle_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -65,6 +70,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   right_hip_pitch_joint:
     control_type: torque
     stiffness: 100.0
@@ -75,6 +81,7 @@ joints:
     default_position: -0.1
     properties:
       armature: 0.01
+      frictionloss: 0.2
   right_hip_roll_joint:
     control_type: torque
     stiffness: 100.0
@@ -85,6 +92,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   right_hip_yaw_joint:
     control_type: torque
     stiffness: 100.0
@@ -95,6 +103,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   right_knee_joint:
     control_type: torque
     stiffness: 100.0
@@ -105,6 +114,7 @@ joints:
     default_position: 0.3
     properties:
       armature: 0.01
+      frictionloss: 0.2
   right_ankle_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -115,6 +125,7 @@ joints:
     default_position: -0.2
     properties:
       armature: 0.01
+      frictionloss: 0.2
   right_ankle_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -125,6 +136,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   waist_yaw_joint:
     control_type: torque
     stiffness: 200.0
@@ -135,6 +147,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   waist_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -145,6 +158,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   waist_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -155,6 +169,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_shoulder_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -165,6 +180,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_shoulder_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -175,6 +191,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_shoulder_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -185,6 +202,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_elbow_joint:
     control_type: torque
     stiffness: 40.0
@@ -195,6 +213,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.2
   left_wrist_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -205,6 +224,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_wrist_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -215,6 +235,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_wrist_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -225,6 +246,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_thumb_0_joint:
     control_type: torque
     stiffness: 5.0
@@ -235,6 +257,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_thumb_1_joint:
     control_type: torque
     stiffness: 5.0
@@ -245,6 +268,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_thumb_2_joint:
     control_type: torque
     stiffness: 5.0
@@ -255,6 +279,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_middle_0_joint:
     control_type: torque
     stiffness: 5.0
@@ -265,6 +290,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_middle_1_joint:
     control_type: torque
     stiffness: 5.0
@@ -275,6 +301,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_index_0_joint:
     control_type: torque
     stiffness: 5.0
@@ -285,6 +312,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   left_hand_index_1_joint:
     control_type: torque
     stiffness: 5.0
@@ -295,6 +323,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_shoulder_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -305,6 +334,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_shoulder_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -315,6 +345,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_shoulder_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -325,6 +356,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_elbow_joint:
     control_type: torque
     stiffness: 40.0
@@ -335,6 +367,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_wrist_roll_joint:
     control_type: torque
     stiffness: 40.0
@@ -345,6 +378,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_wrist_pitch_joint:
     control_type: torque
     stiffness: 40.0
@@ -355,6 +389,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_wrist_yaw_joint:
     control_type: torque
     stiffness: 40.0
@@ -365,6 +400,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_thumb_0_joint:
     control_type: torque
     stiffness: 5.0
@@ -375,6 +411,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_thumb_1_joint:
     control_type: torque
     stiffness: 5.0
@@ -386,6 +423,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_thumb_2_joint:
     control_type: torque
     stiffness: 5.0
@@ -396,6 +434,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_middle_0_joint:
     control_type: torque
     stiffness: 5.0
@@ -406,6 +445,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_middle_1_joint:
     control_type: torque
     stiffness: 5.0
@@ -416,6 +456,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_index_0_joint:
     control_type: torque
     stiffness: 5.0
@@ -426,6 +467,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
   right_hand_index_1_joint:
     control_type: torque
     stiffness: 5.0
@@ -436,6 +478,7 @@ joints:
     default_position: 0.0
     properties:
       armature: 0.01
+      frictionloss: 0.1
 
 sensors:
   head_camera:

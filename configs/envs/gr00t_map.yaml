@@ -241,12 +241,12 @@ action_map:
   #         right_ankle_pitch.*,
   #         right_ankle_roll.*,
   #       ]
+  # action.waist:
+  #   - _target_: robot_sim.adapters.gr00t.utils.act_actuator_map
+  #   - actuator_patterns: [waist_yaw.*, waist_roll.*, waist_pitch.*]
   ######################
   #### Upper Body #####
   ######################
-  action.waist:
-    - _target_: robot_sim.adapters.gr00t.utils.act_actuator_map
-    - actuator_patterns: [waist_yaw.*, waist_roll.*, waist_pitch.*]
   action.left_arm:
     - _target_: robot_sim.adapters.gr00t.utils.act_actuator_map
     - actuator_patterns:

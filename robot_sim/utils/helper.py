@@ -11,7 +11,7 @@ def setup_logger(log_file: str, max_file_size: int = 10, mode: str = "w") -> Non
     """
     from loguru import logger
 
-    loguru_log_file = f"{log_file}.loguru.log"
+    loguru_log_file = f"{log_file}.loguru.log" if not log_file.endswith(".log") else log_file
     max_file_size_b = max_file_size * 1024 * 1024  # Convert MB to bytes
     logger.add(loguru_log_file, rotation=max_file_size_b, mode=mode)
 

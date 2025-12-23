@@ -15,6 +15,7 @@ class PIDController(BaseController):
         ki: np.ndarray | torch.Tensor = None,
         kd: np.ndarray | torch.Tensor = None,
         dt: float = 0.01,
+        enabled_indices: list[int] | np.ndarray = None,
     ) -> None:
         """Initialize PID controller.
 
@@ -30,6 +31,11 @@ class PIDController(BaseController):
         self.kd = kd
         self.dt = dt
         self.integral_error = None  # Will be initialized on first compute
+        self.disabled_indices = (
+            np.array([i for i in range(len(kp)) if i not in enabled_indices], dtype=np.int32)
+            if enabled_indices is not None
+            else None
+        )
 
     def compute(
         self,
@@ -89,6 +95,9 @@ class PIDController(BaseController):
             # Update integral error
             self.integral_error += error * self.dt
             control_output = self.kp * error + self.ki * self.integral_error - self.kd * velocity
+
+        if self.disabled_indices is not None:
+            control_output[..., self.disabled_indices] = target[..., self.disabled_indices]
 
         return control_output
 

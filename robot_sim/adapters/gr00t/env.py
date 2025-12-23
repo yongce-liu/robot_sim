@@ -3,6 +3,7 @@ from typing import Any
 import numpy as np
 import regex as re
 
+from robot_sim.configs.object import ControlType
 from robot_sim.controllers import PIDController
 from robot_sim.envs import MapEnv
 
@@ -118,7 +119,14 @@ class Gr00tWBCEnv(MapEnv):
         robot_cfg = self.backend.objects[self.robot_name]
         kp = np.array([robot_cfg.joints[name].stiffness for name in self.default_actuator_names], dtype=np.float32)
         kd = np.array([robot_cfg.joints[name].damping for name in self.default_actuator_names], dtype=np.float32)
-        pd_controller = PIDController(kp=kp, kd=kd, dt=self.config.simulator_config.sim.dt)
+        used_pd_indices = [
+            i
+            for i, name in enumerate(self.default_actuator_names)
+            if ControlType(robot_cfg.joints[name].control_type) == ControlType.TORQUE
+        ]
+        # kp = np.array([150, 150, 150, 300,  40,  40, 150, 150, 150, 200,  40,  40, 250., 250., 250., 100, 100,  40,  40,  20,  20,  20, 0,0,0,0,0,0,0,100, 100,  40,  40,  20,  20,  20 ,0,0,0,0,0,0,0,], dtype=np.float32)
+        # kd = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2, 5., 5., 5., 5., 5., 2., 2., 2., 2., 2.,0,0,0,0,0,0,0,5., 5., 2., 2., 2., 2., 2.,0,0,0,0,0,0,0,], dtype=np.float32)
+        pd_controller = PIDController(kp=kp, kd=kd, dt=self.config.simulator_config.sim.dt, enabled_indices=used_pd_indices)
 
         return pd_controller
 

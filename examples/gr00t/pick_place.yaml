@@ -15,7 +15,8 @@ defaults:
   - _self_
   - /configs/envs/gr00t_map.yaml@env_config
   - /configs/backends/mujoco.yaml@env_config.simulator_config
-  - /configs/robots/unitree_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1
+  # - /configs/robots/unitree_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1
+  - /configs/robots/gr00t_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1
 
 env_config:
   simulator_config:
@@ -41,7 +42,7 @@ env_config:
           initial_position: [0.5, 1.2, 0.0]
           initial_orientation: [0.707, 0.0, 0.0, 0.707]
         g1:
-          initial_position: [-1.0, 0.0, 0.78]
+          initial_position: [-0.5, 0.0, 0.78]
 
 task: Gr00tPickAndPlace-v0
 

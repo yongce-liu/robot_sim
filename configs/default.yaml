@@ -16,8 +16,22 @@ hydra:
 
 defaults:
   - _self_
-  - backends/mujoco@_global_
-  - robots/unitree_g1_dex3@scene.objects.g1
+  - /objects/robots/unitree/g1_dex3.yaml@scene.objects.g1
+  - /objects/builtin/sphere.yaml@scene.objects.sphere
+
+backend: mujoco
+
+# simulator settings
+sim:
+  dt: 0.002
+  render_interval: 10
+  gravity: [0.0, 0.0, -9.81]
+  headless: false
+  device: "cpu"
+
+extras:
+  max_episode_steps: 1024
+  decimation: 10
 
 scene:
   path: assets/scenes/gear_lab/gear_lab.xml

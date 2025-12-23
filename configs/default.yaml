@@ -17,7 +17,7 @@ hydra:
 defaults:
   - _self_
   - backends/mujoco@_global_
-  - robots/unitree_g1@scene.objects.g1
+  - robots/unitree_g1_dex3@scene.objects.g1
 
 scene:
   path: assets/scenes/gear_lab/gear_lab.xml

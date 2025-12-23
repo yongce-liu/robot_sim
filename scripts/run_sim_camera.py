@@ -9,15 +9,15 @@ import cv2
 import hydra
 import numpy as np
 import yaml
+from hydra.core.hydra_config import HydraConfig
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-import robot_sim
 from robot_sim.backends import BackendFactory
 from robot_sim.configs import SimulatorConfig
 from robot_sim.utils.helper import setup_logger
 
-PROJECT_DIR = Path(robot_sim.__file__).parents[1].resolve()
+PROJECT_DIR = Path(__file__).parents[1].resolve()
 
 
 class DualImageViewer:
@@ -112,7 +112,7 @@ class DualImageViewer:
         return self.stop_event.is_set()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_DIR), config_name="/configs/simulator.yaml")
+@hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default.yaml")
 def main(cfg: DictConfig) -> None:
     """Main entry point with threaded visualization.
 
@@ -123,7 +123,9 @@ def main(cfg: DictConfig) -> None:
     Args:
         cfg: Hydra configuration object
     """
-    setup_logger(max_file_size=10)
+    setup_logger(
+        log_file=f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log", max_file_size=10
+    )
     # Print configuration
     cfg = SimulatorConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
     cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)

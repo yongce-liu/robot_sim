@@ -32,8 +32,7 @@ def run(cfg: DictConfig) -> None:
     Args:
         cfg: Hydra configuration containing simulator_config, observation_mapping, action_mapping
     """
-    loguru_log_file = f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log"
-    setup_logger(loguru_log_file)
+    setup_logger(f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log")
     logger.info("Starting Gr00t simulation...")
     cfg = hydra.utils.instantiate(cfg, _recursive_=True)
 
@@ -78,7 +77,7 @@ def run(cfg: DictConfig) -> None:
     task.close()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_DIR), config_name="/examples/gr00t/pick_place")
+@hydra.main(version_base=None, config_path=str(PROJECT_DIR), config_name="/examples/gr00t/configs/tasks/pick_place")
 def main(cfg: DictConfig) -> None:
     """Main function to run Gr00t simulation with Hydra configuration.
 

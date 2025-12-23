@@ -13,7 +13,7 @@ hydra:
 
 defaults:
   - _self_
-  - /configs/envs/gr00t_map.yaml@env_config
+  - /examples/gr00t/configs/envs/gr00t_map.yaml@env_config
   - /configs/backends/mujoco.yaml@env_config.simulator_config
   # - /configs/robots/unitree_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1
   - /configs/robots/gr00t_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1

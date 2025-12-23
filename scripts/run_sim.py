@@ -8,11 +8,10 @@ import yaml
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-import robot_sim
 from robot_sim.backends import BackendFactory
 from robot_sim.configs import SimulatorConfig
 
-PROJECT_DIR = Path(robot_sim.__file__).parents[1].resolve()
+PROJECT_DIR = Path(__file__).parents[1].resolve()
 
 
 @hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default")

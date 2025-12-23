@@ -10,7 +10,7 @@ from loguru import logger
 import robot_sim
 from robot_sim.backends.types import ActionsType, ArrayType, StatesType
 from robot_sim.controllers import BasePolicy, CompositeController, PIDController
-from robot_sim.utils.math import quat_apply_inverse_numpy
+from robot_sim.utils.math_array import quat_apply_inverse
 
 
 class UpperBodyPolicy(BasePolicy):
@@ -105,7 +105,7 @@ class LowerBodyPolicy(BasePolicy):
         height_cmd = np.array([[targets.get("action.base_height_command", self.default_height_cmd)]])
         rpy_cmd = targets.get("action.rpy_cmd", self.default_rpy_cmd)
         omega_scaled = omega * self.ang_vel_scale
-        gravity_orientation = quat_apply_inverse_numpy(quat, self.gravity_vec)
+        gravity_orientation = quat_apply_inverse(quat, self.gravity_vec)
         joint_pos_scaled = (states[name].joint_pos - self.default_joint_position) * self.joint_pos_scale
         joint_vel_scaled = states[name].joint_vel * self.joint_vel_scale
         action_prev = self.action

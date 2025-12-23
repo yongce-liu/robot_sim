@@ -4,15 +4,15 @@ from pathlib import Path
 
 import gymnasium as gym
 import hydra
+from hydra.core.hydra_config import HydraConfig
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
-import robot_sim
 import robot_sim.adapters.gr00t  # noqa: F401 - triggers task registration
 from robot_sim.configs import MapTaskConfig
 from robot_sim.utils.helper import setup_logger
 
-PROJECT_DIR = Path(robot_sim.__file__).parents[1].resolve()
+PROJECT_DIR = Path(__file__).parents[2].resolve()
 
 
 def check_observation_space(task: gym.Env, obs: gym.spaces.Dict) -> None:
@@ -32,7 +32,8 @@ def run(cfg: DictConfig) -> None:
     Args:
         cfg: Hydra configuration containing simulator_config, observation_mapping, action_mapping
     """
-    setup_logger()
+    loguru_log_file = f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log"
+    setup_logger(loguru_log_file)
     logger.info("Starting Gr00t simulation...")
     cfg = hydra.utils.instantiate(cfg, _recursive_=True)
 
@@ -85,6 +86,7 @@ def main(cfg: DictConfig) -> None:
         cfg: Hydra configuration
     """
     try:
+        OmegaConf.register_new_resolver("root", lambda: str(PROJECT_DIR))
         run(cfg)
     except Exception as e:
         logger.exception(f"An error occurred in main: {e}")

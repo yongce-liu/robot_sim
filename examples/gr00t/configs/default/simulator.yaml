@@ -1,9 +1,4 @@
-# Environment configuration
-
-defaults:
-  - _self_
-  - /configs/robots/g1_dex3_gr00t.yaml@scene.objects.g1
-
+# Simulator configuration
 backend: mujoco
 sim:
   dt: 0.002

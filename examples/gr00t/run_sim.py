@@ -34,15 +34,14 @@ def run(cfg: DictConfig) -> None:
     """
     setup_logger(f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log")
     logger.info("Starting Gr00t simulation...")
-    cfg = hydra.utils.instantiate(cfg, _recursive_=True)
-
+    cfg = OmegaConf.to_container(cfg, resolve=True)
     # Hydra automatically instantiates all _target_ in the config tree
-    task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
-    task_cfg.print()
+    task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)
+    # task_cfg.print()
 
     # Initialize Gr00tEnv
     logger.info("Initializing Gr00tEnv...")
-    task = gym.make(task_cfg.task, env_config=task_cfg.env_config, **task_cfg.extra)
+    task = gym.make(task_cfg.task, config=task_cfg.environment, **task_cfg.params)
 
     # Reset environment
     logger.info("Resetting environment...")
@@ -85,7 +84,6 @@ def main(cfg: DictConfig) -> None:
         cfg: Hydra configuration
     """
     try:
-        OmegaConf.register_new_resolver("root", lambda: str(PROJECT_DIR))
         run(cfg)
     except Exception as e:
         logger.exception(f"An error occurred in main: {e}")

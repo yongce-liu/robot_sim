@@ -36,6 +36,8 @@ class SimulatorConfig:
     """Configuration for the physics simulation."""
     scene: SceneConfig = MISSING
     """Configuration for the simulation scene."""
+    extras: dict = field(default_factory=dict)
+    """Additional task-specific configuration options, e.g., you can assign decimation, max_episode_steps here."""
 
     @staticmethod
     def get_dacite_config():

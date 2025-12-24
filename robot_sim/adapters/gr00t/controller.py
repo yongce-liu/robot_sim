@@ -102,7 +102,7 @@ class LowerBodyPolicy(BasePolicy):
         omega = states[name].root_state[..., 10:13]  # angular velocity in world frame
 
         nav_cmd = targets.get("action.navigate_command", self.default_nav_command) * self.command_scale
-        height_cmd = np.array([[targets.get("action.base_height_command", self.default_height_cmd)]])
+        height_cmd = np.array([targets.get("action.base_height_command", self.default_height_cmd)])
         rpy_cmd = targets.get("action.rpy_cmd", self.default_rpy_cmd)
         omega_scaled = omega * self.ang_vel_scale
         gravity_orientation = quat_apply_inverse(quat, self.gravity_vec)
@@ -169,18 +169,23 @@ class DecoupledWBCPolicy(CompositeController):
         self,
         upper_body_policy: UpperBodyPolicy = None,
         lower_body_policy: LowerBodyPolicy = None,
-        output_redices: list[int] = None,
+        output_indices: list[int] = None,
+        lower_priority: bool = True,
     ) -> None:
         super().__init__(controllers={"upper_body_policy": upper_body_policy, "lower_body_policy": lower_body_policy})
         self.upper_body_policy = upper_body_policy
         self.lower_body_policy = lower_body_policy
-        self.output_redices = output_redices
+        self.lower_priority = lower_priority
 
     def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
         upper_target = self.upper_body_policy.compute(name=name, states=states, targets=targets)
         lower_target = self.lower_body_policy.compute(name=name, states=states, targets=targets)
-        output = np.concatenate([lower_target, upper_target], axis=-1)[..., self.output_redices]
-        return output
+
+        if self.lower_priority:
+            output = np.concatenate([lower_target, upper_target], axis=-1)
+        else:
+            output = np.concatenate([upper_target, lower_target], axis=-1)
+        return output[..., self.output_indices]
 
 
 class Gr00tWBCController(CompositeController):

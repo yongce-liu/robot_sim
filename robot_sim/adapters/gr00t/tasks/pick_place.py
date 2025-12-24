@@ -5,13 +5,12 @@ from typing import Any
 import numpy as np
 from loguru import logger
 
-from robot_sim.adapters.gr00t.env import Gr00tWBCEnv
-from robot_sim.configs import MapTaskConfig
+from robot_sim.adapters.gr00t.env import Gr00tEnv, Gr00tEnvConfig
 from robot_sim.utils.helper import task_register
 
 
 @task_register("Gr00tPickAndPlace-v0")
-class PickAndPlaceTask(Gr00tWBCEnv):
+class PickAndPlaceTask(Gr00tEnv):
     """Pick-and-place task wrapper.
 
     This wrapper computes task-specific reward, termination, truncation, and info
@@ -20,13 +19,14 @@ class PickAndPlaceTask(Gr00tWBCEnv):
 
     def __init__(
         self,
-        env_config: MapTaskConfig,
+        config: Gr00tEnvConfig,
         object_name: str,
         target_name: str,
         success_threshold: float = 1e-2,
         reward_scale: float = 1.0,
+        **kwargs,
     ) -> None:
-        super().__init__(env_config)
+        super().__init__(config, **kwargs)
         logger.info(f"PickAndPlaceTask with object: {object_name}, target: {target_name}, robot: {self.robot_name}")
 
         self.object_name = object_name
@@ -59,7 +59,7 @@ class PickAndPlaceTask(Gr00tWBCEnv):
         is_success = info.get("is_success", None)
         if is_success is None:
             is_success = self.obj_tgt_distance < self.success_threshold
-            info["is_success"] = is_success
+            info["success"] = is_success
         return info
 
     @staticmethod

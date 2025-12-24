@@ -47,7 +47,7 @@ class BaseBackend(ABC):
         )
         # you can use it to store anything, e.g., default joint names order/ body names order, etc.
         self._buffer_dict = defaultdict(Buffer)
-        self._cache = {}
+        self.__cache = {}
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -247,23 +247,23 @@ class BaseBackend(ABC):
     def get_joint_names(self, name: str, prefix: str = "") -> list[str]:
         """Get the joint indices of all robots and objects."""
         idx = f"joint_names/{name}/{prefix}"
-        if idx not in self._cache:
-            self._cache[idx] = [prefix + jn for jn in self._buffer_dict[name].joint_names]
-        return self._cache[idx]
+        if idx not in self.__cache:
+            self.__cache[idx] = [prefix + jn for jn in self._buffer_dict[name].joint_names]
+        return self.__cache[idx]
 
     def get_body_names(self, name: str, prefix: str = "") -> list[str]:
         """Get the body indices of all robots and objects."""
         idx = f"body_names/{name}/{prefix}"
-        if idx not in self._cache:
-            self._cache[idx] = [prefix + bn for bn in self._buffer_dict[name].body_names]
-        return self._cache[idx]
+        if idx not in self.__cache:
+            self.__cache[idx] = [prefix + bn for bn in self._buffer_dict[name].body_names]
+        return self.__cache[idx]
 
     def get_actuator_names(self, name: str, prefix: str = "") -> list[str]:
         """Get the actuator names of all robots and objects."""
         idx = f"actuator_names/{name}/{prefix}"
-        if idx not in self._cache:
-            self._cache[idx] = [prefix + an for an in self._buffer_dict[name].actuator_names]
-        return self._cache[idx]
+        if idx not in self.__cache:
+            self.__cache[idx] = [prefix + an for an in self._buffer_dict[name].actuator_names]
+        return self.__cache[idx]
 
     # private functions
     # def get_sensors(self, name: str) -> dict[str, SensorConfig]:

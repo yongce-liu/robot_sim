@@ -73,6 +73,8 @@ class ObjectConfig:
     """Sensor configurations for the robot."""
     properties: dict[str, Any] = field(default_factory=dict)
     """Additional properties specific to the robot."""
+    _cache: dict[str, Any] = field(default_factory=dict, repr=False)
+    """Internal cache for storing preprocessed data."""
 
     def __post_init__(self):
         if self.path is None and self.type in [ObjectType.CUSTOM, ObjectType.ROBOT]:

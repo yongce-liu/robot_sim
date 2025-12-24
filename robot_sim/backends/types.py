@@ -133,6 +133,9 @@ class Buffer:
     sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
     # the joint order follows the config.joints order
     joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
+    default_joint_positions: np.ndarray = field(
+        default_factory=lambda: np.array([], dtype=np.float32)
+    )  # buffer -> (num_joints,)
     # the body order follows the urdf/sdf/model file order if not specified in the config
     body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
     actuator_names: list[str] = field(default_factory=list)  # buffer -> list[actuator name]

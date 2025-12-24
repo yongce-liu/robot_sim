@@ -4,7 +4,7 @@ datasets
 uv.lock
 *.onnx
 *.pt
-
+*tmp*
 # C extensions
 *.so
 

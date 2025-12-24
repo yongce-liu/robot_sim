@@ -16,13 +16,13 @@ observation:
     indices: [15, 16, 17, 18, 19, 20, 21]
   state.left_hand:
     type: joint
-    indices: [22, 23, 24, 25, 26, 27]
+    indices: [22, 23, 24, 25, 26, 27, 28]
   state.right_arm:
     type: joint
-    indices: [28, 29, 30, 31, 32, 33, 34]
+    indices: [29, 30, 31, 32, 33, 34, 35]
   state.right_hand:
     type: joint
-    indices: [35, 36, 37, 38, 39, 40, 41]
+    indices: [36, 37, 38, 39, 40, 41, 42]
   # # I don't know whether the gr00t model need this observation or not, so provide it here
   # ######## EEF ########
   # state.left_wrist_pos:
@@ -83,6 +83,9 @@ action:
   ######################
   #### Upper Body #####
   ######################
+  # action.waist:
+  #   type: joint
+  #   indices: [12, 13, 14]
   action.left_arm:
     type: joint
     indices: [15, 16, 17, 18, 19, 20, 21]
@@ -109,11 +112,11 @@ action:
     bound:
       min: [-1.0, -1.0, -3.14]
       max: [1.0, 1.0, 3.14]
-  action.rpy_command:
-    type: command
-    bound:
-      min: [-0.5, -0.5, -3.14]
-      max: [0.5, 0.5, 3.14]
+  # action.rpy_command:
+  #   type: command
+  #   bound:
+  #     min: [-0.5, -0.5, -3.14]
+  #     max: [0.5, 0.5, 3.14]
   ######################
   ######## EEF ########
   ######################

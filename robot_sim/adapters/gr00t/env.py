@@ -242,6 +242,7 @@ class Gr00tEnv(MapEnv):
         actuator_indices: list[int],
         hand_indices: list[int],
         observation_params: dict[str, Any],
+        use_rpy_cmd_from_waist: bool = True,
         **kwargs,
     ) -> LowerBodyPolicy:
         num_dofs = self.num_dofs[self.robot_name]
@@ -253,10 +254,15 @@ class Gr00tEnv(MapEnv):
 
         observation_params["used_joint_indices"] = used_joint_indices_in_env
         observation_params["default_joint_position"] = default_joint_position
+        torso_index = self.get_body_names(self.robot_name).index("torso_link")
+        pelvis_index = self.get_body_names(self.robot_name).index("pelvis")
 
         lower_body_policy = LowerBodyPolicy(
             actuator_indices=actuator_indices,
             observation_params=observation_params,
+            use_rpy_cmd_from_waist=use_rpy_cmd_from_waist,
+            torso_index=torso_index,
+            pelvis_index=pelvis_index,
             **kwargs,
         )
         return lower_body_policy

@@ -1,5 +1,6 @@
 import os
 from collections import deque
+from functools import partial
 from pathlib import Path
 from typing import Any, Literal
 
@@ -8,6 +9,7 @@ import torch
 from loguru import logger
 
 import robot_sim
+from robot_sim.adapters.gr00t.utils import rpy_cmd_from_waist
 from robot_sim.backends.types import ActionsType, ArrayType, StatesType
 from robot_sim.controllers import BasePolicy, CompositeController, PIDController
 from robot_sim.utils.math_array import quat_apply_inverse
@@ -39,6 +41,8 @@ class LowerBodyPolicy(BasePolicy):
         model_path: dict[Literal["stand", "walk"], str] = None,
         observation_params: dict[str, Any] | None = None,
         stand_mode_threshold: float = 0.05,
+        use_rpy_cmd_from_waist: bool = True,
+        **kwargs,
     ):
         """
         Lower body control policy for Gr00t robot.
@@ -56,6 +60,15 @@ class LowerBodyPolicy(BasePolicy):
                 path = project_root / Path(v)
                 self.policies[k] = self.load_onnx_policy(path)
             self.init_by_config(observation_params)
+        if use_rpy_cmd_from_waist:
+            self.rpy_cmd_from_waist = partial(
+                rpy_cmd_from_waist,
+                torso_index=kwargs["torso_index"],
+                pelvis_index=kwargs["pelvis_index"],
+                action = None
+            )
+        else:
+            self.rpy_cmd_from_waist = None
 
     def compute(self, name: str, states: StatesType, targets: ActionsType) -> ArrayType:
         if self.model_path is None:
@@ -103,7 +116,11 @@ class LowerBodyPolicy(BasePolicy):
 
         nav_cmd = targets.get("action.navigate_command", self.default_nav_command) * self.command_scale
         height_cmd = np.array([targets.get("action.base_height_command", self.default_height_cmd)])
-        rpy_cmd = targets.get("action.rpy_cmd", self.default_rpy_cmd)
+        rpy_cmd = (
+            self.rpy_cmd_from_waist(name=name, states=states)
+            if self.rpy_cmd_from_waist is not None
+            else self.default_rpy_cmd
+        )
         omega_scaled = omega * self.ang_vel_scale
         gravity_orientation = quat_apply_inverse(quat, self.gravity_vec)
         joint_pos_scaled = (states[name].joint_pos - self.default_joint_position) * self.joint_pos_scale

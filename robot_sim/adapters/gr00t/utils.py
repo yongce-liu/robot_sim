@@ -56,6 +56,6 @@ def rpy_cmd_from_waist(
     waist_yaw_quat = rmath.yaw_quat(waist_quat)  # (B, 4)
     waist_yaw_quat_inv = rmath.quat_conjugate(waist_yaw_quat)  # (B, 4)
     yaw_only_waist_from_torso_quat = rmath.quat_mul(waist_yaw_quat_inv, torso_quat)
-    rpy_cmd = np.array(rmath.euler_xyz_from_quat(yaw_only_waist_from_torso_quat))
+    rpy_cmd = np.stack(rmath.euler_xyz_from_quat(yaw_only_waist_from_torso_quat), axis=-1)
 
     return rpy_cmd

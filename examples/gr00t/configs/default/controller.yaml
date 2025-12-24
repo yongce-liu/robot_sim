@@ -44,7 +44,7 @@ lower_policy:
     action_scale: 0.25
     command_scale: [2.0, 2.0, 0.25]
     nav_command: [0.0, 0.0, 0.0]
-    height_command: 0.78
+    height_command: 0.74
     rpy_command: [0.0, 0.0, 0.0]
     ang_vel_scale: 0.25
     joint_pos_scale: 1.0

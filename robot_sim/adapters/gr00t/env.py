@@ -136,12 +136,13 @@ class Gr00tEnv(MapEnv):
         obs_map = {}
         for group_name, group_cfg in kwargs.items():
             if group_cfg["type"] == "joint":
+                group_indices = group_cfg["indices"]
                 epsilon: float = group_cfg.get("epsilon", 1e-3)
-                obs_map[group_name] = partial(obs_joint_extract, indices=group_cfg["indices"])
+                obs_map[group_name] = partial(obs_joint_extract, indices=group_indices)
                 _spaces = gym.spaces.Box(
-                    low=joint_position_limit[:, 0] - epsilon,
-                    high=joint_position_limit[:, 1] + epsilon,
-                    shape=(len(joint_position_limit),),
+                    low=joint_position_limit[group_indices, 0] - epsilon,
+                    high=joint_position_limit[group_indices, 1] + epsilon,
+                    shape=(len(group_indices),),
                     dtype=np.float32,
                 )
             elif group_cfg["type"] == "sensor":
@@ -199,11 +200,12 @@ class Gr00tEnv(MapEnv):
         for group_name, group_cfg in kwargs.items():
             if group_cfg["type"] == "joint":
                 epsilon: float = group_cfg.get("epsilon", 1e-3)
-                action_map[group_name] = partial(act_joint_assign, group_name=group_name)
+                group_indices = group_cfg["indices"]
+                action_map[group_name] = partial(act_joint_assign, group_name=group_name, indices=group_indices)
                 _spaces = gym.spaces.Box(
-                    low=joint_position_limit[:, 0] - epsilon,
-                    high=joint_position_limit[:, 1] + epsilon,
-                    shape=(len(joint_position_limit),),
+                    low=joint_position_limit[group_indices, 0] - epsilon,
+                    high=joint_position_limit[group_indices, 1] + epsilon,
+                    shape=(len(group_indices),),
                     dtype=np.float32,
                 )
             elif group_cfg["type"] == "command":

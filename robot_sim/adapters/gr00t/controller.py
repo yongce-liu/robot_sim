@@ -176,6 +176,7 @@ class DecoupledWBCPolicy(CompositeController):
         self.upper_body_policy = upper_body_policy
         self.lower_body_policy = lower_body_policy
         self.lower_priority = lower_priority
+        self.output_indices = output_indices
 
     def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
         upper_target = self.upper_body_policy.compute(name=name, states=states, targets=targets)
@@ -210,4 +211,4 @@ class Gr00tWBCController(CompositeController):
         pd_output = self.pd_controller.compute(
             target=wbc_output, position=states[name].joint_pos, velocity=states[name].joint_vel
         )
-        return {name: pd_output}
+        return pd_output

@@ -59,7 +59,7 @@ def run(cfg: DictConfig) -> None:
         action = task.action_space.sample()
         for k, v in action.items():
             action[k] = 0 * v  # Zero action
-        action["action.base_height_command"] = 0.8
+        action["action.base_height_command"] = [0.8]
 
         # Step environment
         obs, reward, terminated, truncated, info = task.step(action)

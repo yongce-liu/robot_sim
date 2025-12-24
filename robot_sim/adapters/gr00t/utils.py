@@ -24,10 +24,11 @@ def obs_joint_extract(
 def act_joint_assign(
     name: str,
     group_name: str,
+    indices: list[int],
     action: ActionsType,
     **kwargs,
 ):
-    action[name] = action[group_name]
+    action[name][..., indices] = action[group_name]
 
 
 def rpy_cmd_from_waist(

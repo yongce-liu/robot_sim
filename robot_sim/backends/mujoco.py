@@ -9,9 +9,9 @@ from dm_control import mjcf
 from loguru import logger
 
 from robot_sim.backends.base import BaseBackend
-from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig
+from robot_sim.utils.helper import get_reindices
 
 
 class MujocoBackend(BaseBackend):
@@ -25,30 +25,9 @@ class MujocoBackend(BaseBackend):
         self._mjcf_model: mjcf.RootElement | None = None
         self._mjcf_physics: mjcf.Physics | None = None
         self.viewer: mujoco.viewer.Viewer | None = None
-        # self._mujoco_robot_names = []
-        # self._robot_num_dofs = []
-        # self._robot_paths = []
-        # self._gravity_compensations = []
+        self._mjcf_model = self._init_mujoco()
 
-        # # Support multiple robots
-        # for robot in self.robots:
-        #     self._robot_paths.append(robot.mjcf_path)
-        #     self._gravity_compensations.append(not robot.enabled_gravity)
-
-        # self.viewer = None
-        # self.cameras = []
-        # # for camera in config.cameras:
-        # #     self.cameras.append(camera)
-        # self._current_action = None
-        # self._current_vel_target = None  # Track velocity targets
-
-        # # === Added: GL/physics serialization + native renderer state ===
-        # self._mj_lock = threading.RLock()
-        # self._mj_model = None  # native mujoco.MjModel for offscreen rendering
-        # self._mj_data = None  # native mujoco.MjData  for offscreen rendering
-        # self.renderer = None  # mujoco.Renderer (offscreen)
-
-    def _init_backend(self) -> mjcf.RootElement:
+    def _init_mujoco(self) -> mjcf.RootElement:
         if self.config.scene.path is not None:
             mjcf_model = mjcf.from_path(self.config.scene.path)
             logger.info(f"Loaded scene from: {self.config.scene.path}")
@@ -59,12 +38,68 @@ class MujocoBackend(BaseBackend):
         # self._add_cameras(model)
         self._add_objects(mjcf_model)
         # dt
-        mjcf_model.option.timestep = self.cfg_phyx.dt
+        mjcf_model.option.timestep = self.sim_config.dt
         # gravity
-        mjcf_model.option.gravity = self.cfg_phyx.gravity
+        mjcf_model.option.gravity = self.sim_config.gravity
 
-        self._mjcf_model = mjcf_model
-        self._update_buffer_dict(mjcf_model)  # update the root model indices first
+        return mjcf_model
+
+    @staticmethod
+    def __update_from_set(obj_name: str, sets: list[str]) -> list[str]:
+        # In dm_control, attached elements are prefixed with the model name
+        obj_prefix = f"{obj_name}/"
+        ans = []
+        for sub in sets:
+            # Check if joint belongs to this object by checking the full_identifier
+            full_identifier = sub.full_identifier
+            if full_identifier and full_identifier.startswith(obj_prefix):
+                # Extract the joint name without the prefix
+                name = full_identifier[len(obj_prefix) :]
+                if len(full_identifier) == 0 or len(name) == 0:
+                    # logger.warning(f"Remove the attached dummy joint in object {obj_name}!")
+                    continue
+                elif name not in ans:
+                    ans.append(name)
+                else:
+                    logger.error(f"Duplicate name detected: {name} in object {obj_name}")
+        return ans
+
+    def _update_buffer_indices(self) -> None:
+        """Update joint and body name indices for the given model."""
+        model = self._mjcf_model
+        all_joints = model.find_all("joint")
+        all_bodies = model.find_all("body")
+        all_actuators = model.find_all("actuator")
+
+        # update names if not specified in the object config
+        for obj_name in self.objects.keys():
+            # Only find joints and bodies belonging to this specific object
+            # define the source names in the backend order
+            joint_src = self.__update_from_set(obj_name, all_joints)
+            body_src = self.__update_from_set(obj_name, all_bodies)
+            actuator_src = self.__update_from_set(obj_name, all_actuators)
+
+            # define the target names in the config order
+            # JOINT
+            if self._buffer_dict[obj_name].joint_names is None:
+                self._buffer_dict[obj_name].joint_names = joint_src
+            joint_tgt = self._buffer_dict[obj_name].joint_names
+            self._buffer_dict[obj_name].joint_indices = get_reindices(source=joint_src, target=joint_tgt)
+            self._buffer_dict[obj_name].joint_indices_reverse = get_reindices(source=joint_tgt, target=joint_src)
+
+            # BODY
+            if self._buffer_dict[obj_name].body_names is None:
+                self._buffer_dict[obj_name].body_names = body_src
+            body_tgt = self._buffer_dict[obj_name].body_names
+            self._buffer_dict[obj_name].body_indices = get_reindices(source=body_src, target=body_tgt)
+            self._buffer_dict[obj_name].body_indices_reverse = get_reindices(source=body_tgt, target=body_src)
+
+            # actuator
+            if self._buffer_dict[obj_name].actuator_names is None:
+                self._buffer_dict[obj_name].actuator_names = actuator_src
+            actuator_tgt = self._buffer_dict[obj_name].actuator_names
+            self._buffer_dict[obj_name].action_indices = get_reindices(source=actuator_src, target=actuator_tgt)
+            self._buffer_dict[obj_name].action_indices_reverse = get_reindices(source=actuator_tgt, target=actuator_src)
 
     def _launch(self) -> None:
         """Initialize MuJoCo model with optional scene support."""
@@ -122,17 +157,17 @@ class MujocoBackend(BaseBackend):
             env_ids = self._full_env_ids
 
         for obj_name, obj_action in actions.items():
-            action_indices = self._get_action_indices(obj_name)
+            actuator_names = self.get_actuator_names(obj_name, prefix=obj_name + "/")
             # Here, we also use the default order index when adding a object/robot
-            self._mjcf_physics.data.ctrl[action_indices] = obj_action[env_ids]
+            self._mjcf_physics.named.data.ctrl[actuator_names] = obj_action[env_ids]
 
     def _get_states(self, dtype=np.float32) -> StatesType:
         """Get states of all objects and robots."""
 
         states: dict[str, ObjectState] = {}
         _pnd = self._mjcf_physics.named.data
-        for obj_name in self._buffer_dict.keys():
-            joint_names = self.get_joint_names(obj_name)
+        for obj_name in self.objects.keys():
+            joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
             _root_state, _body_state = self._pack_state(obj_name)
             state = ObjectState(
                 root_state=_root_state.astype(dtype),
@@ -158,7 +193,7 @@ class MujocoBackend(BaseBackend):
             body_np: numpy (n_body,13)     — n_body bodies
         """
         data = self._mjcf_physics.named.data
-        body_names = [obj_name + "/"] + self.get_body_names(obj_name)
+        body_names = [obj_name + "/"] + self.get_body_names(obj_name, prefix=obj_name + "/")
         pos = data.xpos[body_names]
         quat = data.xquat[body_names]
 
@@ -303,77 +338,11 @@ class MujocoBackend(BaseBackend):
         mjcf.export_with_assets(model, out_dir, out_file_name=file_name)
         logger.info(f"Exported MJCF model and assets to: {out_dir}/{file_name}")
 
-    def _update_buffer_dict(self, model: mjcf.RootElement) -> None:
-        """Update joint and body name indices for the given model."""
-        all_joints = model.find_all("joint")
-        all_bodies = model.find_all("body")
-        all_actuators = model.find_all("actuator")
-
-        for obj_name, obj_cfg in self.objects.items():
-            # Only find joints and bodies belonging to this specific object
-            # In dm_control, attached elements are prefixed with the model name
-            obj_prefix = f"{obj_name}/"
-
-            for joint in all_joints:
-                # Check if joint belongs to this object by checking the full_identifier
-                full_identifier = joint.full_identifier
-                if full_identifier and full_identifier.startswith(obj_prefix):
-                    # Extract the joint name without the prefix
-                    # joint_name = getattr(joint, "name", full_identifier.split("/")[-1])
-                    if len(full_identifier) == 0 or len(full_identifier.split("/")[-1]) == 0:
-                        # logger.warning(f"Remove the attached dummy joint in object {obj_name}!")
-                        continue
-                    elif full_identifier not in self._buffer_dict[obj_name].joint_names:
-                        self._buffer_dict[obj_name].joint_names.append(full_identifier)
-                    else:
-                        logger.error(f"Duplicate joint name detected: {full_identifier} in object {obj_name}")
-
-            for body in all_bodies:
-                # Check if body belongs to this object
-                full_identifier = body.full_identifier
-                if full_identifier and full_identifier.startswith(obj_prefix):
-                    # Extract the body name without the prefix
-                    # body_name = getattr(body, "name", full_identifier.split("/")[-1])
-                    if len(full_identifier) == 0 or len(full_identifier.split("/")[-1]) == 0:
-                        # logger.warning(f"Remove the attached dummy body in object {obj_name}!")
-                        continue
-                    elif full_identifier not in self._buffer_dict[obj_name].body_names:
-                        self._buffer_dict[obj_name].body_names.append(full_identifier)
-                    else:
-                        logger.error(f"Duplicate body name detected: {full_identifier} in object {obj_name}")
-
-            for actuator in all_actuators:
-                # Check if actuator belongs to this object
-                full_identifier = actuator.full_identifier
-                if full_identifier and full_identifier.startswith(obj_prefix):
-                    # Extract the actuator name without the prefix
-                    # actuator_name = getattr(actuator, "name", full_identifier.split("/")[-1])
-                    if len(full_identifier) == 0 or len(full_identifier.split("/")[-1]) == 0:
-                        continue
-                    elif full_identifier not in self._buffer_dict[obj_name].actuator_names:
-                        self._buffer_dict[obj_name].actuator_names.append(full_identifier)
-                    else:
-                        logger.error(f"Duplicate actuator name detected: {full_identifier} in object {obj_name}")
-
-            # Add sensors if configured for this object
-            if hasattr(obj_cfg, "sensors") and obj_cfg.sensors:
-                for sensor_name, sensor_cfg in obj_cfg.sensors.items():
-                    sensor_type = sensor_cfg.type
-                    if sensor_type in _SENSOR_TYPE_REGISTRY:
-                        sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
-                        # sensor_instance.bind(self, obj_name, sensor_name)
-                        self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
-                    else:
-                        logger.error(
-                            f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
-                        )
-            self._buffer_dict[obj_name].config = obj_cfg
-
     def _set_root_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set root position and rotation."""
 
         identifier = obj_name + "/"  # MuJoCo joint/body names are prefixed with model name
-        if not self._buffer_dict[obj_name].config.properties.get("fix_base_link", False):
+        if not self.objects[obj_name].properties.get("fix_base_link", False):
             # when the object is not fixed-base-link
             root_joint = self._mjcf_physics.data.joint(identifier)
             root_joint.qpos[:7] = obj_state.root_state[env_ids, :7]
@@ -387,7 +356,7 @@ class MujocoBackend(BaseBackend):
 
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set joint positions."""
-        joint_names = self.get_joint_names(obj_name)
+        joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
         if len(joint_names) > 0:
             self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
             self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
@@ -397,22 +366,6 @@ class MujocoBackend(BaseBackend):
         #     joint = self._mjcf_physics.data.joint(joint_name)
         #     joint.qpos[:] = obj_state.joint_pos[env_ids, i]
         #     joint.qvel[:] = obj_state.joint_vel[env_ids, i]
-
-    def _get_action_indices(self, name: str) -> np.ndarray:
-        if self._buffer_dict[name].action_indices is None:
-            actuator_names = self.get_actuator_names(name)
-            action_indices = []
-            for actuator_name in actuator_names:
-                try:
-                    actuator_id = self._mjcf_physics.model.actuator(actuator_name).id
-                    action_indices.append(actuator_id)
-                    # self._buffer_dict[name].actuator_names.append(actuator_name)
-                except Exception:
-                    logger.warning(f"Actuator '{actuator_name}' in object '{name}' cannot be found in MJCF Physics.")
-            action_indices = np.array(action_indices, dtype=np.int32)
-            self._buffer_dict[name].action_indices = action_indices
-            return action_indices
-        return self._buffer_dict[name].action_indices
 
     def _create_builtin_xml(self, obj_cfg: ObjectConfig) -> str:
         prop: dict[str, Any] = obj_cfg.properties
@@ -447,6 +400,23 @@ class MujocoBackend(BaseBackend):
         """
 
         return xml.strip()
+
+    # def __get_action_indices(self, name: str) -> np.ndarray:
+    #     if not hasattr(self, "_action_indices"):
+    #         self._actions_indices = {}
+    #         actuator_names = self.get_actuator_names(name, prefix=name + "/")
+    #         action_indices = []
+    #         for actuator_name in actuator_names:
+    #             try:
+    #                 actuator_id = self._mjcf_physics.model.actuator(actuator_name).id
+    #                 action_indices.append(actuator_id)
+    #                 # self._buffer_dict[name].actuator_names.append(actuator_name)
+    #             except Exception:
+    #                 logger.warning(f"Actuator '{actuator_name}' in object '{name}' cannot be found in MJCF Physics.")
+    #         action_indices = np.array(action_indices, dtype=np.int32)
+    #         self._action_indices[name] = action_indices
+    #         return action_indices
+    #     return self._action_indices[name]
 
     # def _add_cameras(self, mjcf_model: mjcf.RootElement) -> None:
     #     """Add cameras to the model."""

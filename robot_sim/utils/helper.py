@@ -1,6 +1,7 @@
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import gymnasium as gym
+import regex as re
 
 
 def setup_logger(log_file: str, max_file_size: int = 10, mode: str = "w") -> None:
@@ -30,3 +31,32 @@ def task_register(
         return cls
 
     return decorator
+
+
+def get_reindices(
+    source: list[str],
+    target: list[str],
+    *,
+    pattern_position: Literal["source", "target", "none"] = "none",
+) -> list[list[int]]:
+    if pattern_position == "source":
+        source = [re.compile(p) for p in source]
+
+    if pattern_position == "target":
+        target = [re.compile(p) for p in target]
+
+    result: list[list[int]] = []
+
+    for tgt in target:
+        if pattern_position == "source":
+            # source: pattern, target: string
+            matched = [i for i, rx in enumerate(source) if rx.fullmatch(tgt)]
+        elif pattern_position == "target":
+            # target: pattern, source: string
+            matched = [i for i, s in enumerate(source) if tgt.fullmatch(s)]
+        else:
+            matched = [i for i, s in enumerate(source) if s == tgt]
+
+        result.extend(matched)
+
+    return result

@@ -1,7 +1,4 @@
-# @package _global_
-
 # Hydra runtime configuration
-
 hydra:
   run:
     dir: outputs/debug
@@ -11,41 +8,44 @@ hydra:
   job:
     chdir: false
 
+# Configuration group for environment configuration
+
+# Default configurations to compose the full configuration
 defaults:
   - _self_
-  - /examples/gr00t/configs/envs/gr00t_map.yaml@env_config
-  - /configs/backends/mujoco.yaml@env_config.simulator_config
-  - /configs/robots/gr00t_g1_dex3.yaml@env_config.simulator_config.scene.objects.g1
-
-env_config:
-  simulator_config:
-    scene:
-      path: ${root:}/assets/scenes/gear_lab/gear_lab.xml
-      # terrain:
-      #   type: plane
-      objects:
-        apple:
-          path: ${root:}/assets/objects/apple_0/model.xml
-          # initial_position: [0.4, 0.0, 0.684446]
-          initial_position: [0.4, 0.0, 0.73]
-          # initial_orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
-        plate:
-          path: ${root:}/assets/objects/plate_1/model.xml
-          initial_position: [0.4, 1.2, 0.7]
-        object_table:
-          path: ${root:}/assets/objects/lab_table/model.xml
-          initial_position: [0.5, 0.0, 0.0]
-          initial_orientation: [0.707, 0.0, 0.0, 0.707]
-        target_table:
-          path: ${root:}/assets/objects/lab_table/model.xml
-          initial_position: [0.5, 1.2, 0.0]
-          initial_orientation: [0.707, 0.0, 0.0, 0.707]
-        g1:
-          initial_position: [-0.5, 0.0, 0.78]
+  - /maps.yaml@env_config.maps
+  - /robots/g1_dex3_gr00t.yaml@env_config.scene.objects.g1
 
 task: Gr00tPickAndPlace-v0
 
+# Task specific parameters
 params:
   object_name: apple
   target_name: plate
   success_threshold: 0.05
+
+# Environment configuration
+env_config:
+  scene:
+    path: ${root:}/assets/scenes/gear_lab/gear_lab.xml
+    # terrain:
+    #   type: plane
+    objects:
+      apple:
+        path: ${root:}/assets/objects/apple_0/model.xml
+        # initial_position: [0.4, 0.0, 0.684446]
+        initial_position: [0.4, 0.0, 0.73]
+        # initial_orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
+      plate:
+        path: ${root:}/assets/objects/plate_1/model.xml
+        initial_position: [0.4, 1.2, 0.7]
+      object_table:
+        path: ${root:}/assets/objects/lab_table/model.xml
+        initial_position: [0.5, 0.0, 0.0]
+        initial_orientation: [0.707, 0.0, 0.0, 0.707]
+      target_table:
+        path: ${root:}/assets/objects/lab_table/model.xml
+        initial_position: [0.5, 1.2, 0.0]
+        initial_orientation: [0.707, 0.0, 0.0, 0.707]
+      g1:
+        initial_position: [-0.5, 0.0, 0.78]

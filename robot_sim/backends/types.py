@@ -6,7 +6,6 @@ import numpy as np
 import torch
 
 from robot_sim.backends.sensors import BaseSensor
-from robot_sim.configs import ObjectConfig
 
 ########################## Data Structures ##########################
 
@@ -130,9 +129,17 @@ ActionsType = dict[str, ArrayType]
 # robot/object name
 @dataclass
 class Buffer:
-    config: ObjectConfig | None = None
+    # config: ObjectConfig | None = None
     sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
+    # the joint order follows the config.joints order
     joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
+    # the body order follows the urdf/sdf/model file order if not specified in the config
     body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
     actuator_names: list[str] = field(default_factory=list)  # buffer -> list[actuator name]
-    action_indices: list[int] | None = None  # buffer -> list[joint index]
+    # source: backend order, target: config order
+    joint_indices: list[int] | None = None  # source -> target
+    joint_indices_reverse: list[int] | None = None  # target -> source
+    body_indices: list[int] | None = None  # source -> target
+    body_indices_reverse: list[int] | None = None  # target -> source
+    action_indices: list[int] | None = None  # source -> target
+    action_indices_reverse: list[int] | None = None  # target -> source

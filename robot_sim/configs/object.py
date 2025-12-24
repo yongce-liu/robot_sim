@@ -42,8 +42,10 @@ class JointConfig:
     """Stiffness of the actuator."""
     damping: float | None = None
     """Damping of the actuator."""
+    actuated: bool = True
+    """Whether the actuator is can be actuated."""
     properties: dict[str, Any] = field(default_factory=dict)
-    """Additional properties specific to the robot."""
+    """Additional properties specific to the joint."""
 
     def __post_init__(self):
         if ControlType(self.control_type) in [ControlType.POSITION]:
@@ -65,6 +67,8 @@ class ObjectConfig:
     """Initial orientation of the robot as a quaternion, [w,x,y,z]"""
     joints: dict[str, JointConfig] | None = None
     """List of actuators (joints) in the robot/object. If it is None, no actuators are defined."""
+    bodies: dict[str, Any] | None = None
+    """List of bodies in the robot/object. If it is None, no bodies are defined."""
     sensors: dict[str, SensorConfig] = field(default_factory=dict)
     """Sensor configurations for the robot."""
     properties: dict[str, Any] = field(default_factory=dict)

@@ -84,7 +84,7 @@ class Camera(BaseSensor):
 
         # Find the specific link body
         target_body = None
-        for body_name in self._backend.get_body_names(self.obj_name):
+        for body_name in self._backend.get_body_names(self.obj_name, prefix=self.obj_name + "/"):
             if body_name == f"{self.obj_name}/{self.config.mount_to}":
                 target_body = model.find("body", body_name)
                 break

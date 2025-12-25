@@ -62,10 +62,7 @@ class LowerBodyPolicy(BasePolicy):
             self.init_by_config(observation_params)
         if use_rpy_cmd_from_waist:
             self.rpy_cmd_from_waist = partial(
-                rpy_cmd_from_waist,
-                torso_index=kwargs["torso_index"],
-                pelvis_index=kwargs["pelvis_index"],
-                action = None
+                rpy_cmd_from_waist, torso_index=kwargs["torso_index"], pelvis_index=kwargs["pelvis_index"], action=None
             )
         else:
             self.rpy_cmd_from_waist = None

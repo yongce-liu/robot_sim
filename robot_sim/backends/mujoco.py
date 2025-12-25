@@ -11,7 +11,7 @@ from loguru import logger
 from robot_sim.backends.base import BaseBackend
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig
-from robot_sim.utils.helper import get_reindices
+from robot_sim.utils.helper import get_reindices, resolve_asset_path
 
 
 class MujocoBackend(BaseBackend):
@@ -29,8 +29,9 @@ class MujocoBackend(BaseBackend):
 
     def _init_mujoco(self) -> mjcf.RootElement:
         if self.config.scene.path is not None:
-            mjcf_model = mjcf.from_path(self.config.scene.path)
-            logger.info(f"Loaded scene from: {self.config.scene.path}")
+            _asset_path = resolve_asset_path(self.config.scene.path)
+            mjcf_model = mjcf.from_path(_asset_path)
+            logger.info(f"Loaded scene from: {_asset_path}")
         else:
             mjcf_model = mjcf.RootElement()
             self._add_terrain(mjcf_model)
@@ -264,7 +265,9 @@ class MujocoBackend(BaseBackend):
         """Add individual objects to the model."""
         for obj_name, obj_cfg in self.objects.items():
             if obj_cfg.type in [ObjectType.CUSTOM, ObjectType.ROBOT]:
-                obj_mjcf = mjcf.from_path(obj_cfg.path)
+                _asset_path = resolve_asset_path(obj_cfg.path)
+                obj_mjcf = mjcf.from_path(_asset_path)
+                logger.info(f"Loaded object '{obj_name}' from: {_asset_path}")
                 # TODO: handle free joints for custom objects
                 """
                 # Remove free joint since dm_control has limit support for it.

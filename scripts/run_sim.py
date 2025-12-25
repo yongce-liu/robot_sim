@@ -37,9 +37,11 @@ def main(cfg: DictConfig) -> None:
     # Setup and run simulation
     sim_backend.launch()
     logger.info("Simulation launched successfully.")
+    states = sim_backend.get_states()
 
     try:
         while True:
+            sim_backend.set_states(states)
             sim_backend.simulate()
     except KeyboardInterrupt:
         logger.info("Simulation interrupted by user.")

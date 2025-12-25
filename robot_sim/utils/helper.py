@@ -1,7 +1,10 @@
+import os
+from pathlib import Path
 from typing import Any, Callable, Literal
 
 import gymnasium as gym
 import regex as re
+from loguru import logger
 
 
 def setup_logger(log_file: str, max_file_size: int = 10, mode: str = "w") -> None:
@@ -10,7 +13,6 @@ def setup_logger(log_file: str, max_file_size: int = 10, mode: str = "w") -> Non
     Args:
         max_file_size (int): Maximum size of log file in MB before rotation.
     """
-    from loguru import logger
 
     loguru_log_file = f"{log_file}.loguru.log" if not log_file.endswith(".log") else log_file
     max_file_size_b = max_file_size * 1024 * 1024  # Convert MB to bytes
@@ -60,3 +62,40 @@ def get_reindices(
         result.extend(matched)
 
     return result
+
+
+def resolve_asset_path(path: str | os.PathLike) -> str:
+    LOCAL_ASSETS_DIR = Path(__file__).parents[1]
+    HF_REPO_ID = "your-username/your-model-repo"
+    path_obj = Path(path)
+
+    if path_obj.is_absolute():
+        target_path = path_obj
+    else:
+        target_path = LOCAL_ASSETS_DIR / path_obj
+
+    if target_path.exists():
+        return str(target_path)
+
+    logger.info(f"Local path '{target_path}' not found. Attempting download from Hugging Face...")
+
+    try:
+        from huggingface_hub import snapshot_download
+
+        folder_pattern = f"{str(path_obj.parent)}/*"
+        snapshot_download(
+            repo_id=HF_REPO_ID,
+            repo_type="dataset",
+            allow_patterns=folder_pattern,
+            local_dir=LOCAL_ASSETS_DIR / path_obj.parent,
+            local_dir_use_symlinks=False,
+        )
+
+        if target_path.exists():
+            logger.info(f"Assets downloaded to: {target_path.parent}")
+            return str(target_path)
+        else:
+            raise FileNotFoundError(f"Download finished but '{target_path}' is still missing.")
+
+    except Exception as e:
+        raise FileNotFoundError(f"Failed to retrieve assets from Hugging Face repo '{HF_REPO_ID}'.") from e

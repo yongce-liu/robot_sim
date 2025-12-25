@@ -43,7 +43,11 @@ observation:
   ######## Video ########
   video.ego_view:
     type: sensor
-    sensor_name: head_camera
+    sensor_name: oak_camera
+    data_type: rgb
+  video.tpp_view:
+    type: sensor
+    sensor_name: tpp_camera
     data_type: rgb
   ######## Task Description ########
   annotation.human.task_description:
@@ -83,9 +87,9 @@ action:
   ######################
   #### Upper Body #####
   ######################
-  # action.waist:
-  #   type: joint
-  #   indices: [12, 13, 14]
+  action.waist:
+    type: joint
+    indices: [12, 13, 14]
   action.left_arm:
     type: joint
     indices: [15, 16, 17, 18, 19, 20, 21]

@@ -481,32 +481,42 @@ joints:
       frictionloss: 0.1
 
 sensors:
-  head_camera:
+  # head_camera:
+  #   type: camera
+  #   width: 640
+  #   height: 480
+  #   freq: 30.0
+  #   vertical_fov: 59.
+  #   mount_to: torso_link
+  #   position: [0.07555294, 0.02579919, 0.49719054]
+  #   orientation: [0.67876761, 0.20864099, -0.20567003, -0.67338199]
+  # rs_camera:
+  #   type: camera
+  #   width: 640
+  #   height: 480
+  #   freq: 30.0
+  #   vertical_fov: 40.
+  #   mount_to: torso_link
+  #   position: [0.07555294, 0.02579919, 0.49719054]
+  #   orientation: [0.67876761, 0.20864099, -0.20567003, -0.67338199]
+  oak_camera:
     type: camera
     width: 640
     height: 480
     freq: 30.0
-    vertical_fov: 59.
+    vertical_fov: 79.5
     mount_to: torso_link
-    position: [0.06, 0.0, 0.45]
-    orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
-
-# # realsense D435i, 1920 * 1080, 69° × 42°
-# _cam_config[f"{self.naming_prefix}rs_egoview"] = dict(
-#     pos=[0.07555294, 0.02579919, 0.49719054],
-#     # quat=[0.69263989,  0.16169103, -0.19008497,  -0.67673754],
-#     quat=[0.67876761, 0.20864099, -0.20567003, -0.67338199],
-#     camera_attribs=dict(fovy="40"),
-#     parent_body=f"{self.naming_prefix}torso_link",
-# )
-
-# # OAK-D W, OV9782, 640*480
-# _cam_config[f"{self.naming_prefix}oak_egoview"] = dict(
-#     pos=[0.10209156, -0.00937542, 0.42446595],
-#     quat=[0.64367383, 0.26523914, -0.27106013, -0.66472446],
-#     camera_attribs=dict(fovy="79.5"),
-#     parent_body=f"{self.naming_prefix}torso_link",
-# )
+    position: [0.10209156, -0.00937542, 0.42446595]
+    orientation: [0.64367383, 0.26523914, -0.27106013, -0.66472446]
+  tpp_camera:
+    type: camera
+    width: 640
+    height: 480
+    freq: 30.0
+    vertical_fov: 60.
+    mount_to: pelvis
+    position: [-1.131, -0.626, 1.247, -0.793]
+    orientation: [0.67953146, 0.46872971, -0.3204774, -0.46456828]
 
 properties:
   fix_base_link: false

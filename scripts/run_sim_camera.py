@@ -56,11 +56,7 @@ class DualImageViewer:
                                 image = image.astype(np.uint8)
 
                         # Convert RGB to BGR
-                        if len(image.shape) == 3 and image.shape[2] == 3:
-                            image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        else:
-                            image_bgr = image
-
+                        image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                         processed_images.append(image_bgr)
 
                 # Combine images horizontally

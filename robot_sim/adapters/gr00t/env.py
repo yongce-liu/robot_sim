@@ -150,13 +150,11 @@ class Gr00tEnv(MapEnv):
                 sensor_data_type = group_cfg.get("data_type", None)
                 # map
                 if sensor_data_type:
-                    obs_map[group_name] = partial(
-                        lambda name, states: states[name].sensors[sensor_name][sensor_data_type],
-                    )
+                    obs_map[group_name] = lambda name, states, sn=sensor_name, dt=sensor_data_type: states[
+                        name
+                    ].sensors[sn][dt]
                 else:
-                    obs_map[group_name] = partial(
-                        lambda name, states: states[name].sensors[sensor_name],
-                    )
+                    obs_map[group_name] = lambda name, states, sn=sensor_name: states[name].sensors[sn]
                 # _spaces
                 if robot_cfg.sensors[sensor_name].type in [SensorType.CAMERA]:
                     _spaces = gym.spaces.Box(
@@ -173,9 +171,7 @@ class Gr00tEnv(MapEnv):
                     raise NotImplementedError
             elif group_cfg["type"] == "constant":
                 value = group_cfg["value"]
-                obs_map[group_name] = partial(
-                    lambda name, states: value,
-                )
+                obs_map[group_name] = lambda *args, **kwargs: value
                 if isinstance(value, str):
                     allowed_language_charset = (
                         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.\n\t[]{}()!?'_:"
@@ -219,7 +215,7 @@ class Gr00tEnv(MapEnv):
                         pelvis_index=pelvis_index,
                     )
                 elif group_name in ["action.base_height_command", "action.navigate_command"]:
-                    action_map[group_name] = lambda **kwargs: None  # No processing needed; direct assignment
+                    action_map[group_name] = lambda *args, **kwargs: None  # No processing needed; direct assignment
                 bound = group_cfg["bound"]
                 command_dim = len(bound["min"])
                 _spaces = gym.spaces.Box(

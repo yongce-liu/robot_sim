@@ -13,8 +13,9 @@ from hydra.core.hydra_config import HydraConfig
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
+from robot_sim.adapters.gr00t.env import Gr00tTaskConfig  # noqa: F401
 from robot_sim.backends import BackendFactory
-from robot_sim.configs import SimulatorConfig
+from robot_sim.configs import SimulatorConfig  # noqa: F401
 from robot_sim.utils.helper import setup_logger
 
 PROJECT_DIR = Path(__file__).parents[1].resolve()
@@ -108,7 +109,9 @@ class DualImageViewer:
         return self.stop_event.is_set()
 
 
-@hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default.yaml")
+@hydra.main(
+    version_base=None, config_path=str(PROJECT_DIR / "examples/gr00t/configs"), config_name="tasks/pick_place.yaml"
+)
 def main(cfg: DictConfig) -> None:
     """Main entry point with threaded visualization.
 
@@ -123,12 +126,12 @@ def main(cfg: DictConfig) -> None:
         log_file=f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log", max_file_size=10
     )
     # Print configuration
-    cfg = SimulatorConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
+    cfg = Gr00tTaskConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
     cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)
     logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
     # Create simulation manager
-    sim_backend = BackendFactory(config=cfg).backend
+    sim_backend = BackendFactory(config=cfg.environment.simulator).backend
 
     # Setup and run simulation
     sim_backend.launch()
@@ -146,11 +149,11 @@ def main(cfg: DictConfig) -> None:
             sim_backend.simulate()
             states = sim_backend.get_states()
             try:
-                image1 = states["g1"].sensors["head_camera"]["rgb"]
+                image1 = states["g1"].sensors["rs_camera"]["rgb"]
             except KeyError:
                 image1 = np.zeros((480, 640, 3), dtype=np.uint8)
             try:
-                image2 = states["g2"].sensors["head_camera"]["rgb"]
+                image2 = states["g1"].sensors["tpp_camera"]["rgb"]
             except KeyError:
                 image2 = np.zeros((480, 640, 3), dtype=np.uint8)
             # Send both images to the dual viewer

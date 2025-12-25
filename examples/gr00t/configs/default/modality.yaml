@@ -43,7 +43,7 @@ observation:
   ######## Video ########
   video.ego_view:
     type: sensor
-    sensor_name: oak_camera
+    sensor_name: rs_camera
     data_type: rgb
   video.tpp_view:
     type: sensor

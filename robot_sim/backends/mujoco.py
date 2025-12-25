@@ -1,5 +1,5 @@
 import os
-import tempfile
+from pathlib import Path
 from typing import Any
 
 import mujoco
@@ -42,6 +42,7 @@ class MujocoBackend(BaseBackend):
         mjcf_model.option.timestep = self.sim_config.dt
         # gravity
         mjcf_model.option.gravity = self.sim_config.gravity
+        self.export_mjcf(model=mjcf_model, out_dir="outputs/mujoco/", file_name="model.xml")
 
         return mjcf_model
 
@@ -110,7 +111,6 @@ class MujocoBackend(BaseBackend):
 
         # Export MJCF + assets to a temp dir.
         # Handle filename variability (dm_control 1.0.34).
-        self.export_mjcf(model=self._mjcf_model, out_dir=tempfile.gettempdir(), file_name="model.xml")
 
         # FIXME: whether need to reload the model?
         # # Load the model from the XML *in the same directory as the exported assets*
@@ -122,7 +122,9 @@ class MujocoBackend(BaseBackend):
         # self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
 
         if not self.headless:
-            self.viewer = mujoco.viewer.launch_passive(self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr)
+            self.viewer = mujoco.viewer.launch_passive(
+                self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr, show_left_ui=False, show_right_ui=False
+            )
             self.viewer.sync()
 
     def _render(self) -> None:
@@ -338,6 +340,8 @@ class MujocoBackend(BaseBackend):
         """Export the full MJCF model and assets to the specified directory."""
         # Write assets + XML to disk (this version returns None and writes files)
         # model_name is not guaranteed to be respected by all versions, so we’ll glob later.
+        if not Path(out_dir).exists():
+            Path(out_dir).mkdir(parents=True, exist_ok=True)
         mjcf.export_with_assets(model, out_dir, out_file_name=file_name)
         logger.info(f"Exported MJCF model and assets to: {out_dir}/{file_name}")
 

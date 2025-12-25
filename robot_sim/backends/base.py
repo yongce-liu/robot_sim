@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from copy import deepcopy
 from typing import Any
 
 import numpy as np
@@ -56,6 +57,7 @@ class BaseBackend(ABC):
         self._bind_sensors_queries()
         self._launch()
         self._refresh_sensors(self._sim_cnt)
+        self.set_states(self.initial_states)
         self.is_launched = True
 
     def _bind_sensors_queries(self) -> None:
@@ -241,6 +243,38 @@ class BaseBackend(ABC):
     def sim_config(self) -> PhysicsConfig:
         """Get the physics configuration."""
         return self._config.sim
+
+    @property
+    def initial_states(self) -> StatesType:
+        """Get the initial states of the environment."""
+        if "_initial_states" not in self.__cache:
+            template = self.get_states()
+            for obj_name, obj_cfg in self.objects.items():
+                i_pos = obj_cfg.initial_state.get("position", [0, 0, 0])
+                i_ori = obj_cfg.initial_state.get("orientation", [1, 0, 0, 0])
+                i_vel = obj_cfg.initial_state.get("velocity", [0, 0, 0])
+                i_ang_vel = obj_cfg.initial_state.get("angular_velocity", [0, 0, 0])
+                i_j_pos = [joint.default_position for joint in obj_cfg.joints.values()] if obj_cfg.joints else []
+                if isinstance(template[obj_name].root_state, np.ndarray):
+                    template[obj_name].root_state = np.concatenate(
+                        [np.array(i_pos), np.array(i_ori), np.array(i_vel), np.array(i_ang_vel)], axis=0
+                    )[None, ...].repeat(self.num_envs, axis=0)
+                    template[obj_name].joint_pos = np.array(i_j_pos)[None, ...].repeat(self.num_envs, axis=0)
+                else:
+                    template[obj_name].root_state = torch.cat(
+                        [
+                            torch.tensor(i_pos, device=self.device),
+                            torch.tensor(i_ori, device=self.device),
+                            torch.tensor(i_vel, device=self.device),
+                            torch.tensor(i_ang_vel, device=self.device),
+                        ],
+                        dim=0,
+                    )[None, ...].repeat(self.num_envs, axis=0)
+                    template[obj_name].joint_pos[..., 0] = torch.tensor(i_j_pos, device=self.device)[None, ...].repeat(
+                        self.num_envs, axis=0
+                    )
+            self.__cache["_initial_states"] = deepcopy(template)
+        return self.__cache["_initial_states"]
 
     # Utility functions for buffers
     # public functions

@@ -212,17 +212,27 @@ class Gr00tWBCController(CompositeController):
     In another example, you can implement a unitree-sdk message interface and then use the sdk to control the robot.
     """
 
-    def __init__(self, wbc_policy: BasePolicy, pd_controller: PIDController) -> None:
+    def __init__(
+        self,
+        wbc_policy: BasePolicy,
+        pd_controller: PIDController,
+        position_limits: np.ndarray,
+        torque_limits: np.ndarray,
+    ) -> None:
         super().__init__(controllers={"wbc_policy": wbc_policy, "pd_controller": pd_controller})
         self.wbc_policy = wbc_policy
         self.pd_controller = pd_controller
+        self.position_limits = position_limits
+        self.torque_limits = torque_limits
 
     def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
         # Implement routing logic specific to Gr00t here
         # For example, route commands to different sub-controllers
         # wbc_output = default order of actuators
         wbc_output = self.wbc_policy.compute(name=name, states=states, targets=targets)
+        wbc_output = np.clip(wbc_output, self.position_limits[:, 0], self.position_limits[:, 1])
         pd_output = self.pd_controller.compute(
             target=wbc_output, position=states[name].joint_pos, velocity=states[name].joint_vel
         )
+        pd_output = np.clip(pd_output, -self.torque_limits, self.torque_limits)
         return pd_output

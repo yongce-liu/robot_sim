@@ -8,7 +8,6 @@ from pathlib import Path
 import cv2
 import hydra
 import numpy as np
-import yaml
 from hydra.core.hydra_config import HydraConfig
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
@@ -127,8 +126,8 @@ def main(cfg: DictConfig) -> None:
     )
     # Print configuration
     cfg = Gr00tTaskConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
-    cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)
-    logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
+    # cfg_dict = cfg.to_dict()
+    # logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
     # Create simulation manager
     sim_backend = BackendFactory(config=cfg.environment.simulator).backend
@@ -137,7 +136,7 @@ def main(cfg: DictConfig) -> None:
     sim_backend.launch()
     logger.info("Simulation launched successfully.")
 
-    default_state = sim_backend.get_states()
+    default_state = sim_backend.initial_states
 
     # Start a single dual image viewer
     viewer = DualImageViewer(window_name="Robot Cameras (G1 | G2)", max_queue_size=2)

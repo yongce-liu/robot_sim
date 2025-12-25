@@ -28,7 +28,7 @@ def main(cfg: DictConfig) -> None:
     """
     # Print configuration
     cfg = SimulatorConfig.from_dict(OmegaConf.to_container(cfg, resolve=True))
-    cfg_dict = OmegaConf.to_container(OmegaConf.create(cfg), resolve=True)
+    cfg_dict = cfg.to_dict()
     logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
     # Create simulation manager

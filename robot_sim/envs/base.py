@@ -71,7 +71,6 @@ class BaseEnv(ABC):
         # Launch the backend if not already launched
         if not self._backend.is_launched:
             self._backend.launch()
-        self._initial_states: StatesType = self._backend.get_states()
 
         self._observation_space: Any = None  # to be defined in subclass
         self._action_space: Any = None  # to be defined in subclass
@@ -85,6 +84,7 @@ class BaseEnv(ABC):
 
     def reset(
         self,
+        states: StatesType | None = None,
         *,
         seed: int | None = None,
         options: dict[str, Any] | None = None,
@@ -103,10 +103,9 @@ class BaseEnv(ABC):
         self._episode_step = 0
 
         # Reset the backend state
-        if options is not None:
-            states = options.get("initial_states", self._initial_states)
-        else:
-            states = self._initial_states
+        if states is None:
+            states = options.get("initial_states", self.initial_states) if options is not None else self.initial_states
+
         self._backend.set_states(states)
 
         # FIXME: Whether need to resimulate?
@@ -338,7 +337,7 @@ class BaseEnv(ABC):
         Returns:
             initial_states: The initial state dictionary for backend.
         """
-        return self._initial_states
+        return self._backend.initial_states
 
     @property
     def decimation(self) -> int:

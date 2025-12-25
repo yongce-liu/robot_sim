@@ -2,7 +2,7 @@
 
 type: robot
 path: assets/robots/unitree/g1/g1_dex3_rev_1_0_black_hand.xml
-# initial_position: [0.0, 0.0, 0.78]
+# initial_state: [0.0, 0.0, 0.78]
 # initial_orientation: [1.0, 0.0, 0.0, 0.0] # [w, x, y, z]
 joints:
   left_hip_pitch_joint:

@@ -296,8 +296,8 @@ class MujocoBackend(BaseBackend):
             self._fix_attach_bugs(obj_attached, obj_name, obj_cfg)
 
             # Apply default position and orientation to the object's root body,
-            obj_attached.pos = obj_cfg.initial_position
-            obj_attached.quat = obj_cfg.initial_orientation  # [w,x,y,z] format
+            obj_attached.pos = obj_cfg.initial_state.get("position", [0.0, 0.0, 0.0])
+            obj_attached.quat = obj_cfg.initial_state.get("orientation", [1.0, 0.0, 0.0, 0.0])  # [w,x,y,z] format
 
             # self._mjcf_sub_models[obj_name] = obj_mjcf
             # self._update_buffer_dict(obj_mjcf, obj_cfg)

@@ -1,6 +1,6 @@
 from dataclasses import MISSING, dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from .sensor import SensorConfig
 
@@ -61,10 +61,10 @@ class ObjectConfig:
     """Type of the object. Can be a ObjectType or 'custom'."""
     path: str | None = None
     """Path to the robot's model file."""
-    initial_position: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
-    """Initial position of the robot in the simulation."""
-    initial_orientation: list[float] = field(default_factory=lambda: [1.0, 0.0, 0.0, 0.0])
-    """Initial orientation of the robot as a quaternion, [w,x,y,z]"""
+    initial_state: dict[Literal["position", "orientation", "velocity", "angular_velocity"], list] = field(
+        default_factory=dict
+    )
+    """Initial state of the robot in the simulation."""
     joints: dict[str, JointConfig] | None = None
     """List of actuators (joints) in the robot/object. If it is None, no actuators are defined."""
     bodies: dict[str, Any] | None = None

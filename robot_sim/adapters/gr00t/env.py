@@ -10,7 +10,12 @@ from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
 
-from .controller import DecoupledWBCPolicy, Gr00tWBCController, LowerBodyPolicy, UpperBodyPolicy
+from .controller import (
+    DecoupledWBCPolicy,
+    Gr00tWBCController,
+    LowerBodyPolicy,
+    UpperBodyPolicy,
+)
 from .utils import act_joint_assign, obs_joint_extract, rpy_cmd_from_waist
 
 
@@ -102,9 +107,27 @@ class Gr00tEnv(MapEnv):
 
         pd_controller = self._init_pd_controller()
 
+        coeff = 1.0
+        torque_limits = (
+            np.array(
+                [obj.torque_limit for obj in self.get_object_config(self.robot_name).joints.values() if obj.actuated],
+                dtype=np.float32,
+            )
+            * coeff
+        )
+        position_limits = np.array(
+            [obj.position_limit for obj in self.get_object_config(self.robot_name).joints.values() if obj.actuated],
+            dtype=np.float32,
+        )
+        mid = (position_limits[:, 0] + position_limits[:, 1]) / 2
+        range_2 = (position_limits[:, 1] - position_limits[:, 0]) * 0.5
+        position_limits[:, 0] = mid - coeff * range_2
+        position_limits[:, 1] = mid + coeff * range_2
         controller = Gr00tWBCController(
             wbc_policy=wbc_policy,
             pd_controller=pd_controller,
+            position_limits=position_limits,
+            torque_limits=torque_limits,
         )
         return controller
 

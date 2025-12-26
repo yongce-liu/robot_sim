@@ -125,7 +125,7 @@ class MujocoBackend(BaseBackend):
 
     def _init_renderer(self) -> None:
         self._render_cfg: dict = self.config.sim.backend_spec.get("render", {})
-        self._render_cfg["mode"] = self._render_cfg.get("mode", "mjrender")
+        self._render_cfg["mode"] = self._render_cfg.get("mode", "mjviewer")
         if self._render_cfg["mode"] == "mjviewer":
             self.__viewer = mujoco.viewer.launch_passive(
                 self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr, show_left_ui=False, show_right_ui=False
@@ -142,7 +142,7 @@ class MujocoBackend(BaseBackend):
     def _render(self) -> None:
         if self.renderer is not None:
             if self._render_cfg["mode"] == "mjrender":
-                rgb_array = self.renderer()
+                rgb_array = self.renderer().copy()
                 cv2.imshow("Mujoco Render", cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
                 # Ensure the OpenCV window processes events and refreshes.
                 cv2.waitKey(1)

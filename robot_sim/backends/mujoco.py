@@ -27,7 +27,7 @@ class MujocoBackend(BaseBackend):
         # self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
         self._mjcf_model: mjcf.RootElement | None = None
         self._mjcf_physics: mjcf.Physics | None = None
-        self.renderer: Callable | None = None
+        self._renderer: Callable | None = None
         self._mjcf_model = self._init_mujoco()
 
     def _init_mujoco(self) -> mjcf.RootElement:
@@ -130,9 +130,9 @@ class MujocoBackend(BaseBackend):
             self.__viewer = mujoco.viewer.launch_passive(
                 self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr, show_left_ui=False, show_right_ui=False
             )
-            self.renderer = self.__viewer.sync
-        elif self._render_cfg["mode"] == "mjrender":
-            self.renderer = partial(
+            self._renderer = self.__viewer.sync
+        elif self._render_cfg["mode"] == "opencv":
+            self._renderer = partial(
                 self._mjcf_physics.render,
                 camera_id=self._render_cfg.get("camera", 0),
                 width=self._render_cfg.get("width", 640),
@@ -140,17 +140,17 @@ class MujocoBackend(BaseBackend):
             )
 
     def _render(self) -> None:
-        if self.renderer is not None:
-            if self._render_cfg["mode"] == "mjrender":
-                rgb_array = self.renderer().copy()
+        if self._renderer is not None:
+            if self._render_cfg["mode"] == "opencv":
+                rgb_array = self._renderer().copy()
                 cv2.imshow("Mujoco Render", cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
                 # Ensure the OpenCV window processes events and refreshes.
                 cv2.waitKey(1)
             elif self._render_cfg["mode"] == "mjviewer":
-                self.renderer()
+                self._renderer()
 
     def close(self):
-        if self.renderer is not None:
+        if self._renderer is not None:
             if self._render_cfg["mode"] == "mjrender":
                 cv2.destroyAllWindows()
             if hasattr(self, "__viewer"):

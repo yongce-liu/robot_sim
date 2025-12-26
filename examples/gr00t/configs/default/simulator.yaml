@@ -8,7 +8,7 @@ sim:
   device: "cpu"
   backend_spec:
     render:
-      mode: mjrender # or mjviewer
+      mode:  mjviewer
       camera: g1/rs_camera
       width: 640
       height: 480

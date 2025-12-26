@@ -1,7 +1,10 @@
 import os
+from copy import deepcopy
+from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
+import cv2
 import mujoco
 import mujoco.viewer
 import numpy as np
@@ -24,7 +27,7 @@ class MujocoBackend(BaseBackend):
         # self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
         self._mjcf_model: mjcf.RootElement | None = None
         self._mjcf_physics: mjcf.Physics | None = None
-        self.viewer: mujoco.viewer.Viewer | None = None
+        self.renderer: Callable | None = None
         self._mjcf_model = self._init_mujoco()
 
     def _init_mujoco(self) -> mjcf.RootElement:
@@ -117,23 +120,41 @@ class MujocoBackend(BaseBackend):
         # # so hashed filenames resolve correctly.
         # self._mj_model = mujoco.MjModel.from_xml_path(xml_path)
         # self._mj_data = mujoco.MjData(self._mj_model)
-
-        # # Create a default-sized renderer (camera sizes can be applied on demand)
-        # self.renderer = mujoco.Renderer(self._mj_model, width=640, height=480)
-
         if not self.headless:
-            self.viewer = mujoco.viewer.launch_passive(
+            self._init_renderer()
+
+    def _init_renderer(self) -> None:
+        self._render_cfg: dict = self.config.sim.backend_spec.get("render", {})
+        self._render_cfg["mode"] = self._render_cfg.get("mode", "mjrender")
+        if self._render_cfg["mode"] == "mjviewer":
+            self.__viewer = mujoco.viewer.launch_passive(
                 self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr, show_left_ui=False, show_right_ui=False
             )
-            self.viewer.sync()
+            self.renderer = self.__viewer.sync
+        elif self._render_cfg["mode"] == "mjrender":
+            self.renderer = partial(
+                self._mjcf_physics.render,
+                camera_id=self._render_cfg.get("camera", 0),
+                width=self._render_cfg.get("width", 640),
+                height=self._render_cfg.get("height", 480),
+            )
 
     def _render(self) -> None:
-        if self.viewer is not None:
-            self.viewer.sync()
+        if self.renderer is not None:
+            if self._render_cfg["mode"] == "mjrender":
+                rgb_array = self.renderer()
+                cv2.imshow("Mujoco Render", cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
+                # Ensure the OpenCV window processes events and refreshes.
+                cv2.waitKey(1)
+            elif self._render_cfg["mode"] == "mjviewer":
+                self.renderer()
 
     def close(self):
-        if self.viewer is not None:
-            self.viewer.close()
+        if self.renderer is not None:
+            if self._render_cfg["mode"] == "mjrender":
+                cv2.destroyAllWindows()
+            if hasattr(self, "__viewer"):
+                self.__viewer.close()
 
     def _simulate(self):
         # # Apply gravity compensation for all robots
@@ -173,12 +194,12 @@ class MujocoBackend(BaseBackend):
             joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
             _root_state, _body_state = self._pack_state(obj_name)
             state = ObjectState(
-                root_state=_root_state.astype(dtype),
-                body_state=_body_state.astype(dtype),
+                root_state=_root_state.astype(dtype).copy(),
+                body_state=_body_state.astype(dtype).copy(),
                 joint_pos=None if len(joint_names) == 0 else _pnd.qpos[joint_names].copy()[None, ...].astype(dtype),
                 joint_vel=None if len(joint_names) == 0 else _pnd.qvel[joint_names].copy()[None, ...].astype(dtype),
                 joint_action=None,
-                sensors={k: v.data for k, v in self._buffer_dict[obj_name].sensors.items()},
+                sensors={k: deepcopy(v.data) for k, v in self._buffer_dict[obj_name].sensors.items()},
             )
             states[obj_name] = state
 

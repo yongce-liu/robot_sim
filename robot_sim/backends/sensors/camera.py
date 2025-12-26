@@ -94,7 +94,7 @@ class Camera(BaseSensor):
 
         camera_params = {
             "pos": f"{self.config.position[0]} {self.config.position[1]} {self.config.position[2]}",
-            # "mode": "fixed",
+            "mode": "fixed",
             "fovy": self.config.vertical_fov,
             "quat": f"{self.config.orientation[0]} {self.config.orientation[1]} {self.config.orientation[2]} {self.config.orientation[3]}",
             # "euler": "0 -0.8 -1.57",  # in radians

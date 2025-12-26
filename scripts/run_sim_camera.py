@@ -129,6 +129,11 @@ def main(cfg: DictConfig) -> None:
     # cfg_dict = cfg.to_dict()
     # logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
+    # Avoid OpenCV GUI conflicts when both backend and viewer try to create windows.
+    if not cfg.environment.simulator.sim.headless:
+        cfg.environment.simulator.sim.headless = True
+        logger.info("Force simulator headless mode to prevent OpenCV window conflicts.")
+
     # Create simulation manager
     sim_backend = BackendFactory(config=cfg.environment.simulator).backend
 

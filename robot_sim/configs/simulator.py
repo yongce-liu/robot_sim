@@ -27,6 +27,8 @@ class PhysicsConfig:
     """Whether to run the simulation in headless mode (no GUI)."""
     num_envs: int = 1
     """Number of parallel simulation environments."""
+    backend_spec: dict = field(default_factory=dict)
+    """Backend-specific configuration options."""
 
 
 @configclass

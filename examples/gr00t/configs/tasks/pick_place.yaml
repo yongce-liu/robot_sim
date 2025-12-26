@@ -40,12 +40,12 @@ environment:
           path: assets/objects/apple_0/model.xml
           # initial_state: [0.4, 0.0, 0.684446]
           initial_state: 
-            position: [0.4, 0.0, 0.72]
+            position: [0.35, 0.03, 0.72]
           #  orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
         plate:
           path: assets/objects/plate_1/model.xml
           initial_state: 
-            position: [0.4, 1.2, 0.7]
+            position: [0.3, 1.2, 0.7]
         object_table:
           path: assets/objects/lab_table/model.xml
           initial_state: 

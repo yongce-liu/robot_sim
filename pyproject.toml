@@ -60,21 +60,31 @@ target-version = "py311"
 # allow-direct-references = true
 
 [project.optional-dependencies]
-dev = ["opencv-python>=4.11.0.86", "pytest>=9.0.2"]
+teleop = ["general-motion-retargeting"]
 # gr00t = ["gr00t @ git+https://github.com/NVIDIA/Isaac-GR00T.git@main"]
 # isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 
 [dependency-groups]
-dev = ["opencv-python>=4.11.0.86", "pytest>=9.0.2"]
-# isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
+dev = ["mypy>=1.19.1", "pytest>=9.0.2"]
 
+[tool.uv.sources]
+general-motion-retargeting = { git = "https://github.com/YanjieZe/GMR.git" }
 
-# # mypy type checking configuration
-# [tool.mypy]
-# python_version = "3.11"
-# warn_return_any = true
-# warn_unused_configs = true
-# disallow_untyped_defs = false
+[tool.mypy]
+python_version = "3.11"
+strict = false
+packages = ["robot_sim"]
+pretty = true
+show_error_codes = true
+show_column_numbers = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+disallow_any_generics = false
+# files = ["robot_sim", "tests"]
+
 
 # [project.urls]
 # Homepage = "https://github.com/yourusername/robot_sim"

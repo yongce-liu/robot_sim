@@ -80,4 +80,6 @@ class PickAndPlaceTask(Gr00tEnv):
             target_pos = self.get_object_state(self.target_name).root_state[:3]
             self._distance_cache = np.linalg.norm(object_pos - target_pos, axis=-1)
             self._distance_cache_expire = False
-        return self._distance_cache[0]
+        if self._distance_cache is None:
+            raise ValueError("Distance cache is None. This should not happen.")
+        return self._distance_cache

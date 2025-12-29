@@ -41,6 +41,8 @@ class CameraConfig(SensorConfig):
     """Camera position [x, y, z] in world frame. Used when camera is not mounted."""
     orientation: list[float] = field(default_factory=lambda: [1.0, 0.0, 0.0, 0.0])
     """Camera orientation [w, x, y, z] in world frame. Used when camera is not mounted."""
+    look_at: list[float] | None = None
+    """Point [x, y, z] for the camera to look at in world frame. Used when camera is not mounted."""
 
     # camera parameters
     vertical_fov: float = 45.0

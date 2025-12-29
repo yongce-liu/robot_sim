@@ -24,10 +24,8 @@ class ControlType(Enum):
 
 @dataclass
 class JointConfig:
-    # name: str = MISSING
-    # """Name of the actuator."""
-    # type: str = MISSING
-    # """Type of the actuator (e.g., 'servo', 'stepper')."""
+    """Configuration for a single joint (actuator) in the robot."""
+
     torque_limit: float = MISSING
     """Maximum torque of the actuator."""
     velocity_limit: float = MISSING

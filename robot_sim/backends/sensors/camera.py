@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from loguru import logger
 
-from robot_sim.configs import BackendType
+from robot_sim.configs import BackendType, CameraConfig
 
 from .base import BaseSensor
 
@@ -22,6 +22,7 @@ class Camera(BaseSensor):
         super().__init__(config, **kwargs)
         self._data = defaultdict(lambda: None)
         """Camera data dictionary with keys: 'rgb', 'depth', 'segmentation'."""
+        self.config: CameraConfig = config
 
     def _bind(self, obj_name: str, sensor_name: str, **kwargs) -> None:
         """Bind to mujoco backend and setup camera."""
@@ -56,9 +57,9 @@ class Camera(BaseSensor):
         mjcf_model = self._backend._mjcf_model
         direction = np.array(
             [
-                self.look_at[0] - self.pos[0],
-                self.look_at[1] - self.pos[1],
-                self.look_at[2] - self.pos[2],
+                self.config.look_at[0] - self.config.position[0],
+                self.config.look_at[1] - self.config.position[1],
+                self.config.look_at[2] - self.config.position[2],
             ]
         )
         direction = direction / np.linalg.norm(direction)

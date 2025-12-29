@@ -71,6 +71,8 @@ class ObjectConfig:
     """Sensor configurations for the robot."""
     properties: dict[str, Any] = field(default_factory=dict)
     """Additional properties specific to the robot."""
+    extra: dict[str, Any] = field(default_factory=dict)
+    """Extra information for custom use cases."""
     _cache: dict[str, Any] = field(default_factory=dict, repr=False)
     """Internal cache for storing preprocessed data."""
 

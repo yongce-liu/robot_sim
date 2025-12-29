@@ -1,0 +1,17 @@
+# Simulator configuration
+backend: mujoco
+sim:
+  dt: 0.002
+  render_interval: 10
+  gravity: [0.0, 0.0, -9.81]
+  headless: false
+  device: "cpu"
+  backend_spec:
+    render:
+      mode:  mjviewer
+      camera: g1/rs_camera
+      width: 640
+      height: 480
+extras:
+  decimation: 10
+  max_episode_steps: 1000

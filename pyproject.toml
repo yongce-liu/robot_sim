@@ -60,7 +60,12 @@ target-version = "py311"
 # allow-direct-references = true
 
 [project.optional-dependencies]
-teleop = ["general-motion-retargeting"]
+teleop = [
+    "general-motion-retargeting",
+    "xrobotoolkit-sdk",
+    "proxsuite==0.7.2",
+    "pybind11>=3.0.1",
+]
 # gr00t = ["gr00t @ git+https://github.com/NVIDIA/Isaac-GR00T.git@main"]
 # isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 
@@ -68,7 +73,8 @@ teleop = ["general-motion-retargeting"]
 dev = ["mypy>=1.19.1", "pytest>=9.0.2"]
 
 [tool.uv.sources]
-general-motion-retargeting = { git = "https://github.com/YanjieZe/GMR.git" }
+general-motion-retargeting = { path = "third_party/teleop/GMR", editable = true}
+xrobotoolkit-sdk = { path = "third_party/teleop/XRoboToolkit-PC-Service-Pybind", editable = true}
 
 [tool.mypy]
 python_version = "3.11"

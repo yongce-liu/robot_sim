@@ -23,10 +23,11 @@ Whole-Body Teleop Features:
 - Uses retargeted motion directly from the teleoperation stream
 """
 
-import argparse
 import json
 import subprocess
 import time
+from dataclasses import dataclass
+from typing import Literal
 
 import cv2
 import mujoco as mj
@@ -366,8 +367,35 @@ class StateMachine:
             print(f"[EMERGENCY STOP] Error executing pkill: {e}")
 
 
+@dataclass
+class Twist2TeleopConfig:
+    """Configuration for Twist2 teleoperation."""
+
+    robot: Literal["unitree_g1", "unitree_g1_with_hands"] = "unitree_g1"
+    """Robot selection for the teleop target."""
+    record_video: bool = False
+    """Enable video recording for the session."""
+    pinch_mode: bool = False
+    """Use pinch mode for hand control."""
+    redis_ip: str = "localhost"
+    """Redis host used for telemetry and control."""
+    actual_human_height: float = 1.5
+    """Real human height used for retargeting scale."""
+    neck_retarget_scale: float = 1.5
+    """Scale factor applied to neck data."""
+    smooth: bool = False
+    """Enable sliding-window smoothing for mimic observations."""
+    smooth_window_size: int = 5
+    """Window size for smoothing (in frames)."""
+    target_fps: int = 100
+    """Target frames per second for teleop control loop."""
+    measure_fps: int = 0
+    """0 disables detailed FPS stats; 1 enables them."""
+
+
 class XRobotTeleopToRobot:
-    def __init__(self, args):
+    def __init__(self, config: Twist2TeleopConfig):
+        args = config
         self.args = args
         self.robot_name = args.robot
         self.xml_file = ROBOT_XML_DICT[args.robot]
@@ -772,70 +800,7 @@ class XRobotTeleopToRobot:
                 self.rate.sleep()
 
 
-def parse_arguments():
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--robot",
-        choices=["unitree_g1", "unitree_g1_with_hands"],
-        default="unitree_g1",
-    )
-    parser.add_argument(
-        "--record_video",
-        action="store_true",
-        help="Whether to record the video.",
-    )
-    parser.add_argument(
-        "--pinch_mode",
-        action="store_true",
-        help="Whether to use pinch mode for hand control.",
-        default=False,
-    )
-    parser.add_argument(
-        "--redis_ip",
-        type=str,
-        default="localhost",
-        help="Redis IP",
-    )
-    parser.add_argument(
-        "--actual_human_height",
-        type=float,
-        default=1.5,
-        help="Actual human height for retargeting.",
-    )
-    parser.add_argument(
-        "--neck_retarget_scale",
-        type=float,
-        default=1.5,
-        help="Scale factor for neck data.",
-    )
-    parser.add_argument(
-        "--smooth",
-        action="store_true",
-        help="Enable smooth filtering for mimic observations in teleop mode.",
-    )
-    parser.add_argument(
-        "--smooth_window_size",
-        type=int,
-        default=5,
-        help="Window size for sliding window smoothing (default: 5 frames).",
-    )
-    parser.add_argument(
-        "--target_fps",
-        type=int,
-        default=100,
-        help="Target FPS for the teleop system.",
-    )
-    parser.add_argument(
-        "--measure_fps",
-        type=int,
-        default=0,
-        help="Measure and print detailed FPS statistics (0=disabled, 1=enabled).",
-    )
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_arguments()
+    args = Twist2TeleopConfig()
     teleop_robot = XRobotTeleopToRobot(args)
     teleop_robot.run()

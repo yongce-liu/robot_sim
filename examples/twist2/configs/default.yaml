@@ -1,0 +1,45 @@
+# @package _global_
+
+# Hydra runtime configuration
+hydra:
+  run:
+    dir: outputs/debug
+  sweep:
+    dir: outputs/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false
+
+defaults:
+  - _self_
+  - /simulator.yaml@simulator
+  - /g1_dex3_twist2.yaml@simulator.scene.objects.unitree_g1_with_hands
+
+policy:
+  _target_: robot_sim.adapters.twist2.Twist2Policy
+  robot_name: unitree_g1_with_hands
+  policy_path: examples/twist2/configs/policy/g1/twist2_1017_20k.onnx
+  robot_config: ${simulator.scene.objects.unitree_g1_with_hands}
+  observation_config:
+    n_mimic_obs: 35 # 6 + 29 (modified: root_vel_xy + root_pos_z + roll_pitch + yaw_ang_vel + dof_pos)
+    n_proprio: 92 # 3 + 2 + 3*29 # from config analysis
+    history_len: 10
+    action_scale: 0.5
+  redis_config:
+    send_keys: ["state_body", "state_hand_left", "state_hand_right"]
+    send_size: [127, 7, 7]
+    recv_keys:
+      ["action_body", "action_hand_left", "action_hand_right", "action_neck"]
+    host: localhost
+    port: 8888
+    db: 0
+  logs_config:
+    record_proprio: False,
+    mesure_fps_size: null # 1000
+    expected_fps: 60
+    measure_policy_size: null # 100
+
+teleop:
+  _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.XRobotTeleopToRobotWHand
+  config:
+    _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.Twist2TeleopConfig

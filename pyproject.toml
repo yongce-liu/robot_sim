@@ -51,6 +51,7 @@ addopts = "-s"
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+extend-exclude = ["third_party"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 # Also ignore `E402` in all `__init__.py` files.

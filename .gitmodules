@@ -1,0 +1,9 @@
+[submodule "third_party/teleop/GMR"]
+	path = third_party/teleop/GMR
+	url = https://github.com/YanjieZe/GMR.git
+[submodule "third_party/teleop/XRoboToolkit-PC-Service-Pybind"]
+	path = third_party/teleop/XRoboToolkit-PC-Service-Pybind
+	url = https://github.com/YanjieZe/XRoboToolkit-PC-Service-Pybind.git
+[submodule "third_party/teleop/XRoboToolkit-PC-Service"]
+	path = third_party/teleop/XRoboToolkit-PC-Service
+	url = https://github.com/XR-Robotics/XRoboToolkit-PC-Service.git

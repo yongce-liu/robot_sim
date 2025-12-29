@@ -3,7 +3,7 @@
 import numpy as np
 import torch
 
-from robot_sim.backends.types import ActionsType, StatesType
+from robot_sim.backends.types import ActionsType, ArrayType, StatesType
 from robot_sim.controllers import BaseController
 
 
@@ -38,7 +38,7 @@ class PIDController(BaseController):
             else None
         )
 
-    def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
+    def compute(self, name: str, states: StatesType, targets: ActionsType) -> ArrayType:
         """Compute control action for the given robot.
 
         Args:
@@ -48,9 +48,7 @@ class PIDController(BaseController):
         Returns:
             Control output (torque or force)
         """
-        return {
-            name: self.apply_pid(target=targets[name], position=states[name].joint_pos, velocity=states[name].joint_vel)
-        }
+        return self.apply_pid(target=targets[name], position=states[name].joint_pos, velocity=states[name].joint_vel)
 
     def apply_pid(
         self,

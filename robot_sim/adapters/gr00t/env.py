@@ -6,13 +6,13 @@ import gymnasium as gym
 import numpy as np
 
 from robot_sim.configs import ControlType, ObjectType, SensorType, SimulatorConfig
+from robot_sim.configs.object import ObjectConfig
 from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
 
 from .controller import (
     DecoupledWBCPolicy,
-    Gr00tWBCController,
     LowerBodyPolicy,
     UpperBodyPolicy,
 )
@@ -66,7 +66,7 @@ class Gr00tEnv(MapEnv):
 
         super().__init__(config=config.simulator, **kwargs)
 
-    def _create_controller_and_maps(self) -> tuple[Gr00tWBCController, MapCache]:
+    def _create_controller_and_maps(self) -> tuple[CompositeController, MapCache]:
         maps: MapCache = self._init_spaces_maps(**self.__maps_config)
         controller: CompositeController = self._init_controller(**self.__controller_config)
         return controller, maps
@@ -90,46 +90,58 @@ class Gr00tEnv(MapEnv):
         self,
         upper_policy: dict[str, any] = None,
         lower_policy: dict[str, any] = None,
-    ) -> Gr00tWBCController:
+    ) -> CompositeController:
         """Initialize the composite controller for the Gr00t robot.
 
         Returns:
-            An instance of Gr00tWBCController.
+            An instance of CompositeController.
         """
 
         upper_body_policy = UpperBodyPolicy(**upper_policy)
         lower_body_policy = self._init_lower_policy(**lower_policy)
+
         wbc_policy = DecoupledWBCPolicy(
             upper_body_policy=upper_body_policy,
             lower_body_policy=lower_body_policy,
             output_indices=np.arange(len(self.get_actuator_names(self.robot_name))),
         )
+        pid_controller = self._init_pd_controller()
 
-        pd_controller = self._init_pd_controller()
+        robot_cfg = self.get_object_config(self.robot_name)
+        output_clips = self.get_limits_from_config(robot_cfg)
 
-        coeff = 1.0
+        controller = CompositeController(
+            controllers={
+                "wbc_policy": wbc_policy,
+                "pd_controller": pid_controller,
+            },
+            output_clips={
+                "wbc_policy": (output_clips["position"][:, 0], output_clips["position"][:, 1]),
+                "pd_controller": (-output_clips["torque"], output_clips["torque"]),
+            },
+        )
+        return controller
+
+    @staticmethod
+    def get_limits_from_config(robot_cfg: ObjectConfig, soft_coeff=0.9) -> tuple[np.ndarray, np.ndarray]:
+        coeff = soft_coeff
         torque_limits = (
             np.array(
-                [obj.torque_limit for obj in self.get_object_config(self.robot_name).joints.values() if obj.actuated],
+                [obj.torque_limit for obj in robot_cfg.joints.values() if obj.actuated],
                 dtype=np.float32,
             )
             * coeff
         )
         position_limits = np.array(
-            [obj.position_limit for obj in self.get_object_config(self.robot_name).joints.values() if obj.actuated],
+            [obj.position_limit for obj in robot_cfg.joints.values() if obj.actuated],
             dtype=np.float32,
         )
         mid = (position_limits[:, 0] + position_limits[:, 1]) / 2
         range_2 = (position_limits[:, 1] - position_limits[:, 0]) * 0.5
         position_limits[:, 0] = mid - coeff * range_2
         position_limits[:, 1] = mid + coeff * range_2
-        controller = Gr00tWBCController(
-            wbc_policy=wbc_policy,
-            pd_controller=pd_controller,
-            position_limits=position_limits,
-            torque_limits=torque_limits,
-        )
-        return controller
+
+        return {"position": position_limits, "torque": torque_limits}
 
     @property
     def robot_name(self) -> str:

@@ -11,11 +11,11 @@ from loguru import logger
 import robot_sim
 from robot_sim.adapters.gr00t.utils import rpy_cmd_from_waist
 from robot_sim.backends.types import ActionsType, ArrayType, StatesType
-from robot_sim.controllers import BasePolicy, CompositeController, PIDController
+from robot_sim.controllers import BaseController
 from robot_sim.utils.math_array import quat_apply_inverse
 
 
-class UpperBodyPolicy(BasePolicy):
+class UpperBodyPolicy:
     def __init__(self, actuator_indices: list[int]):
         """
         Upper body control policy for Gr00t robot.
@@ -24,17 +24,11 @@ class UpperBodyPolicy(BasePolicy):
         """
         self.actuator_indices = actuator_indices
 
-    def compute(self, name: str, states: StatesType, targets: ActionsType, **kwargs) -> ArrayType:
+    def compute(self, name: str, targets: ActionsType, **kwargs) -> ArrayType:
         return targets[name][..., self.actuator_indices]
 
-    def load_policy(self, policy_path):
-        pass
 
-    def reset(self):
-        self.actuator_indices = None
-
-
-class LowerBodyPolicy(BasePolicy):
+class LowerBodyPolicy:
     def __init__(
         self,
         actuator_indices: list[int],
@@ -168,11 +162,8 @@ class LowerBodyPolicy(BasePolicy):
     def observation(self) -> torch.Tensor:
         return torch.concatenate(list(self._obs_buffer), dim=-1)
 
-    def reset(self):
-        pass
 
-
-class DecoupledWBCPolicy(CompositeController):
+class DecoupledWBCPolicy(BaseController):
     """Whole-body control policy for Gr00t robot.
 
     This policy combines multiple controllers to produce whole-body commands
@@ -186,7 +177,6 @@ class DecoupledWBCPolicy(CompositeController):
         output_indices: list[int] = None,
         lower_priority: bool = True,
     ) -> None:
-        super().__init__(controllers={"upper_body_policy": upper_body_policy, "lower_body_policy": lower_body_policy})
         self.upper_body_policy = upper_body_policy
         self.lower_body_policy = lower_body_policy
         self.lower_priority = lower_priority
@@ -202,37 +192,5 @@ class DecoupledWBCPolicy(CompositeController):
             output = np.concatenate([upper_target, lower_target], axis=-1)
         return output[..., self.output_indices]
 
-
-class Gr00tWBCController(CompositeController):
-    """Composite controller for Gr00t robot.
-
-    This controller combines multiple sub-controllers to manage different
-    aspects of the Gr00t robot's behavior.
-    For example, it can include a trained whole-body controller (WBC) and a PD controller.
-    In another example, you can implement a unitree-sdk message interface and then use the sdk to control the robot.
-    """
-
-    def __init__(
-        self,
-        wbc_policy: BasePolicy,
-        pd_controller: PIDController,
-        position_limits: np.ndarray,
-        torque_limits: np.ndarray,
-    ) -> None:
-        super().__init__(controllers={"wbc_policy": wbc_policy, "pd_controller": pd_controller})
-        self.wbc_policy = wbc_policy
-        self.pd_controller = pd_controller
-        self.position_limits = position_limits
-        self.torque_limits = torque_limits
-
-    def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
-        # Implement routing logic specific to Gr00t here
-        # For example, route commands to different sub-controllers
-        # wbc_output = default order of actuators
-        wbc_output = self.wbc_policy.compute(name=name, states=states, targets=targets)
-        wbc_output = np.clip(wbc_output, self.position_limits[:, 0], self.position_limits[:, 1])
-        pd_output = self.pd_controller.compute(
-            target=wbc_output, position=states[name].joint_pos, velocity=states[name].joint_vel
-        )
-        pd_output = np.clip(pd_output, -self.torque_limits, self.torque_limits)
-        return pd_output
+    def reset(self):
+        pass

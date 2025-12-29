@@ -1,6 +1,4 @@
-import os
 from abc import ABC, abstractmethod
-from typing import Any
 
 from robot_sim.backends.types import ActionsType, StatesType
 
@@ -17,30 +15,13 @@ class BaseController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def compute(self, *args: Any, **kwargs: Any) -> Any:
+    def compute(self, name: str, states: StatesType, targets: ActionsType, *args, **kwargs) -> ActionsType:
         """Compute control output.
 
         Signature is intentionally flexible; concrete controllers should
         document their expected inputs.
         """
 
-        raise NotImplementedError
-
-
-class BasePolicy(BaseController):
-    """Base class for control policies.
-
-    A *policy* maps an input (observation/state) to an output action.
-    Policies may maintain internal state across time steps.
-    """
-
-    @abstractmethod
-    def load_policy(self, path: os.PathLike) -> None:
-        """Load policy parameters from a file.
-
-        Args:
-            path (str): Path to the policy file.
-        """
         raise NotImplementedError
 
 
@@ -62,8 +43,7 @@ class CompositeController:
         for c in self.controllers.values():
             c.reset()
 
-    @abstractmethod
-    def compute(self, name: str, states: StatesType, targets: Any, **kwargs: Any) -> ActionsType:
-        """Override in subclasses to implement routing logic."""
-
-        raise NotImplementedError
+    def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
+        for controller in self.controllers.values():
+            targets = controller.compute(name, states, targets)
+        return targets

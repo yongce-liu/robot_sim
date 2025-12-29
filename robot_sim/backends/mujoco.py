@@ -130,6 +130,10 @@ class MujocoBackend(BaseBackend):
             self.__viewer = mujoco.viewer.launch_passive(
                 self._mjcf_physics.model.ptr, self._mjcf_physics.data.ptr, show_left_ui=False, show_right_ui=False
             )
+            self.__viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_PERTFORCE] = 0
+            self.__viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = 0
+            self.__viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = 0
+            self.__viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = 0
             self._renderer = self.__viewer.sync
         elif self._render_cfg["mode"] == "opencv":
             self._renderer = partial(

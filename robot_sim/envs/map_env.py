@@ -100,7 +100,9 @@ class MapEnv(BaseEnv, gym.Env):
                 res = map_func(name=name, action=action, states=self.states)
                 if res is not None:
                     action[group_name] = res
-            output[name] = self._controller.compute(name=name, states=self.states, targets=action)
+            res: ActionsType = self._controller.compute(name=name, states=self.states, targets=action)
+            assert len(res) == 1, f"Action map function for robot '{name}' returned multiple action arrays."
+            output[name] = res[name]
         return output
 
     def compute_reward(self, observation, action=None):

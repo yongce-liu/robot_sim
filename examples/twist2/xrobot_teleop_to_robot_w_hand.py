@@ -379,6 +379,10 @@ class Twist2TeleopConfig:
     """Use pinch mode for hand control."""
     redis_ip: str = "localhost"
     """Redis host used for telemetry and control."""
+    redis_port: int = 6379
+    """Redis port used for telemetry and control."""
+    redis_db: int = 0
+    """Redis database index."""
     actual_human_height: float = 1.5
     """Real human height used for retargeting scale."""
     neck_retarget_scale: float = 1.5
@@ -440,7 +444,9 @@ class XRobotTeleopToRobot:
     def setup_redis_connection(self):
         """Setup Redis connection"""
         redis_ip = self.args.redis_ip
-        self.redis_client = redis.Redis(host=redis_ip, port=6379, db=0)
+        redis_port = self.args.redis_port
+        db = self.args.redis_db
+        self.redis_client = redis.Redis(host=redis_ip, port=redis_port, db=db)
         self.redis_pipeline = self.redis_client.pipeline()
         self.redis_client.ping()
         print("Redis connected successfully")

@@ -1,10 +1,8 @@
-from abc import abstractmethod
 from dataclasses import MISSING, dataclass
 from typing import Any, Callable
 
 import gymnasium as gym
 import numpy as np
-from loguru import logger
 
 from robot_sim.backends.types import ActionsType, StatesType
 from robot_sim.configs import SimulatorConfig
@@ -59,17 +57,11 @@ class MapEnv(BaseEnv, gym.Env):
     ) -> None:
         super().__init__(config=config, **kwargs)
         assert config.sim.num_envs == 1, "Only single environment supported in MapEnv currently."
-        self._controller, self._map_cache = self._create_controller_and_maps()
-        assert isinstance(self._controller, CompositeController), "Controller must be a CompositeController."
-        assert isinstance(self._map_cache, MapCache), "Map cache must be a MapCache."
-        logger.info(
-            f"Maps initialized.\nObservation Space: {self.observation_space}\nAction Space: {self.action_space}"
-        )
-
-    @abstractmethod
-    def _create_controller_and_maps(self) -> tuple[CompositeController, MapCache]:
-        """Create the composite controller and mapping functions."""
-        raise NotImplementedError
+        assert len(self.robot_names) == 1, "Only single robot supported in MapEnv currently."
+        self._observation_space_dict: dict[str, gym.spaces.Space] = {}
+        self._action_space_dict: dict[str, gym.spaces.Space] = {}
+        self._controller: CompositeController | None = None
+        self._map_cache: MapCache | None = None
 
     def statesType2observation(self, states: StatesType) -> gym.spaces.Dict:
         observation_dict = {}
@@ -100,7 +92,7 @@ class MapEnv(BaseEnv, gym.Env):
                 res = map_func(name=name, action=action, states=self.states)
                 if res is not None:
                     action[group_name] = res
-            res: ActionsType = self._controller.compute(name=name, states=self.states, targets=action)
+            res: ActionsType = self.controller.compute(name=name, states=self.states, targets=action)
             assert len(res) == 1, f"Action map function for robot '{name}' returned multiple action arrays."
             output[name] = res[name]
         return output
@@ -139,11 +131,27 @@ class MapEnv(BaseEnv, gym.Env):
 
     @property
     def observation_space(self) -> gym.spaces.Dict:
-        raise NotImplementedError
+        assert len(self._observation_space_dict) > 0, "Observation space not initialized."
+        return gym.spaces.Dict(self._observation_space_dict)
 
     @property
     def action_space(self) -> gym.spaces.Dict:
-        raise NotImplementedError
+        assert len(self._action_space_dict) > 0, "Action space not initialized."
+        return gym.spaces.Dict(self._action_space_dict)
+
+    @property
+    def controller(self) -> CompositeController:
+        assert self._controller is not None, "Controller not initialized."
+        return self._controller
+
+    @property
+    def map_cache(self) -> MapCache:
+        assert self._map_cache is not None, "Map cache not initialized."
+        return self._map_cache
+
+    @property
+    def robot_name(self) -> str:
+        return self.robot_names[0]
 
     @property
     def observation_map(self) -> dict[str, Callable]:

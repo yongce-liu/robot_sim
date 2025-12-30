@@ -12,24 +12,16 @@ from robot_sim.utils.math_array import euler_xyz_from_quat
 class Twist2Env(MapEnv):
     def __init__(self, config: SimulatorConfig, **kwargs):
         super().__init__(config, **kwargs)
-        self._init_specs()
-        self._observation_space_dict = {}
-        self._action_space_dict = {}
 
-    def _create_controller_and_maps(self) -> tuple[CompositeController, MapCache]:
-        maps: MapCache = self._init_spaces_maps()
-        controller: CompositeController = self._init_controller()
-        return controller, maps
+        self._init_specs()
+        self._map_cache: MapCache = self._init_spaces_maps()
+        self._controller: CompositeController = self._init_controller()
 
     def _init_spaces_maps(self) -> MapCache:
         obs_map = self._init_observation_spaces_map()
         action_map = self._init_action_spaces_map()
 
-        maps = MapCache(
-            observation_space_map=obs_map,
-            action_space_map=action_map,
-        )
-        return maps
+        return MapCache(observation=obs_map, action=action_map)
 
     def _init_controller(self) -> CompositeController:
         robot_cfg = self.get_object_config(self.robot_name)
@@ -41,9 +33,7 @@ class Twist2Env(MapEnv):
             for i, joint in enumerate(robot_cfg.joints.values())
             if ControlType(joint.control_type) == ControlType.TORQUE
         ]
-        pd_controller = PIDController(
-            kp=kp, kd=kd, dt=self.step_dt / self.decimation, enabled_indices=used_pd_indices, limits=self.torque_limits
-        )
+        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation, enabled_indices=used_pd_indices)
         return CompositeController(
             controllers={"pd_controller": pd_controller},
             output_clips={"pd_controller": (-self.torque_limits, self.torque_limits)},
@@ -58,8 +48,6 @@ class Twist2Env(MapEnv):
         return gym.spaces.Dict(self._action_space_dict)
 
     def _init_specs(self) -> None:
-        assert len(self.robot_names) == 1, "Twist2Env only supports a single robot."
-        self.robot_name = self.robot_names[0]
         robot_cfg = self.get_object_config(self.robot_name)
         coeff = robot_cfg.extra.get("soft_coeff", 0.9)
         self.torque_limits = (
@@ -106,8 +94,8 @@ class Twist2Env(MapEnv):
 
         group_name = "dos_vel"
         _spaces = gym.spaces.Box(
-            low=self.velocity_limits[self.body_idx, 0],
-            high=self.velocity_limits[self.body_idx, 1],
+            low=-self.velocity_limits[self.body_idx],
+            high=self.velocity_limits[self.body_idx],
             shape=(len(self.body_idx),),
             dtype=np.float32,
         )

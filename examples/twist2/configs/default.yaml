@@ -31,7 +31,7 @@ policy:
     recv_keys:
       ["action_body", "action_hand_left", "action_hand_right", "action_neck"]
     host: localhost
-    port: 8888
+    port: 6379
     db: 0
   logs_config:
     record_proprio: False,
@@ -40,6 +40,6 @@ policy:
     measure_policy_size: null # 100
 
 teleop:
-  _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.XRobotTeleopToRobotWHand
+  _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.XRobotTeleopToRobot
   config:
     _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.Twist2TeleopConfig

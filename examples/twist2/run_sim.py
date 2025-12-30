@@ -1,11 +1,13 @@
+import time
+from multiprocessing import Process
 from pathlib import Path
 
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
-from xrobot_teleop_to_robot_w_hand import XRobotTeleopToRobot
 
+from examples.twist2.xrobot_teleop_to_robot_w_hand import XRobotTeleopToRobot
 from robot_sim.adapters.twist2 import Twist2Env, Twist2Policy
 from robot_sim.configs import SimulatorConfig
 from robot_sim.utils.helper import setup_logger
@@ -26,28 +28,6 @@ def teleop_worker(teleop_client: XRobotTeleopToRobot) -> None:
         raise e
 
 
-def simulate_worker(env: Twist2Env, policy: Twist2Policy, num_steps: int) -> None:
-    """Worker function to run simulation in a separate process.
-
-    Args:
-        env: Twist2Env environment instance
-        policy: Twist2Policy instance
-        num_steps: Number of simulation steps to run
-    """
-    obs, info = env.reset()
-    for step in range(num_steps):
-        action = policy.run_once(obs)
-        obs, reward, terminated, truncated, info = env.step(action)
-
-        if step % 50 == 0:
-            logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
-
-        if terminated or truncated:
-            logger.info(f"Episode ended at step {step}")
-            break
-    env.close()
-
-
 def run(cfg: DictConfig) -> None:
     """Run Gr00t simulation.
 
@@ -57,24 +37,32 @@ def run(cfg: DictConfig) -> None:
     setup_logger(f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log")
     logger.info("Starting Twist2 simulation...")
     cfg = hydra.utils.instantiate(cfg, _recursive=True)
-    cfg = OmegaConf.to_container(cfg, resolve=True)
 
     # Initialize Twist2Env
     logger.info("Initializing Twist2Env...")
 
-    policy: Twist2Policy = cfg.policy
-    teleop_client = cfg.teleop
-    env = Twist2Env(config=SimulatorConfig.from_dict(cfg.simulator))
-
     # Start teleoperation and simulation workers
-    from multiprocessing import Process
-
-    teleop_process = Process(target=teleop_worker, args=(teleop_client,))
-    simulate_process = Process(target=simulate_worker, args=(env, policy, cfg.simulator.num_steps))
+    teleop_process = Process(target=teleop_worker, args=(cfg.teleop,))
     teleop_process.start()
-    simulate_process.start()
     teleop_process.join()
-    simulate_process.join()
+    time.sleep(10)  # Ensure teleop client is ready
+
+    policy: Twist2Policy = cfg.policy
+    env = Twist2Env(config=SimulatorConfig.from_dict(OmegaConf.to_container(cfg.simulator, resolve=True)))
+
+    # num_steps = 1000
+    # obs, info = env.reset()
+    # for step in range(num_steps):
+    #     action = policy.run_once(obs)
+    #     obs, reward, terminated, truncated, info = env.step(action)
+
+    #     if step % 50 == 0:
+    #         logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
+
+    #     if terminated or truncated:
+    #         logger.info(f"Episode ended at step {step}")
+    #         break
+    # env.close()
 
 
 @hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default")

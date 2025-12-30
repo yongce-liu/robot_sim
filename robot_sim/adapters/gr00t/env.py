@@ -5,7 +5,7 @@ from typing import Any, Callable
 import gymnasium as gym
 import numpy as np
 
-from robot_sim.configs import ControlType, ObjectType, SensorType, SimulatorConfig
+from robot_sim.configs import ControlType, SensorType, SimulatorConfig
 from robot_sim.configs.object import ObjectConfig
 from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
@@ -58,26 +58,16 @@ class Gr00tEnv(MapEnv):
         config: Gr00tEnvConfig,
         **kwargs,
     ):
-        self.__maps_config = config.maps
-        self.__controller_config = config.controller
-        _robot_names = [name for name, obj in config.simulator.scene.objects.items() if obj.type == ObjectType.ROBOT]
-        assert len(_robot_names) == 1, "Only single robot supported in MapEnv currently."
-        self._robot_name = _robot_names[0]
-
         super().__init__(config=config.simulator, **kwargs)
 
-    def _create_controller_and_maps(self) -> tuple[CompositeController, MapCache]:
-        maps: MapCache = self._init_spaces_maps(**self.__maps_config)
-        controller: CompositeController = self._init_controller(**self.__controller_config)
-        return controller, maps
+        self._map_cache: MapCache = self._init_spaces_maps(**config.maps)
+        self._controller: CompositeController = self._init_controller(**config.controller)
 
     def _init_spaces_maps(
         self,
         observation: dict[str, Any],
         action: dict[str, Any],
     ) -> MapCache:
-        self._observation_space_dict: dict[str, gym.spaces.Space] = None
-        self._action_space_dict: dict[str, gym.spaces.Space] = None
         obs_maps = self._init_observation_spaces_map(**observation)
         act_maps = self._init_action_spaces_map(**action)
 
@@ -143,18 +133,6 @@ class Gr00tEnv(MapEnv):
 
         return {"position": position_limits, "torque": torque_limits}
 
-    @property
-    def robot_name(self) -> str:
-        return self._robot_name
-
-    @property
-    def observation_space(self) -> gym.spaces.Dict:
-        return gym.spaces.Dict(self._observation_space_dict)
-
-    @property
-    def action_space(self) -> gym.spaces.Dict:
-        return gym.spaces.Dict(self._action_space_dict)
-
     ############################################################################
     ########## Helper Functions for Maps Initialization and Callbacks ##########
     ############################################################################
@@ -167,7 +145,6 @@ class Gr00tEnv(MapEnv):
         """
         robot_cfg = self.get_object_config(self.robot_name)
         joint_position_limit = np.array([joint.position_limit for joint in robot_cfg.joints.values()], dtype=np.float32)
-        self._observation_space_dict = {}
         obs_map = {}
         for group_name, group_cfg in kwargs.items():
             if group_cfg["type"] == "joint":
@@ -226,7 +203,6 @@ class Gr00tEnv(MapEnv):
     def _init_action_spaces_map(self, **kwargs) -> dict[str, Callable]:
         robot_cfg = self.get_object_config(self.robot_name)
         joint_position_limit = np.array([joint.position_limit for joint in robot_cfg.joints.values()], dtype=np.float32)
-        self._action_space_dict = {}
         action_map = {}
         for group_name, group_cfg in kwargs.items():
             if group_cfg["type"] == "joint":

@@ -1,17 +1,20 @@
-from dataclasses import MISSING, dataclass
+from dataclasses import dataclass, field
+from enum import Enum
+
+
+class TerrainType(Enum):
+    PLANE = "plane"
+    CUSTOM = "custom"
 
 
 @dataclass
 class TerrainConfig:
-    type: str = MISSING
-    """Type of the terrain (e.g., 'heightfield', 'plane', 'trimesh')."""
-    # size: list[float] = field(default_factory=lambda: [10.0, 10.0])
-    # """Size of the terrain [length, width]."""
-    # heightmap_path: str | None = None
-    # """Path to the heightmap file (if applicable)."""
-    # friction: float = 1.0
-    # """Friction coefficient of the terrain."""
-    # restitution: float = 0.0
-    # """Restitution coefficient of the terrain."""
-    # texture_path: str | None = None
-    # """Path to the texture file for the terrain surface."""
+    type: TerrainType | None = None
+    path: str | None = None
+    """Path to a custom terrain mesh file. Used only if terrain type is CUSTOM."""
+    properties: dict = field(default_factory=dict)
+    """take effect when path is None."""
+
+    def __post_init__(self):
+        if self.type == TerrainType.CUSTOM:
+            assert self.path is not None, "Custom terrain type requires a valid mesh file path."

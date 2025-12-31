@@ -1,4 +1,4 @@
-from dataclasses import MISSING, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 
 from robot_sim.utils.config import configclass
@@ -15,11 +15,11 @@ class BackendType(Enum):
 
 @dataclass
 class PhysicsConfig:
-    dt: float = MISSING
+    dt: float
     """Simulation timestep."""
-    render_interval: int = MISSING
+    render_interval: int
     """Interval (in steps) at which to render the simulation."""
-    device: str = MISSING
+    device: str
     """Device to run the simulation on (e.g., 'cpu', 'cuda:0')."""
     gravity: list[float] = field(default_factory=lambda: [0.0, 0.0, -9.81])
     """Gravity vector for the simulation."""
@@ -33,10 +33,10 @@ class PhysicsConfig:
 
 @configclass
 class SimulatorConfig:
-    backend: BackendType = MISSING
-    sim: PhysicsConfig = MISSING
+    backend: BackendType
+    sim: PhysicsConfig
     """Configuration for the physics simulation."""
-    scene: SceneConfig = MISSING
+    scene: SceneConfig
     """Configuration for the simulation scene."""
     extras: dict = field(default_factory=dict)
     """Additional task-specific configuration options, e.g., you can assign decimation, max_episode_steps here."""

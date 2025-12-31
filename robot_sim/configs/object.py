@@ -1,6 +1,6 @@
-from dataclasses import MISSING, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
+from typing import Any
 
 from .sensor import SensorConfig
 
@@ -26,13 +26,13 @@ class ControlType(Enum):
 class JointConfig:
     """Configuration for a single joint (actuator) in the robot."""
 
-    torque_limit: float = MISSING
+    torque_limit: float
     """Maximum torque of the actuator."""
-    velocity_limit: float = MISSING
+    velocity_limit: float
     """Maximum velocity of the actuator."""
-    position_limit: list[float] = MISSING
+    position_limit: list[float]
     """Position limits of the actuator [min, max]."""
-    control_type: ControlType | None = MISSING
+    control_type: ControlType | None
     """Control type of the actuator."""
     default_position: float = 0.0
     """Default position of the actuator."""
@@ -53,16 +53,16 @@ class JointConfig:
 
 @dataclass
 class ObjectConfig:
-    # name: str = MISSING
+    # name: str
     # """Name of the robot."""
     type: ObjectType = ObjectType.CUSTOM
     """Type of the object. Can be a ObjectType or 'custom'."""
     path: str | None = None
     """Path to the robot's model file."""
-    initial_state: dict[Literal["position", "orientation", "velocity", "angular_velocity"], list] = field(
-        default_factory=dict
-    )
-    """Initial state of the robot in the simulation."""
+    pose: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+    """Initial pose of the robot/object in the simulation [x, y, z, qw, qx, qy, qz]."""
+    twist: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    """Initial twist (linear and angular velocity) of the robot/object in the simulation [vx, vy, vz, wx, wy, wz]."""
     joints: dict[str, JointConfig] | None = None
     """List of actuators (joints) in the robot/object. If it is None, no actuators are defined."""
     bodies: dict[str, Any] | None = None
@@ -79,3 +79,5 @@ class ObjectConfig:
     def __post_init__(self):
         if self.path is None and self.type in [ObjectType.CUSTOM, ObjectType.ROBOT]:
             raise ValueError("For custom object type, a valid path to the model file must be provided.")
+        assert len(self.pose) == 7, "Pose must be a list of 7 elements [x, y, z, qw, qx, qy, qz]."
+        assert len(self.twist) == 6, "Twist must be a list of 6 elements [vx, vy, vz, wx, wy, wz]."

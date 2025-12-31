@@ -41,7 +41,7 @@ class Camera(BaseSensor):
         if self._backend.type == BackendType.MUJOCO:
             self._camera_id = f"{self.obj_name}/{self.sensor_name}"
         logger.info(
-            f"Initializing Camera Sensor: width={self.config.width}, height={self.config.height}. Camera {sensor_name} will be mounted to '{self.config.mount_to}' at link '{self.config.mount_to}' for object {obj_name} with position {self.config.position} and quaternion {self.config.orientation}."
+            f"Initializing Camera Sensor: width={self.config.width}, height={self.config.height}. Camera {sensor_name} will be mounted to '{self.config.mount_to}' at link '{self.config.mount_to}' for object {obj_name} with position {self.config.pose[:3]} and quaternion {self.config.pose[3:]}."
         )
 
     def _update(self) -> None:
@@ -57,9 +57,9 @@ class Camera(BaseSensor):
         mjcf_model = self._backend._mjcf_model
         direction = np.array(
             [
-                self.config.look_at[0] - self.config.position[0],
-                self.config.look_at[1] - self.config.position[1],
-                self.config.look_at[2] - self.config.position[2],
+                self.config.look_at[0] - self.config.pose[0],
+                self.config.look_at[1] - self.config.pose[1],
+                self.config.look_at[2] - self.config.pose[2],
             ]
         )
         direction = direction / np.linalg.norm(direction)
@@ -94,10 +94,10 @@ class Camera(BaseSensor):
             raise ValueError(f"Link '{self.config.mount_to}' not found in '{self.obj_name}'.")
 
         camera_params = {
-            "pos": f"{self.config.position[0]} {self.config.position[1]} {self.config.position[2]}",
+            "pos": f"{self.config.pose[0]} {self.config.pose[1]} {self.config.pose[2]}",
             "mode": "fixed",
             "fovy": self.config.vertical_fov,
-            "quat": f"{self.config.orientation[0]} {self.config.orientation[1]} {self.config.orientation[2]} {self.config.orientation[3]}",
+            "quat": f"{self.config.pose[3]} {self.config.pose[4]} {self.config.pose[5]} {self.config.pose[6]}",
             # "euler": "0 -0.8 -1.57",  # in radians
         }
         # logger.info(f"euler angles (rad): roll={roll.item()}, pitch={pitch.item()}, yaw={yaw.item()}")

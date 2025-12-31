@@ -1,4 +1,4 @@
-from dataclasses import MISSING, dataclass
+from dataclasses import dataclass
 from typing import Any, Callable
 
 import gymnasium as gym
@@ -12,13 +12,13 @@ from robot_sim.envs.base import BaseEnv
 
 @dataclass
 class MapCache:
-    observation: dict[str, Callable] = MISSING
+    observation: dict[str, Callable]
     """
     Mapping of observation group name to a tuple of (callable, config_dict).
     - key (str): Observation group name (e.g., "proprio", "camera", "language")
     - value (tuple): config_parameters: Dict containing configuration for the processing function
     """
-    action: dict[str, Callable] = MISSING
+    action: dict[str, Callable]
     """
     Mapping of action group name to action processing callable.
     - key (str): Action group name (e.g., "joint_positions", "gripper")

@@ -9,7 +9,7 @@ from loguru import logger
 
 from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY
 from robot_sim.backends.types import ActionsType, ArrayType, Buffer, StatesType
-from robot_sim.configs import BackendType, ObjectConfig, PhysicsConfig, SimulatorConfig, TerrainConfig
+from robot_sim.configs import BackendType, ObjectConfig, PhysicsConfig, SimulatorConfig, TerrainConfig, VisualConfig
 
 
 ########################### Base Backend ##########################
@@ -37,7 +37,7 @@ class BaseBackend(ABC):
         # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
 
         self._state_cache_expire = True
-        self._states: StatesType = None
+        self._states: StatesType | None = None
 
         # Constants
         self.is_launched = False
@@ -47,7 +47,7 @@ class BaseBackend(ABC):
             np.arange(self.num_envs) if self.device == "cpu" else torch.arange(self.num_envs, device=self.device)
         )
         # you can use it to store anything, e.g., default joint names order/ body names order, etc.
-        self._buffer_dict = defaultdict(Buffer)
+        self._buffer_dict: dict[str, Buffer] = defaultdict(Buffer)
         self.__cache = {}
 
     def launch(self) -> None:
@@ -240,6 +240,11 @@ class BaseBackend(ABC):
         return self._config.scene.terrain
 
     @property
+    def visual(self) -> VisualConfig | None:
+        """Get whether visualization is enabled."""
+        return self._config.scene.visual
+
+    @property
     def sim_config(self) -> PhysicsConfig:
         """Get the physics configuration."""
         return self._config.sim
@@ -250,28 +255,17 @@ class BaseBackend(ABC):
         if "_initial_states" not in self.__cache:
             template = self.get_states()
             for obj_name, obj_cfg in self.objects.items():
-                i_pos = obj_cfg.initial_state.get("position", [0, 0, 0])
-                i_ori = obj_cfg.initial_state.get("orientation", [1, 0, 0, 0])
-                i_vel = obj_cfg.initial_state.get("velocity", [0, 0, 0])
-                i_ang_vel = obj_cfg.initial_state.get("angular_velocity", [0, 0, 0])
+                root_state = np.concatenate([np.array(obj_cfg.pose), np.array(obj_cfg.twist)], axis=-1)
                 i_j_pos = [joint.default_position for joint in obj_cfg.joints.values()] if obj_cfg.joints else []
                 if isinstance(template[obj_name].root_state, np.ndarray):
-                    template[obj_name].root_state = np.concatenate(
-                        [np.array(i_pos), np.array(i_ori), np.array(i_vel), np.array(i_ang_vel)], axis=0
-                    )[None, ...].repeat(self.num_envs, axis=0)
+                    template[obj_name].root_state = root_state[None, ...].repeat(self.num_envs, axis=0)
                     template[obj_name].joint_pos = np.array(i_j_pos)[None, ...].repeat(self.num_envs, axis=0)
                 else:
-                    template[obj_name].root_state = torch.cat(
-                        [
-                            torch.tensor(i_pos, device=self.device),
-                            torch.tensor(i_ori, device=self.device),
-                            torch.tensor(i_vel, device=self.device),
-                            torch.tensor(i_ang_vel, device=self.device),
-                        ],
-                        dim=0,
-                    )[None, ...].repeat(self.num_envs, axis=0)
+                    template[obj_name].root_state = torch.tensor(root_state, device=self.device)[None, ...].repeat(
+                        self.num_envs
+                    )
                     template[obj_name].joint_pos[..., 0] = torch.tensor(i_j_pos, device=self.device)[None, ...].repeat(
-                        self.num_envs, axis=0
+                        self.num_envs
                     )
             self.__cache["_initial_states"] = deepcopy(template)
         return self.__cache["_initial_states"]

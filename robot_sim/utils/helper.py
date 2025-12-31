@@ -64,7 +64,9 @@ def get_reindices(
     return result
 
 
-def resolve_asset_path(path: str | os.PathLike) -> str:
+def resolve_asset_path(path: str | os.PathLike | None) -> str:
+    if path is None:
+        raise ValueError("Path cannot be None.")
     LOCAL_ASSETS_DIR = Path(__file__).parents[1]
     HF_REPO_ID = "your-username/your-model-repo"
     path_obj = Path(path)
@@ -99,3 +101,14 @@ def resolve_asset_path(path: str | os.PathLike) -> str:
 
     except Exception as e:
         raise FileNotFoundError(f"Failed to retrieve assets from Hugging Face repo '{HF_REPO_ID}'.") from e
+
+
+def recursive_setattr(obj, props):
+    for key, value in props.items():
+        if isinstance(value, dict) and hasattr(obj, key):
+            recursive_setattr(getattr(obj, key), value)
+        else:
+            try:
+                setattr(obj, key, value)
+            except AttributeError:
+                logger.error(f"Unknown option '{key}' ignored.")

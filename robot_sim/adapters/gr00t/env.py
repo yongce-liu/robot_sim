@@ -1,4 +1,3 @@
-from dataclasses import MISSING
 from functools import partial
 from typing import Any, Callable
 
@@ -23,11 +22,11 @@ from .utils import act_joint_assign, obs_joint_extract, rpy_cmd_from_waist
 class Gr00tEnvConfig:
     """Configuration for MapEnv environments."""
 
-    simulator: SimulatorConfig = MISSING
+    simulator: SimulatorConfig
     """Simulator configuration for MapEnv."""
-    controller: dict[str, Any] = MISSING
+    controller: dict[str, Any]
     """Controller configuration for MapEnv."""
-    maps: dict[str, Any] = MISSING
+    maps: dict[str, Any]
     """Maps configuration for observation, action, reward, termination, truncation, and info maps."""
 
 
@@ -35,11 +34,11 @@ class Gr00tEnvConfig:
 class Gr00tTaskConfig:
     """Configuration for Map pick-and-place task."""
 
-    task: str = MISSING
+    task: str
     """Task name for Gr00t environment."""
-    params: dict = MISSING
+    params: dict
     """Parameters for the specific task."""
-    environment: Gr00tEnvConfig = MISSING
+    environment: Gr00tEnvConfig
     """Environment configuration for the task."""
 
 

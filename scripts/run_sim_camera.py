@@ -129,11 +129,6 @@ def main(cfg: DictConfig) -> None:
     # cfg_dict = cfg.to_dict()
     # logger.info("Configuration:\n{}", yaml.dump(cfg_dict))
 
-    # Avoid OpenCV GUI conflicts when both backend and viewer try to create windows.
-    if not cfg.environment.simulator.sim.headless:
-        cfg.environment.simulator.sim.headless = True
-        logger.info("Force simulator headless mode to prevent OpenCV window conflicts.")
-
     # Create simulation manager
     sim_backend = BackendFactory(config=cfg.environment.simulator).backend
 
@@ -146,14 +141,7 @@ def main(cfg: DictConfig) -> None:
     # Start a single dual image viewer
     viewer = DualImageViewer(window_name="Robot Cameras (G1 | G2)", max_queue_size=2)
     viewer.start()
-    import pickle as pkl
 
-    with open(PROJECT_DIR / "obs_act.pkl", "rb") as f:
-        debug_data = pkl.load(f)
-    obs = debug_data["obs"]
-    video = obs["video.ego_view"]
-    logger.info(f"{len(video)} frames loaded from obs_act.pkl")
-    i = 0
     try:
         while not viewer.is_stopped():
             sim_backend.set_states(default_state)
@@ -164,9 +152,7 @@ def main(cfg: DictConfig) -> None:
             except KeyError:
                 image1 = np.zeros((480, 640, 3), dtype=np.uint8)
             try:
-                # image2 = states["g1"].sensors["tpp_camera"]["rgb"]
-                image2 = video[i]
-                i = (i + 1) % len(video)
+                image2 = states["g1"].sensors["tpp_camera"]["rgb"]
             except KeyError:
                 image2 = np.zeros((480, 640, 3), dtype=np.uint8)
             # Send both images to the dual viewer

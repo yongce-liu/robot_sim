@@ -529,4 +529,4 @@ properties:
 
 extra:
   ankle_idx: [4, 5, 10, 11]
-  soft_coeff: 0.9
+  soft_coeff: 1.0

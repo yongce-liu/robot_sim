@@ -50,14 +50,14 @@ def run(cfg: DictConfig) -> None:
     policy: Twist2Policy = cfg.policy
     env = Twist2Env(config=SimulatorConfig.from_dict(OmegaConf.to_container(cfg.simulator, resolve=True)))
 
-    num_steps = 1000
+    num_steps = 10000
     obs, info = env.reset()
     for step in range(num_steps):
         action = policy.run_once(obs)
         # action = env.action_space.sample()  # Random action for testing
         obs, reward, terminated, truncated, info = env.step(action)
 
-        if step % 50 == 0:
+        if step % 500 == 0:
             logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
 
         if terminated or truncated:

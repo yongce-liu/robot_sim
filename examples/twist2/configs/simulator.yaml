@@ -1,7 +1,7 @@
 # Simulator configuration
 backend: mujoco
 sim:
-  dt: 0.001
+  dt: 0.005
   render_interval: 10
   gravity: [0.0, 0.0, -9.81]
   headless: false
@@ -14,8 +14,8 @@ sim:
       height: 480
 
 extras:
-  decimation: 10
-  max_episode_steps: 1000
+  decimation: 4
+  max_episode_steps: 10000
 
 scene:
   terrain:

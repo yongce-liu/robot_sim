@@ -323,50 +323,6 @@ joints:
     properties:
       armature: 0.01
       frictionloss: 0.1
-  left_hand_index_0_joint:
-    control_type: position # torque
-    stiffness: 5.0
-    damping: 1.0
-    velocity_limit: 1e15
-    torque_limit: 1.4
-    position_limit: [-1.57079632, 0.0]
-    default_position: 0.0
-    properties:
-      armature: 0.01
-      frictionloss: 0.01
-  left_hand_index_1_joint:
-    control_type: position #torque
-    stiffness: 5.0
-    damping: 1.0
-    velocity_limit: 1e15
-    torque_limit: 1.4
-    position_limit: [-1.74532925, 0.0]
-    default_position: 0.0
-    properties:
-      armature: 0.01
-      frictionloss: 0.01
-  left_hand_middle_0_joint:
-    control_type: position # torque
-    stiffness: 5.0
-    damping: 1.0
-    velocity_limit: 1e15
-    torque_limit: 1.4
-    position_limit: [-1.57079632, 0.0]
-    default_position: 0.0
-    properties:
-      armature: 0.01
-      frictionloss: 0.01
-  left_hand_middle_1_joint:
-    control_type: position #torque
-    stiffness: 5.0
-    damping: 1.0
-    velocity_limit: 1e15
-    torque_limit: 1.4
-    position_limit: [-1.74532925, 0.0]
-    default_position: 0.0
-    properties:
-      armature: 0.01
-      frictionloss: 0.01
   left_hand_thumb_0_joint:
     control_type: position #torque
     stiffness: 5.0
@@ -400,46 +356,46 @@ joints:
     properties:
       armature: 0.01
       frictionloss: 0.01
-  right_hand_index_0_joint:
+  left_hand_middle_0_joint:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
     velocity_limit: 1e15
     torque_limit: 1.4
-    position_limit: [0.0, 1.57079632]
+    position_limit: [-1.57079632, 0.0]
     default_position: 0.0
     properties:
       armature: 0.01
       frictionloss: 0.01
-  right_hand_index_1_joint:
-    control_type: position # torque
+  left_hand_middle_1_joint:
+    control_type: position #torque
     stiffness: 5.0
     damping: 1.0
     velocity_limit: 1e15
     torque_limit: 1.4
-    position_limit: [0.0, 1.74532925]
+    position_limit: [-1.74532925, 0.0]
     default_position: 0.0
     properties:
       armature: 0.01
       frictionloss: 0.01
-  right_hand_middle_0_joint:
+  left_hand_index_0_joint:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
     velocity_limit: 1e15
     torque_limit: 1.4
-    position_limit: [0.0, 1.57079632]
+    position_limit: [-1.57079632, 0.0]
     default_position: 0.0
     properties:
       armature: 0.01
       frictionloss: 0.01
-  right_hand_middle_1_joint:
-    control_type: position # torque
+  left_hand_index_1_joint:
+    control_type: position #torque
     stiffness: 5.0
     damping: 1.0
     velocity_limit: 1e15
     torque_limit: 1.4
-    position_limit: [0.0, 1.74532925]
+    position_limit: [-1.74532925, 0.0]
     default_position: 0.0
     properties:
       armature: 0.01
@@ -474,6 +430,50 @@ joints:
     velocity_limit: 1e15
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
+    default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.01
+  right_hand_middle_0_joint:
+    control_type: position # torque
+    stiffness: 5.0
+    damping: 1.0
+    velocity_limit: 1e15
+    torque_limit: 1.4
+    position_limit: [0.0, 1.57079632]
+    default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.01
+  right_hand_middle_1_joint:
+    control_type: position # torque
+    stiffness: 5.0
+    damping: 1.0
+    velocity_limit: 1e15
+    torque_limit: 1.4
+    position_limit: [0.0, 1.74532925]
+    default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.01
+  right_hand_index_0_joint:
+    control_type: position # torque
+    stiffness: 5.0
+    damping: 1.0
+    velocity_limit: 1e15
+    torque_limit: 1.4
+    position_limit: [0.0, 1.57079632]
+    default_position: 0.0
+    properties:
+      armature: 0.01
+      frictionloss: 0.01
+  right_hand_index_1_joint:
+    control_type: position # torque
+    stiffness: 5.0
+    damping: 1.0
+    velocity_limit: 1e15
+    torque_limit: 1.4
+    position_limit: [0.0, 1.74532925]
     default_position: 0.0
     properties:
       armature: 0.01

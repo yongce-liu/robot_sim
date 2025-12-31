@@ -103,12 +103,23 @@ def resolve_asset_path(path: str | os.PathLike | None) -> str:
         raise FileNotFoundError(f"Failed to retrieve assets from Hugging Face repo '{HF_REPO_ID}'.") from e
 
 
-def recursive_setattr(obj, props):
-    for key, value in props.items():
-        if isinstance(value, dict) and hasattr(obj, key):
-            recursive_setattr(getattr(obj, key), value)
-        else:
-            try:
-                setattr(obj, key, value)
-            except AttributeError:
-                logger.error(f"Unknown option '{key}' ignored.")
+def recursive_setattr(obj: object, props: dict | None, tag: str | None = None) -> None:
+    tag = tag if tag is not None else obj.__class__.__name__
+
+    if props is None or len(props) == 0:
+        logger.warning(f"You provided empty properties for {tag}")
+        return
+
+    def _recursive(o: object, p: dict):
+        for key, value in p.items():
+            if isinstance(value, dict) and hasattr(o, key):
+                _recursive(getattr(o, key), value)
+            else:
+                try:
+                    setattr(o, key, value)
+                except AttributeError:
+                    logger.error(f"Unknown option '{key}' ignored.")
+
+    _recursive(obj, props)
+
+    logger.info(f"Successfully set properties for {tag}: {props}")

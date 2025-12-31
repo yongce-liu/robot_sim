@@ -245,69 +245,44 @@ class MujocoBackend(BaseBackend):
         if self.terrain is None:
             logger.warning("No terrain configuration provided; skipping terrain addition.")
             return
+        texture_name = "texplane"
+        material_name = "matplane"
+        geom_name = "ground_plane"
         if self.terrain.type == TerrainType.CUSTOM:
             terrain_mjcf = mjcf.from_path(self.terrain.path)
             terrain_mjcf.model = "terrain"
+            terrain_mjcf.find("texture")[0].name = texture_name
+            terrain_mjcf.find("material")[0].name = material_name
+            terrain_mjcf.find("geom")[0].name = geom_name
             model.worldbody.add(terrain_mjcf)
             logger.info(f"Loaded terrain from: {self.terrain.path}")
         elif self.terrain.type == TerrainType.PLANE:
             model.asset.add(
                 "texture",
-                name="texplane",
+                name=texture_name,
                 type="2d",
                 builtin="checker",
-                mark="edge",
                 width=512,
                 height=512,
                 rgb1=[0.2, 0.3, 0.4],
                 rgb2=[0.1, 0.2, 0.3],
-                markrgb=[0.8, 0.8, 0.8],
             )
-            model.asset.add(
-                "material",
-                name="matplane",
-                texture="texplane",
-                texrepeat=[2, 2],
-                texuniform=True,
-                reflectance="0.2",
-                specular="0.2",
-                shininess="0.4",
-                emission="0.05",
-            )
-            model.worldbody.add(
-                "geom",
-                name="ground_plane",
-                type="plane",
-                pos="0 0 0",
-                size="100 100 0.001",
-                quat="1 0 0 0",
-                condim="3",
-                conaffinity="15",
-                material="matplane",
-                # friction coefficients [sliding, torsional, rolling]
-                friction="1.0 0.005 0.0001",
-                # restition parameters [min, max, margin, stiffness, damping]
-                solimp="0.9 0.95 0.001 0.5 2.0",
-                # contact stiffness and damping [timeconst, dampratio]
-                solref="0.02 1.0",
-            )
+            model.asset.add("material", name=material_name, texture=texture_name, texrepeat=[2, 2], texuniform=True)
+            model.worldbody.add("geom", name=geom_name, type="plane", size="0 0 0.001", material=material_name)
         else:
             raise ValueError(f"Unknown terrain type: {self.terrain.type}")
 
-        recursive_setattr(model.worldbody, self.terrain.properties)
+        recursive_setattr(model.asset.texture[texture_name], self.terrain.properties.get("texture"), tag="texture")
+        recursive_setattr(model.asset.material[material_name], self.terrain.properties.get("material"), tag="material")
+        recursive_setattr(model.worldbody.geom[geom_name], self.terrain.properties.get("geom"), tag="geom")
 
     def _add_visual(self, model: mjcf.RootElement) -> None:
         if self.visual is None:
             logger.warning("No visual configuration provided; skipping visual addition.")
             return
 
-        headlight = model.visual.headlight
-        headlight.diffuse = self.visual.light.diffuse
-        headlight.ambient = self.visual.light.ambient
-        headlight.specular = self.visual.light.specular
-
-        recursive_setattr(model.visual.headlight, self.visual.light.properties)
-        recursive_setattr(model.visual, self.visual.properties)
+        recursive_setattr(model.visual.headlight, self.visual.light, tag="headlight")
+        recursive_setattr(model.visual, self.visual.properties, tag="visual")
 
     def _add_objects(self, model: mjcf.RootElement) -> None:
         """Add individual objects to the model."""

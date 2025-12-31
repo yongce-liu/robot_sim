@@ -1,6 +1,5 @@
 type: robot
-path: assets/robots/unitree/g1/g1_dex3.xml
-# path: assets/robots/unitree/g1/g1_dex3_rev_1_0.xml
+path: assets/robots/unitree/g1/g1_dex3_rev_1_0.xml
 
 joints:
   left_hip_pitch_joint:
@@ -479,15 +478,22 @@ joints:
       frictionloss: 0.1
 
 sensors:
-  head_camera:
+  rs_camera:
     type: camera
     width: 640
     height: 480
     freq: 10.0
     vertical_fov: 59.
     mount_to: torso_link
-    position: [0.06, 0.0, 0.45]
-    orientation: [0.6515477, 0.2752507, -0.27547, -0.6510291]
+    pose: [0.06, 0.0, 0.45, 0.6515477, 0.2752507, -0.27547, -0.6510291]
+  tpp_camera:
+    type: camera
+    width: 640
+    height: 480
+    freq: 30.0
+    vertical_fov: 60.
+    mount_to: pelvis
+    pose: [-1.131, -0.626, 0.481, 0.67953146, 0.46872971, -0.3204774, -0.46456828]
 
 properties:
   fix_base_link: false

@@ -38,24 +38,15 @@ environment:
       objects:
         apple:
           path: assets/objects/apple_0/model.xml
-          # initial_state: [0.4, 0.0, 0.684446]
-          initial_state: 
-            position: [0.4, 0.0, 0.72]
-          #  orientation: [1, 0.0, 0.0, 0] # [w, x, y, z]
+          pose: [0.4, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
         plate:
           path: assets/objects/plate_1/model.xml
-          initial_state: 
-            position: [0.3, 1.2, 0.72]
+          pose: [0.3, 1.2, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
         object_table:
           path: assets/objects/lab_table/model.xml
-          initial_state: 
-            position: [0.5, 0.0, 0.0] # [0.0, 0.0, 0.684446]
-            orientation: [0.707, 0.0, 0.0, 0.707]
+          pose: [0.5, 0.0, 0.0, 0.707, 0.0, 0.0, 0.707]
         target_table:
           path: assets/objects/lab_table/model.xml
-          initial_state: 
-            position: [0.5, 1.2, 0.0]
-            orientation: [0.707, 0.0, 0.0, 0.707]
+          pose: [0.5, 1.2, 0.0, 0.707, 0.0, 0.0, 0.707]
         g1:
-          initial_state: 
-            position: [0.05, 0.05, 0.74]
+          pose: [0.05, 0.05, 0.793, 1, 0.0, 0.0, 0.0]

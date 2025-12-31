@@ -30,8 +30,8 @@ sim:
   num_envs: 1
   backend_spec:
     render:
-      mode: mjrender # or mjviewer
-      camera: g1/head_camera
+      mode: opencv # or opencv
+      camera: g1/tpp_camera
       width: 640
       height: 480
 
@@ -44,25 +44,18 @@ scene:
   objects:
     apple:
       path: assets/objects/apple_0/model.xml
-      initial_state:
-        position: [0.4, 0.0, 0.7]
+      pose: [0.4, 0.0, 0.7, 1, 0, 0, 0] # xyz qw
     plate:
       path: assets/objects/plate_1/model.xml
-      initial_state:
-        position: [0.4, 1.2, 0.7]
+      pose: [0.4, 1.2, 0.7, 1, 0, 0, 0]
     object_table:
       path: assets/objects/lab_table/model.xml
-      initial_state:
-        position: [0.5, 0.0, 0.0]
-        orientation: [0.707, 0.0, 0.0, 0.707]
+      pose: [0.5, 0.0, 0.0, 0.707, 0.0, 0.0, 0.707]
     target_table:
       path: assets/objects/lab_table/model.xml
-      initial_state:
-        position: [0.5, 1.2, 0.0]
-        orientation: [0.707, 0.0, 0.0, 0.707]
+      pose: [0.5, 1.2, 0.0, 0.707, 0.0, 0.0, 0.707]
     g1:
-      initial_state:
-        position: [-1.0, 0.0, 0.78]
+      pose: [0.0, 0.0, 0.793, 1.0, 0.0, 0.0, 0.0]
 
   # Example of adding a simple plane terrain
   # terrain:

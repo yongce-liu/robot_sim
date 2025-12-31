@@ -1,10 +1,8 @@
 # @package _group_
 
 type: robot
-# path: assets/robots/unitree/g1/g1_dex3_rev_1_0_black_hand.xml
-path: assets/robots/unitree/g1/g1_29dof_with_hand.xml
-# initial_state: [0.0, 0.0, 0.78]
-# initial_orientation: [1.0, 0.0, 0.0, 0.0] # [w, x, y, z]
+path: assets/robots/unitree/g1/g1_dex3_rev_1_0.xml
+
 joints:
   left_hip_pitch_joint:
     control_type: torque
@@ -489,8 +487,7 @@ sensors:
   #   freq: 30.0
   #   vertical_fov: 59.
   #   mount_to: torso_link
-  #   position: [0.07555294, 0.02579919, 0.49719054]
-  #   orientation: [0.67876761, 0.20864099, -0.20567003, -0.67338199]
+  #   pose: [0.07555294, 0.02579919, 0.49719054, 0.67876761, 0.20864099, -0.20567003, -0.67338199]
   # rs_camera:
   #   type: camera
   #   width: 640
@@ -498,8 +495,7 @@ sensors:
   #   freq: 30.0
   #   vertical_fov: 40.
   #   mount_to: torso_link
-  #   position: [0.07555294, 0.02579919, 0.49719054]
-  #   orientation: [0.67876761, 0.20864099, -0.20567003, -0.67338199]
+  #   pose: [0.07555294, 0.02579919, 0.49719054, 0.67876761, 0.20864099, -0.20567003, -0.67338199]
   rs_camera: # actually oak camera
     type: camera
     width: 640
@@ -507,9 +503,16 @@ sensors:
     freq: 30.0
     vertical_fov: 79.5
     mount_to: torso_link
-    # position: [0.10209156, -0.00937542, 0.42446595]
-    position: [0.10209156, -0.00937542, 0.42446595]
-    orientation: [0.64367383, 0.26523914, -0.27106013, -0.66472446]
+    pose:
+      [
+        0.10209156,
+        -0.00937542,
+        0.42446595,
+        0.64367383,
+        0.26523914,
+        -0.27106013,
+        -0.66472446,
+      ]
   tpp_camera:
     type: camera
     width: 640
@@ -517,8 +520,8 @@ sensors:
     freq: 30.0
     vertical_fov: 60.
     mount_to: pelvis
-    position: [-1.131, -0.626, 0.481]
-    orientation: [0.67953146, 0.46872971, -0.3204774, -0.46456828]
+    pose:
+      [-1.131, -0.626, 0.481, 0.67953146, 0.46872971, -0.3204774, -0.46456828]
 
 properties:
   fix_base_link: false

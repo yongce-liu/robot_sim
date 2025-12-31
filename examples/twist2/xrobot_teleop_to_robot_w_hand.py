@@ -98,7 +98,7 @@ def extract_mimic_obs_whole_body(qpos, last_qpos, dt=1 / 30):
     base_ang_vel_local = quat_rotate_inverse_np(root_quat, base_ang_vel, scalar_first=True)
 
     # Standard mimic observation (35 dims)
-    height = root_pos[2:3]
+    # height = root_pos[2:3]
     # print("height: ", height)
     mimic_obs = np.concatenate(
         [

@@ -19,7 +19,7 @@ class Twist2Policy:
         robot_name: str,
         policy_path: str,
         robot_config: ObjectConfig,
-        observation_config: dict[str, Any] = None,
+        mdp_config: dict[str, Any] = None,
         redis_config: dict[str, Any] = None,
         logs_config: dict[str, Any] = None,
         device="cuda",
@@ -28,23 +28,25 @@ class Twist2Policy:
         self.device = device
         self.robot_name = robot_name
         self._init_robot_info(robot_config)
-        self._init_observation(**observation_config)
+        self._init_mdp(**mdp_config)
         self._init_logs(**logs_config)
         self._init_redis(**redis_config)
 
     def unpack_data(self, observation: dict[str, Any]):
         """Extract robot state data"""
-        dof_pos = observation["dof_pos"]
-        dof_vel = observation["dof_vel"]
+        body_dof_pos = observation["body_dof_pos"]
+        body_dof_vel = observation["body_dof_vel"]
         rpy = observation["rpy"]
         ang_vel = observation["ang_vel"]
+        left_hand_dof_pos = observation.get("left_hand_dof_pos", None)
+        right_hand_dof_pos = observation.get("right_hand_dof_pos", None)
 
-        return dof_pos, dof_vel, rpy, ang_vel
+        return body_dof_pos, body_dof_vel, rpy, ang_vel, left_hand_dof_pos, right_hand_dof_pos
 
     def run_once(self, observation: dict[str, Any]):
         # Add policy execution FPS tracking for frequent printing
         # Build proprioceptive observation
-        dof_pos, dof_vel, rpy, ang_vel = self.unpack_data(observation)
+        dof_pos, dof_vel, rpy, ang_vel, left_hand_state, right_hand_state = self.unpack_data(observation)
         dof_vel[self.ankle_idx] = 0.0
         obs_proprio = np.concatenate(
             [
@@ -59,10 +61,14 @@ class Twist2Policy:
         self.__send_buffer[f"state_body_{self.robot_name}"] = json.dumps(
             np.concatenate([ang_vel, rpy[:2], dof_pos]).tolist()
         )  # 3+2+29 = 34 dims
+        if left_hand_state is not None:
+            self.__send_buffer[f"state_hand_left_{self.robot_name}"] = json.dumps(left_hand_state.tolist())  # 7 dims
+        if right_hand_state is not None:
+            self.__send_buffer[f"state_hand_right_{self.robot_name}"] = json.dumps(right_hand_state.tolist())  # 7 dims
 
         # Send proprio to redis
         for k in self.redis_send_keys:
-            self.redis_pipeline.set(k, self.__send_buffer.get(k, None))
+            self.redis_pipeline.set(k, self.__send_buffer[k])
         self.redis_pipeline.set("t_state", int(time.time() * 1000))  # current timestamp in ms
         self.redis_pipeline.execute()
 
@@ -73,9 +79,9 @@ class Twist2Policy:
 
         for i, k in enumerate(self.redis_recv_keys):
             self.__recv_buffer[k] = json.loads(redis_results[i])
-        action_mimic = self.__recv_buffer[f"action_body_{self.robot_name}"]  # 35 dims
-        # action_left_hand = json.loads(redis_results[1])
-        # action_right_hand = json.loads(redis_results[2])
+        action_mimic = np.array(self.__recv_buffer[f"action_body_{self.robot_name}"])  # 35 dims
+        action_left_hand = np.array(self.__recv_buffer[f"action_hand_left_{self.robot_name}"]) * self.use_hand_coeff
+        action_right_hand = np.array(self.__recv_buffer[f"action_hand_right_{self.robot_name}"]) * self.use_hand_coeff
         # action_neck = json.loads(redis_results[3])
 
         # Construct observation for TWIST2 controller
@@ -95,20 +101,21 @@ class Twist2Policy:
         # Measure and track policy execution FPS
         current_time = time.time()
         if self.policy_time is not None:
-            policy_interval = current_time - self.policy_time
-            current_policy_fps = 1.0 / policy_interval
+            if self.policy_execution_times is not None:
+                policy_interval = current_time - self.policy_time
+                current_policy_fps = 1.0 / policy_interval
 
-            # For frequent printing (every 100 steps)
-            self.policy_execution_times.append(policy_interval)
+                # For frequent printing (every 100 steps)
+                self.policy_execution_times.append(policy_interval)
 
-            # Print policy execution FPS every 100 steps
-            if len(self.policy_execution_times) == self.policy_execution_times.maxlen:
-                avg_interval = np.mean(self.policy_execution_times)
-                avg_execution_fps = 1.0 / avg_interval
-                logger.info(
-                    f"Policy Execution FPS (last {self.policy_execution_times.maxlen} steps): {avg_execution_fps:.2f} Hz (avg interval: {avg_interval * 1000:.2f}ms)"
-                )
-                self.policy_execution_times.clear()
+                # Print policy execution FPS every 100 steps
+                if len(self.policy_execution_times) == self.policy_execution_times.maxlen:
+                    avg_interval = np.mean(self.policy_execution_times)
+                    avg_execution_fps = 1.0 / avg_interval
+                    logger.info(
+                        f"Policy Execution FPS (last {self.policy_execution_times.maxlen} steps): {avg_execution_fps:.2f} Hz (avg interval: {avg_interval * 1000:.2f}ms)"
+                    )
+                    self.policy_execution_times.clear()
 
             # For detailed measurement (every 1000 steps)
             if self.fps_measurements is not None:
@@ -139,7 +146,17 @@ class Twist2Policy:
             }
             self.proprio_recordings.append(proprio_data)
 
-        return {self.robot_name: raw_action.clip(-10.0, 10.0) * self.action_scale + self.default_dof_pos}
+        target_body_dof_pos = (
+            raw_action.clip(-self.action_clip, self.action_clip) * self.action_scale + self.default_dof_pos
+        )
+        target_left_hand_dof_pos = action_left_hand
+        target_right_hand_dof_pos = action_right_hand
+
+        return {
+            "dof_pos": np.concatenate(
+                [target_body_dof_pos, target_left_hand_dof_pos, target_right_hand_dof_pos], axis=-1
+            )[np.newaxis, :],
+        }
 
     ############### HELPER FUNCTION FOR RUN ###############
     def _init_robot_info(self, robot_config: ObjectConfig):
@@ -165,10 +182,20 @@ class Twist2Policy:
 
         self.ankle_idx = robot_config.extra.get("ankle_idx", [4, 5, 10, 11])
 
-    def _init_observation(self, n_mimic_obs: int, n_proprio: int, history_len: int, action_scale: float = 0.5):
+    def _init_mdp(
+        self,
+        n_mimic_obs: int,
+        n_proprio: int,
+        history_len: int,
+        action_clip: float | list[float] = 10.0,
+        action_scale: float | list[float] = 0.5,
+        use_hand_action: bool = False,
+    ):
         n_obs_single = n_mimic_obs + n_proprio  # n_mimic_obs + n_proprio = 35 + 92 = 127
         self.total_obs_size = n_obs_single * (history_len + 1) + n_mimic_obs  # 127*11 + 35 = 1402
-        self.action_scale = action_scale
+        self.action_clip = np.array(action_clip)
+        self.action_scale = np.array(action_scale)
+        self.use_hand_coeff = 1.0 if use_hand_action else 0.0
 
         # Initialize history buffer
         self.proprio_history_buf = deque(
@@ -212,39 +239,3 @@ class Twist2Policy:
         for k in self.redis_send_keys:
             self.redis_pipeline.set(k, self.__send_buffer.get(k, None))
         self.redis_pipeline.execute()
-
-
-'''
-    def run(self):
-        """Main simulation loop"""
-        print("Starting TWIST2 simulation...")
-
-        self.reset_sim()
-        self.reset(self.mujoco_default_dof_pos)
-
-        steps = int(self.sim_duration / self.sim_dt)
-
-        # Send initial proprio to redis
-        initial_obs = np.zeros(self.n_obs_single, dtype=np.float32)
-        self.redis_pipeline.set("state_body_unitree_g1_with_hands", json.dumps(initial_obs.tolist()))
-        self.redis_pipeline.set("state_hand_left_unitree_g1_with_hands", json.dumps(np.zeros(7).tolist()))
-        self.redis_pipeline.set("state_hand_right_unitree_g1_with_hands", json.dumps(np.zeros(7).tolist()))
-        self.redis_pipeline.execute()
-
-        for i in range(steps):
-            t_start = time.time()
-
-            # Sleep to maintain real-time pace
-            if self.limit_fps:
-                elapsed = time.time() - t_start
-                if elapsed < self.sim_dt:
-                    time.sleep(self.sim_dt - elapsed)
-
-        # Save proprio recordings if enabled
-        if self.record_proprio and self.proprio_recordings:
-            import pickle
-
-            with open("twist2_proprio_recordings.pkl", "wb") as f:
-                pickle.dump(self.proprio_recordings, f)
-            logger.info("Proprioceptive recordings saved as twist2_proprio_recordings.pkl")
-'''

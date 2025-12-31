@@ -15,16 +15,27 @@ defaults:
   - /simulator.yaml@simulator
   - /g1_dex3_twist2.yaml@simulator.scene.objects.unitree_g1_with_hands
 
+simulator:
+  scene:
+    terrain:
+      type: plane
+    objects:
+      unitree_g1_with_hands:
+          initial_state: 
+            position: [0.05, 0.05, 0.793]
+
 policy:
   _target_: robot_sim.adapters.twist2.Twist2Policy
   robot_name: unitree_g1_with_hands
   policy_path: examples/twist2/configs/policy/g1/twist2_1017_20k.onnx
   robot_config: ${simulator.scene.objects.unitree_g1_with_hands}
-  observation_config:
+  mdp_config:
     n_mimic_obs: 35 # 6 + 29 (modified: root_vel_xy + root_pos_z + roll_pitch + yaw_ang_vel + dof_pos)
     n_proprio: 92 # 3 + 2 + 3*29 # from config analysis
     history_len: 10
+    action_clip: 10.0
     action_scale: 0.5
+    use_hand_action: true
   redis_config:
     send_keys: ["state_body", "state_hand_left", "state_hand_right"]
     send_size: [127, 7, 7]

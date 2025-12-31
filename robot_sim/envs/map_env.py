@@ -132,11 +132,19 @@ class MapEnv(BaseEnv, gym.Env):
     @property
     def observation_space(self) -> gym.spaces.Dict:
         assert len(self._observation_space_dict) > 0, "Observation space not initialized."
+        assert not (set(self._observation_space_dict.keys()) & set(self.robot_names)), (
+            "Observation space keys must not include any robot names; "
+            f"overlap: {set(self._observation_space_dict.keys()) & set(self.robot_names)}"
+        )
         return gym.spaces.Dict(self._observation_space_dict)
 
     @property
     def action_space(self) -> gym.spaces.Dict:
         assert len(self._action_space_dict) > 0, "Action space not initialized."
+        assert not (set(self._action_space_dict.keys()) & set(self.robot_names)), (
+            "Action space keys must not include any robot names; "
+            f"overlap: {set(self._action_space_dict.keys()) & set(self.robot_names)}"
+        )
         return gym.spaces.Dict(self._action_space_dict)
 
     @property

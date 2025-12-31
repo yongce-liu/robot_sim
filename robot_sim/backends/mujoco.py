@@ -45,7 +45,7 @@ class MujocoBackend(BaseBackend):
         mjcf_model.option.timestep = self.sim_config.dt
         # gravity
         mjcf_model.option.gravity = self.sim_config.gravity
-        self.export_mjcf(model=mjcf_model, out_dir="outputs/mujoco/", file_name="model.xml")
+        self.export_mjcf(model=mjcf_model, out_dir="outputs/mujoco/", file_name="robot_sim.xml")
 
         return mjcf_model
 
@@ -361,10 +361,11 @@ class MujocoBackend(BaseBackend):
             # obj_attached.add("inertial", mass="1e-9", diaginertia="1e-9 1e-9 1e-9", pos=pos)
 
     @staticmethod
-    def export_mjcf(model: mjcf.RootElement, out_dir: os.PathLike, file_name: str = "model.xml") -> None:
+    def export_mjcf(model: mjcf.RootElement, out_dir: os.PathLike, file_name: str = "robot_sim.xml") -> None:
         """Export the full MJCF model and assets to the specified directory."""
         # Write assets + XML to disk (this version returns None and writes files)
         # model_name is not guaranteed to be respected by all versions, so we’ll glob later.
+        model.model = file_name.split(".")[0]
         if not Path(out_dir).exists():
             Path(out_dir).mkdir(parents=True, exist_ok=True)
         mjcf.export_with_assets(model, out_dir, out_file_name=file_name)

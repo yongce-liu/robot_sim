@@ -1,5 +1,3 @@
-import time
-from multiprocessing import Process
 from pathlib import Path
 
 import hydra
@@ -41,28 +39,31 @@ def run(cfg: DictConfig) -> None:
     # Initialize Twist2Env
     logger.info("Initializing Twist2Env...")
 
-    # Start teleoperation and simulation workers
-    teleop_process = Process(target=teleop_worker, args=(cfg.teleop,))
-    teleop_process.start()
-    teleop_process.join()
-    time.sleep(10)  # Ensure teleop client is ready
+    # # Start teleoperation and simulation workers
+    # import time
+    # from multiprocessing import Process
+    # teleop_process = Process(target=teleop_worker, args=(cfg.teleop,))
+    # teleop_process.start()
+    # teleop_process.join()
+    # time.sleep(10)  # Ensure teleop client is ready
 
     policy: Twist2Policy = cfg.policy
     env = Twist2Env(config=SimulatorConfig.from_dict(OmegaConf.to_container(cfg.simulator, resolve=True)))
 
-    # num_steps = 1000
-    # obs, info = env.reset()
-    # for step in range(num_steps):
-    #     action = policy.run_once(obs)
-    #     obs, reward, terminated, truncated, info = env.step(action)
+    num_steps = 1000
+    obs, info = env.reset()
+    for step in range(num_steps):
+        action = policy.run_once(obs)
+        # action = env.action_space.sample()  # Random action for testing
+        obs, reward, terminated, truncated, info = env.step(action)
 
-    #     if step % 50 == 0:
-    #         logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
+        if step % 50 == 0:
+            logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
 
-    #     if terminated or truncated:
-    #         logger.info(f"Episode ended at step {step}")
-    #         break
-    # env.close()
+        if terminated or truncated:
+            logger.info(f"Episode ended at step {step}")
+            break
+    env.close()
 
 
 @hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="default")

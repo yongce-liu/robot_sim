@@ -7,7 +7,7 @@ from loguru import logger
 
 from robot_sim.backends import BackendFactory
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
-from robot_sim.configs import BackendType, ObjectConfig, ObjectType, SimulatorConfig
+from robot_sim.configs import BackendType, ObjectConfig, ObjectType, RobotModel, SimulatorConfig
 
 
 @dataclass
@@ -32,7 +32,7 @@ class BaseEnv(ABC):
 
     def __init__(
         self,
-        config: SimulatorConfig | None = None,
+        config: SimulatorConfig,
         render_mode: str | None = None,
     ) -> None:
         """Initialize the base environment with a backend.
@@ -80,7 +80,7 @@ class BaseEnv(ABC):
         self._decimation: int = config.extras.get("decimation", 1)
         logger.info(f"Decimation factor set to: {self._decimation}")
 
-        self.__cache = {}
+        self.__cache: dict[str, Any] = {}
 
     def reset(
         self,
@@ -106,7 +106,7 @@ class BaseEnv(ABC):
         if states is None:
             states = options.get("initial_states", self.initial_states) if options is not None else self.initial_states
 
-        self._backend.set_states(states)
+        self._backend.reset(states)
 
         # FIXME: Whether need to resimulate?
         # self._backend.simulate()
@@ -118,6 +118,14 @@ class BaseEnv(ABC):
         # Get extra info
         self._mdp_cache.info = self.compute_info(self.observation, None)
         return self.observation, self.info
+
+    def _sub_step(self, action: ActionsType) -> ActionsType:
+        """Perform a sub-step in the environment.
+
+        This method is intended to be overridden by subclasses to define
+        specific sub-step behavior.
+        """
+        return action
 
     def step(self, action: Any) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         """Run one timestep of the environment's dynamics.
@@ -135,9 +143,9 @@ class BaseEnv(ABC):
         # Convert action to backend format
         self._episode_step += 1
 
+        _set_action = self.action2actionsType(action)
         for _ in range(self.decimation):
-            action_array = self.action2actionsType(action)
-
+            action_array = self._sub_step(_set_action)
             # Set action and simulate
             self._backend.set_actions(action_array)
             self._backend.simulate()
@@ -168,7 +176,7 @@ class BaseEnv(ABC):
             else:
                 logger.warning("Backend does not support image rendering.")
         elif self.render_mode == "human":
-            self._backend.render()
+            self._backend._render()
         return None
 
     def close(self) -> None:
@@ -316,11 +324,13 @@ class BaseEnv(ABC):
         return self._backend.get_states()
 
     @property
+    @abstractmethod
     def observation_space(self) -> Any:
         """It can be any type that constrains the observation."""
         return self._observation_space
 
     @property
+    @abstractmethod
     def action_space(self) -> Any:
         """It can be any type that constrains the action."""
         return self._action_space
@@ -362,15 +372,15 @@ class BaseEnv(ABC):
         return self.__cache["_robot_names"]
 
     @property
-    def num_dofs(self) -> dict[str, int]:
-        """Get the number of degrees of freedom for each robot.
+    def robots(self) -> dict[str, RobotModel]:
+        """Get the RobotModel instance for the Gr00t robot.
 
         Returns:
-            num_dofs: A dictionary mapping robot names to their number of DOFs.
+            An instance of RobotModel representing the Gr00t robot.
         """
-        if "_num_dofs" not in self.__cache:
-            self.__cache["_num_dofs"] = {name: len(self.get_joint_names(name)) for name in self._backend.objects.keys()}
-        return self.__cache["_num_dofs"]
+        if "_robots" not in self.__cache:
+            self.__cache["_robots"] = {name: RobotModel(self.get_object_config(name)) for name in self.robot_names}
+        return self.__cache["_robots"]
 
     ######################## MDP Cache Properties ########################
     @property

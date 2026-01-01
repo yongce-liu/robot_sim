@@ -4,8 +4,7 @@ from typing import Any, Callable
 import gymnasium as gym
 import numpy as np
 
-from robot_sim.configs import ControlType, SensorType, SimulatorConfig
-from robot_sim.configs.object import ObjectConfig
+from robot_sim.configs import CameraConfig, SensorType, SimulatorConfig
 from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
@@ -77,8 +76,8 @@ class Gr00tEnv(MapEnv):
 
     def _init_controller(
         self,
-        upper_policy: dict[str, any] = None,
-        lower_policy: dict[str, any] = None,
+        upper_policy: dict[str, Any],
+        lower_policy: dict[str, Any],
     ) -> CompositeController:
         """Initialize the composite controller for the Gr00t robot.
 
@@ -89,48 +88,17 @@ class Gr00tEnv(MapEnv):
         upper_body_policy = UpperBodyPolicy(**upper_policy)
         lower_body_policy = self._init_lower_policy(**lower_policy)
 
-        wbc_policy = DecoupledWBCPolicy(
-            upper_body_policy=upper_body_policy,
-            lower_body_policy=lower_body_policy,
-            output_indices=np.arange(len(self.get_actuator_names(self.robot_name))),
-        )
+        wbc_policy = DecoupledWBCPolicy(upper_body_policy=upper_body_policy, lower_body_policy=lower_body_policy)
         pid_controller = self._init_pd_controller()
 
-        robot_cfg = self.get_object_config(self.robot_name)
-        output_clips = self.get_limits_from_config(robot_cfg)
-
+        pos_clips = self.robot.get_joint_limits("position", coeff=0.9)
+        tor_clips = self.robot.get_joint_limits("torque", coeff=0.9)
         controller = CompositeController(
-            controllers={
-                "wbc_policy": wbc_policy,
-                "pd_controller": pid_controller,
-            },
-            output_clips={
-                "wbc_policy": (output_clips["position"][:, 0], output_clips["position"][:, 1]),
-                "pd_controller": (-output_clips["torque"], output_clips["torque"]),
-            },
+            controllers={"wbc_policy": wbc_policy, "pd_controller": pid_controller},
+            freqs={"wbc_policy": 1, "pd_controller": self.decimation},
+            output_clips={"wbc_policy": pos_clips, "pd_controller": tor_clips},
         )
         return controller
-
-    @staticmethod
-    def get_limits_from_config(robot_cfg: ObjectConfig, soft_coeff=0.9) -> tuple[np.ndarray, np.ndarray]:
-        coeff = soft_coeff
-        torque_limits = (
-            np.array(
-                [obj.torque_limit for obj in robot_cfg.joints.values() if obj.actuated],
-                dtype=np.float32,
-            )
-            * coeff
-        )
-        position_limits = np.array(
-            [obj.position_limit for obj in robot_cfg.joints.values() if obj.actuated],
-            dtype=np.float32,
-        )
-        mid = (position_limits[:, 0] + position_limits[:, 1]) / 2
-        range_2 = (position_limits[:, 1] - position_limits[:, 0]) * 0.5
-        position_limits[:, 0] = mid - coeff * range_2
-        position_limits[:, 1] = mid + coeff * range_2
-
-        return {"position": position_limits, "torque": torque_limits}
 
     ############################################################################
     ########## Helper Functions for Maps Initialization and Callbacks ##########
@@ -142,23 +110,26 @@ class Gr00tEnv(MapEnv):
         Returns:
             A dictionary mapping observation group names to their configurations.
         """
-        robot_cfg = self.get_object_config(self.robot_name)
-        joint_position_limit = np.array([joint.position_limit for joint in robot_cfg.joints.values()], dtype=np.float32)
-        obs_map = {}
+        joint_position_limit = self.robot.get_joint_limits("position")
+        obs_map: dict[str, Callable] = {}
+        _spaces: gym.spaces.Space
+
         for group_name, group_cfg in kwargs.items():
             if group_cfg["type"] == "joint":
                 group_indices = group_cfg["indices"]
                 epsilon: float = group_cfg.get("epsilon", 1e-3)
                 obs_map[group_name] = partial(obs_joint_extract, indices=group_indices)
                 _spaces = gym.spaces.Box(
-                    low=joint_position_limit[group_indices, 0] - epsilon,
-                    high=joint_position_limit[group_indices, 1] + epsilon,
+                    low=joint_position_limit[0][group_indices] - epsilon,
+                    high=joint_position_limit[1][group_indices] + epsilon,
                     shape=(len(group_indices),),
                     dtype=np.float32,
                 )
+
             elif group_cfg["type"] == "sensor":
                 sensor_name = group_cfg["sensor_name"]
                 sensor_data_type = group_cfg.get("data_type", None)
+                sensor_cfg = self.robot.sensors[sensor_name]
                 # map
                 if sensor_data_type:
                     obs_map[group_name] = lambda name, states, sn=sensor_name, dt=sensor_data_type: states[
@@ -167,19 +138,18 @@ class Gr00tEnv(MapEnv):
                 else:
                     obs_map[group_name] = lambda name, states, sn=sensor_name: states[name].sensors[sn]
                 # _spaces
-                if robot_cfg.sensors[sensor_name].type in [SensorType.CAMERA]:
+                if sensor_cfg.type in [SensorType.CAMERA]:
+                    assert isinstance(sensor_cfg, CameraConfig), "Sensor config must be of type CameraConfig."
                     _spaces = gym.spaces.Box(
                         low=0,
                         high=255,
-                        shape=(
-                            robot_cfg.sensors[sensor_name].height,
-                            robot_cfg.sensors[sensor_name].width,
-                            3,
-                        ),  # Assuming fixed camera resolution; adjust as needed
+                        # Assuming fixed camera resolution; adjust as needed
+                        shape=(sensor_cfg.height, sensor_cfg.width, 3),
                         dtype=np.uint8,
                     )
                 else:
                     raise NotImplementedError
+
             elif group_cfg["type"] == "constant":
                 value = group_cfg["value"]
                 obs_map[group_name] = lambda *args, **kwargs: value
@@ -193,27 +163,31 @@ class Gr00tEnv(MapEnv):
                     )
                 else:
                     raise NotImplementedError
+
             else:
                 raise ValueError(f"Unsupported observation map type '{group_cfg['type']}' for group '{group_name}'.")
-            self._observation_space_dict[group_name] = _spaces
+
+            self._observation_space[group_name] = _spaces
 
         return obs_map
 
     def _init_action_spaces_map(self, **kwargs) -> dict[str, Callable]:
-        robot_cfg = self.get_object_config(self.robot_name)
-        joint_position_limit = np.array([joint.position_limit for joint in robot_cfg.joints.values()], dtype=np.float32)
-        action_map = {}
+        joint_position_limit = self.robot.get_joint_limits("position")
+        action_map: dict[str, Callable] = {}
+        _spaces: gym.spaces.Space
+
         for group_name, group_cfg in kwargs.items():
             if group_cfg["type"] == "joint":
                 epsilon: float = group_cfg.get("epsilon", 1e-3)
                 group_indices = group_cfg["indices"]
                 action_map[group_name] = partial(act_joint_assign, group_name=group_name, indices=group_indices)
                 _spaces = gym.spaces.Box(
-                    low=joint_position_limit[group_indices, 0] - epsilon,
-                    high=joint_position_limit[group_indices, 1] + epsilon,
+                    low=joint_position_limit[0][group_indices] - epsilon,
+                    high=joint_position_limit[1][group_indices] + epsilon,
                     shape=(len(group_indices),),
                     dtype=np.float32,
                 )
+
             elif group_cfg["type"] == "command":
                 if group_name in ["action.rpy_command"]:
                     # Get torso and waist indices
@@ -234,9 +208,11 @@ class Gr00tEnv(MapEnv):
                     shape=(command_dim,),
                     dtype=np.float32,
                 )
+
             else:
                 raise ValueError(f"Unsupported action map type '{group_cfg['type']}' for group '{group_name}'.")
-            self._action_space_dict[group_name] = _spaces
+
+            self._action_space[group_name] = _spaces
 
         return action_map
 
@@ -251,15 +227,11 @@ class Gr00tEnv(MapEnv):
         use_rpy_cmd_from_waist: bool = True,
         **kwargs,
     ) -> LowerBodyPolicy:
-        num_dofs = self.num_dofs[self.robot_name]
+        num_dofs = self.robot.num_dofs
         used_joint_indices_in_env = np.array([i for i in range(num_dofs) if i not in hand_indices], dtype=np.int32)
-        robot_cfg = self.get_object_config(self.robot_name)
-        default_joint_position = np.array(
-            [joint.default_position for joint in robot_cfg.joints.values() if joint.actuated], dtype=np.float32
-        )
 
         observation_params["used_joint_indices"] = used_joint_indices_in_env
-        observation_params["default_joint_position"] = default_joint_position
+        observation_params["default_joint_position"] = self.robot.default_joint_positions
         torso_index = self.get_body_names(self.robot_name).index("torso_link")
         pelvis_index = self.get_body_names(self.robot_name).index("pelvis")
 
@@ -274,16 +246,18 @@ class Gr00tEnv(MapEnv):
         return lower_body_policy
 
     def _init_pd_controller(self) -> PIDController:
-        robot_cfg = self.get_object_config(self.robot_name)
-        kp = np.array([joint.stiffness for joint in robot_cfg.joints.values() if joint.actuated], dtype=np.float32)
-        kd = np.array([joint.damping for joint in robot_cfg.joints.values() if joint.actuated], dtype=np.float32)
-        used_pd_indices = [
-            i
-            for i, joint in enumerate(robot_cfg.joints.values())
-            if ControlType(joint.control_type) == ControlType.TORQUE
-        ]
-        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation, enabled_indices=used_pd_indices)
+        kp = np.array(self.robot.stiffness, dtype=np.float32)
+        kd = np.array(self.robot.damping, dtype=np.float32)
+        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
 
         return pd_controller
 
     ####################################################################
+
+    @property
+    def robot_name(self) -> str:
+        return self.robot_names[0]
+
+    @property
+    def robot(self):
+        return self.robots[self.robot_name]

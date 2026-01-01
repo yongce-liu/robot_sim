@@ -58,8 +58,8 @@ class MapEnv(BaseEnv, gym.Env):
         super().__init__(config=config, **kwargs)
         assert config.sim.num_envs == 1, "Only single environment supported in MapEnv currently."
         assert len(self.robot_names) == 1, "Only single robot supported in MapEnv currently."
-        self._observation_space_dict: dict[str, gym.spaces.Space] = {}
-        self._action_space_dict: dict[str, gym.spaces.Space] = {}
+        self._observation_space: dict[str, gym.spaces.Space] = {}
+        self._action_space: dict[str, gym.spaces.Space] = {}
         self._controller: CompositeController | None = None
         self._map_cache: MapCache | None = None
 
@@ -83,18 +83,22 @@ class MapEnv(BaseEnv, gym.Env):
         Returns:
             Action dictionary in backend format with key as robot name and value as action array (torque control currently, position control may be added later)
         """
-        output: ActionsType = {}
         for name in self.robot_names:
             action[name] = np.full(
-                shape=(self.num_envs, self.num_dofs[name]), fill_value=np.nan, dtype=np.float32
+                shape=(self.num_envs, self.robots[name].num_dofs), fill_value=np.nan, dtype=np.float32
             )  # It is used to output the final action array (ActionsType) for the backend
             for group_name, map_func in self.action_map.items():
                 res = map_func(name=name, action=action, states=self.states)
                 if res is not None:
                     action[group_name] = res
-            res: ActionsType = self.controller.compute(name=name, states=self.states, targets=action)
-            assert len(res) == 1, f"Action map function for robot '{name}' returned multiple action arrays."
-            output[name] = res[name]
+
+        return {name: action[name] for name in self.robot_names}
+
+    def _sub_step(self, action: ActionsType) -> ActionsType:
+        output: ActionsType = {}
+        states = self.states
+        for name in self.robot_names:
+            output[name] = self.controller.compute(state=states[name], target=action[name])
         return output
 
     def compute_reward(self, observation, action=None):
@@ -130,22 +134,22 @@ class MapEnv(BaseEnv, gym.Env):
         return info
 
     @property
-    def observation_space(self) -> gym.spaces.Dict:
-        assert len(self._observation_space_dict) > 0, "Observation space not initialized."
-        assert not (set(self._observation_space_dict.keys()) & set(self.robot_names)), (
+    def observation_space(self) -> gym.spaces.Dict:  # type: ignore[override]
+        assert len(self._observation_space) > 0, "Observation space not initialized."
+        assert not (set(self._observation_space.keys()) & set(self.robot_names)), (
             "Observation space keys must not include any robot names; "
-            f"overlap: {set(self._observation_space_dict.keys()) & set(self.robot_names)}"
+            f"overlap: {set(self._observation_space.keys()) & set(self.robot_names)}"
         )
-        return gym.spaces.Dict(self._observation_space_dict)
+        return gym.spaces.Dict(self._observation_space)
 
     @property
-    def action_space(self) -> gym.spaces.Dict:
-        assert len(self._action_space_dict) > 0, "Action space not initialized."
-        assert not (set(self._action_space_dict.keys()) & set(self.robot_names)), (
+    def action_space(self) -> gym.spaces.Dict:  # type: ignore[override]
+        assert len(self._action_space) > 0, "Action space not initialized."
+        assert not (set(self._action_space.keys()) & set(self.robot_names)), (
             "Action space keys must not include any robot names; "
-            f"overlap: {set(self._action_space_dict.keys()) & set(self.robot_names)}"
+            f"overlap: {set(self._action_space.keys()) & set(self.robot_names)}"
         )
-        return gym.spaces.Dict(self._action_space_dict)
+        return gym.spaces.Dict(self._action_space)
 
     @property
     def controller(self) -> CompositeController:
@@ -156,10 +160,6 @@ class MapEnv(BaseEnv, gym.Env):
     def map_cache(self) -> MapCache:
         assert self._map_cache is not None, "Map cache not initialized."
         return self._map_cache
-
-    @property
-    def robot_name(self) -> str:
-        return self.robot_names[0]
 
     @property
     def observation_map(self) -> dict[str, Callable]:

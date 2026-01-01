@@ -1,6 +1,6 @@
 """Configuration system."""
 
-from .object import ControlType, ObjectConfig, ObjectType
+from .object import ControlType, ObjectConfig, ObjectType, RobotModel
 from .scene import SceneConfig
 from .sensor import CameraConfig, SensorConfig, SensorType
 from .simulator import BackendType, PhysicsConfig, SimulatorConfig
@@ -14,6 +14,7 @@ __all__ = [
     "ObjectConfig",
     "ObjectType",
     "ControlType",
+    "RobotModel",
     "SceneConfig",
     "PhysicsConfig",
     "SimulatorConfig",

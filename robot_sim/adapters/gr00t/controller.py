@@ -172,9 +172,9 @@ class DecoupledWBCPolicy(BaseController):
 
     def __init__(
         self,
-        upper_body_policy: UpperBodyPolicy = None,
-        lower_body_policy: LowerBodyPolicy = None,
-        output_indices: list[int] = None,
+        upper_body_policy: UpperBodyPolicy,
+        lower_body_policy: LowerBodyPolicy,
+        output_indices: ArrayType | list[int] = None,
         lower_priority: bool = True,
     ) -> None:
         self.upper_body_policy = upper_body_policy
@@ -190,7 +190,7 @@ class DecoupledWBCPolicy(BaseController):
             output = np.concatenate([lower_target, upper_target], axis=-1)
         else:
             output = np.concatenate([upper_target, lower_target], axis=-1)
-        return output[..., self.output_indices]
+        return output[..., self.output_indices] if self.output_indices is not None else output
 
     def reset(self):
         pass

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from robot_sim.backends.types import ActionsType, ArrayType, StatesType
+from robot_sim.backends.types import ArrayType, ObjectState
 
 
 class BaseController(ABC):
@@ -15,7 +15,7 @@ class BaseController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def compute(self, name: str, states: StatesType, targets: ActionsType, *args, **kwargs) -> ArrayType:
+    def compute(self, state: ObjectState, target: ArrayType, *args, **kwargs) -> ArrayType:
         """Compute control output.
 
         Signature is intentionally flexible; concrete controllers should
@@ -37,7 +37,9 @@ class CompositeController:
     """
 
     def __init__(
-        self, controllers: dict[str, BaseController], output_clips: dict[str, ArrayType] | None = None
+        self,
+        controllers: dict[str, BaseController],
+        output_clips: dict[str, tuple[ArrayType | float, ArrayType | float]] | None = None,
     ) -> None:
         self.controllers = controllers
         self.output_clips = output_clips
@@ -46,11 +48,11 @@ class CompositeController:
         for c in self.controllers.values():
             c.reset()
 
-    def compute(self, name: str, states: StatesType, targets: ActionsType) -> ActionsType:
-        for controller_name, controller in self.controllers.items():
-            targets[name] = controller.compute(name, states, targets)
-            if self.output_clips is not None and controller_name in self.output_clips:
-                clip_min, clip_max = self.output_clips[controller_name]
-                targets[name].clip(clip_min, clip_max)
+    def compute(self, state: ObjectState, target: ArrayType) -> ArrayType:
+        for ctrl_name, controller in self.controllers.items():
+            output = controller.compute(state, target)
+            if self.output_clips is not None and ctrl_name in self.output_clips:
+                clip_min, clip_max = self.output_clips[ctrl_name]
+                output = output.clip(clip_min, clip_max)
 
-        return {name: targets[name]}
+        return output

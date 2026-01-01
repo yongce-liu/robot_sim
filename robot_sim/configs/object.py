@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, cast
+
+import numpy as np
+import regex as re
+from loguru import logger
 
 from .sensor import SensorConfig
 
@@ -20,6 +24,7 @@ class ControlType(Enum):
 
     POSITION = "position"
     TORQUE = "torque"
+    VELOCITY = "velocity"
 
 
 @dataclass
@@ -73,11 +78,128 @@ class ObjectConfig:
     """Additional properties specific to the robot."""
     extra: dict[str, Any] = field(default_factory=dict)
     """Extra information for custom use cases."""
-    _cache: dict[str, Any] = field(default_factory=dict, repr=False)
-    """Internal cache for storing preprocessed data."""
 
     def __post_init__(self):
         if self.path is None and self.type in [ObjectType.CUSTOM, ObjectType.ROBOT]:
             raise ValueError("For custom object type, a valid path to the model file must be provided.")
         assert len(self.pose) == 7, "Pose must be a list of 7 elements [x, y, z, qw, qx, qy, qz]."
         assert len(self.twist) == 6, "Twist must be a list of 6 elements [vx, vy, vz, wx, wy, wz]."
+
+
+class RobotModel:
+    def __init__(self, config: ObjectConfig):
+        assert config.type == ObjectType.ROBOT, "RobotModel must be initialized with a robot ObjectConfig."
+        self.cfg = config
+        self._cache: dict[str, Any] = {}
+
+    @property
+    def num_dofs(self) -> int:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        return len(self.cfg.joints.values())
+
+    @property
+    def default_joint_positions(self) -> np.ndarray:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if "default_joint_positions" in self._cache:
+            return cast(np.ndarray, self._cache["default_joint_positions"])
+        self._cache["default_joint_positions"] = default_positions = np.array(
+            [obj.default_position for obj in self.cfg.joints.values() if obj.actuated], dtype=np.float32
+        )
+        return default_positions
+
+    @property
+    def actuated_joint_names(self) -> list[str]:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if "actuated_joint_names" in self._cache:
+            return cast(list[str], self._cache["actuated_joint_names"])
+        self._cache["actuated_joint_names"] = names = [name for name, obj in self.cfg.joints.items() if obj.actuated]
+        return names
+
+    @property
+    def actuated_joint_indices(self) -> np.ndarray:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if "actuated_joint_indices" in self._cache:
+            return cast(np.ndarray, self._cache["actuated_joint_indices"])
+        self._cache["actuated_joint_indices"] = indices = np.array(
+            [i for i, obj in enumerate(self.cfg.joints.values()) if obj.actuated], dtype=np.int32
+        )
+        return indices
+
+    @property
+    def stiffness(self) -> np.ndarray:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if "stiffness" in self._cache:
+            return cast(np.ndarray, self._cache["stiffness"])
+        self._cache["stiffness"] = stiffness = np.array(
+            [obj.stiffness if obj.stiffness is not None else 0.0 for obj in self.cfg.joints.values() if obj.actuated],
+            dtype=np.float32,
+        )
+        return stiffness
+
+    @property
+    def damping(self) -> np.ndarray:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if "damping" in self._cache:
+            return cast(np.ndarray, self._cache["damping"])
+        self._cache["damping"] = damping = np.array(
+            [obj.damping if obj.damping is not None else 0.0 for obj in self.cfg.joints.values() if obj.actuated],
+            dtype=np.float32,
+        )
+        return damping
+
+    @property
+    def sensors(self) -> dict[str, SensorConfig]:
+        return self.cfg.sensors
+
+    def get_joint_limits(self, key: ControlType | str, coeff=1.0) -> tuple[np.ndarray, np.ndarray]:
+        """Get joint limits for the specified control type."""
+        key = ControlType(key)
+        hashed_key = f"joint_limits/{key.value}/{coeff}"
+        if hashed_key in self._cache:
+            return cast(tuple[np.ndarray, np.ndarray], self._cache[hashed_key])
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        joints: dict[str, JointConfig] = self.cfg.joints
+        if key == ControlType.TORQUE:
+            tmp = np.array([obj.torque_limit * coeff for obj in joints.values() if obj.actuated], dtype=np.float32)
+            self._cache[hashed_key] = (-tmp, tmp)
+        elif key == ControlType.POSITION:
+            position_limits = np.array(
+                [obj.position_limit for obj in joints.values() if obj.actuated], dtype=np.float32
+            )
+            mid = (position_limits[:, 0] + position_limits[:, 1]) / 2
+            range_2 = (position_limits[:, 1] - position_limits[:, 0]) * 0.5
+            position_limits[:, 0] = mid - coeff * range_2
+            position_limits[:, 1] = mid + coeff * range_2
+            self._cache[hashed_key] = (position_limits[:, 0], position_limits[:, 1])
+        elif key == ControlType.VELOCITY:
+            velocity_limits = np.array(
+                [obj.velocity_limit for obj in joints.values() if obj.actuated], dtype=np.float32
+            )
+            self._cache[hashed_key] = (-velocity_limits * coeff, velocity_limits * coeff)
+
+        return cast(tuple[np.ndarray, np.ndarray], self._cache[hashed_key])
+
+    def get_group_joint_indices(self, group_name: str, patterns: str | list[str] | None = None) -> np.ndarray:
+        """Get joint indices for a specific group."""
+        hased_key = f"group_joint_indices/{group_name}"
+        if hased_key in self._cache:
+            return cast(np.ndarray, self._cache[hased_key])
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if patterns is None:
+            patterns = [group_name]
+        elif isinstance(patterns, str):
+            patterns = [patterns]
+
+        compiled = [re.compile(p) for p in patterns]
+        indices_list: list[int] = []
+        for i, name in enumerate(self.cfg.joints.keys()):
+            if any(rx.search(name) for rx in compiled):
+                indices_list.append(i)
+
+        self._cache[hased_key] = ans = np.array(indices_list, dtype=np.int32)
+        if len(ans) == 0:
+            logger.error(f"No joints found for group '{group_name}' with patterns {patterns}.")
+        else:
+            logger.info(f"Found joints indices: {ans} for group '{group_name}' with patterns {patterns}.")
+
+        return ans

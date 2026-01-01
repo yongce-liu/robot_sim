@@ -76,6 +76,17 @@ class BaseBackend(ABC):
     #     """Get the world image from the backend."""
     #     raise NotImplementedError("get_world_image() is not implemented for this backend.")
 
+    def reset(self, states: StatesType | None = None) -> None:
+        """Reset the environment to the initial states or given states."""
+        self._state_cache_expire = True
+        self._sim_cnt = 0
+        if states is None:
+            self.set_states(self.initial_states)
+        else:
+            self.set_states(states)
+        self._refresh_sensors(self._sim_cnt)
+        self.render()
+
     def simulate(self):
         """Simulate the environment."""
         self._sim_cnt = (self._sim_cnt + 1) % self._sim_freq

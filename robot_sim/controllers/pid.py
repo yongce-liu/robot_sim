@@ -3,7 +3,7 @@
 import numpy as np
 import torch
 
-from robot_sim.backends.types import ActionsType, ArrayType, StatesType
+from robot_sim.backends.types import ArrayType, ObjectState
 from robot_sim.controllers import BaseController
 
 
@@ -12,11 +12,11 @@ class PIDController(BaseController):
 
     def __init__(
         self,
-        kp: np.ndarray | torch.Tensor,
-        ki: np.ndarray | torch.Tensor = None,
-        kd: np.ndarray | torch.Tensor = None,
+        kp: ArrayType,
+        ki: ArrayType | None = None,
+        kd: ArrayType | None = None,
         dt: float = 0.01,
-        enabled_indices: list[int] | np.ndarray = None,
+        enabled_indices: list[int] | ArrayType | None = None,
     ) -> None:
         """Initialize PID controller.
 
@@ -38,7 +38,7 @@ class PIDController(BaseController):
             else None
         )
 
-    def compute(self, name: str, states: StatesType, targets: ActionsType) -> ArrayType:
+    def compute(self, state: ObjectState, target: ArrayType) -> ArrayType:
         """Compute control action for the given robot.
 
         Args:
@@ -48,14 +48,14 @@ class PIDController(BaseController):
         Returns:
             Control output (torque or force)
         """
-        return self.apply_pid(target=targets[name], position=states[name].joint_pos, velocity=states[name].joint_vel)
+        return self.apply_pid(target=target, position=state.joint_pos, velocity=state.joint_vel)
 
     def apply_pid(
         self,
-        target: np.ndarray | torch.Tensor,
-        position: np.ndarray | torch.Tensor,
-        velocity: np.ndarray | torch.Tensor = None,
-    ) -> np.ndarray | torch.Tensor:
+        target: ArrayType,
+        position: ArrayType,
+        velocity: ArrayType | None = None,
+    ) -> ArrayType:
         """Compute PID control output.
 
         Args:

@@ -51,3 +51,8 @@ teleop:
   _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.XRobotTeleopToRobot
   config:
     _target_: examples.twist2.xrobot_teleop_to_robot_w_hand.Twist2TeleopConfig
+    robot: unitree_g1_with_hands
+    pinch_mode: true
+    redis_ip: localhost
+    redis_port: 6379
+    redis_db: 0

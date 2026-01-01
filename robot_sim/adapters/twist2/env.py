@@ -3,7 +3,7 @@ from typing import Callable
 import gymnasium as gym
 import numpy as np
 
-from robot_sim.configs import ControlType, SimulatorConfig
+from robot_sim.configs import SimulatorConfig
 from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.math_array import euler_xyz_from_quat
@@ -28,11 +28,12 @@ class Twist2Env(MapEnv):
         ##### Initialize PD controller
         kp = np.array([joint.stiffness for joint in robot_cfg.joints.values() if joint.actuated], dtype=np.float32)
         kd = np.array([joint.damping for joint in robot_cfg.joints.values() if joint.actuated], dtype=np.float32)
-        used_pd_indices = [
-            i
-            for i, joint in enumerate(robot_cfg.joints.values())
-            if ControlType(joint.control_type) == ControlType.TORQUE
-        ]
+        # used_pd_indices = [
+        #     i
+        #     for i, joint in enumerate(robot_cfg.joints.values())
+        #     if ControlType(joint.control_type) == ControlType.TORQUE
+        # ]
+        used_pd_indices = None  # Use all actuated joints for PD control
         pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation, enabled_indices=used_pd_indices)
         return CompositeController(
             controllers={"pd_controller": pd_controller},
@@ -63,6 +64,8 @@ class Twist2Env(MapEnv):
             dtype=np.float32,
         )
         self.body_idx = np.array([i for i, name in enumerate(robot_cfg.joints.keys()) if "hand" not in name])
+        self.left_hand_idx = np.array([i for i, name in enumerate(robot_cfg.joints.keys()) if "left_hand" in name])
+        self.right_hand_idx = np.array([i for i, name in enumerate(robot_cfg.joints.keys()) if "right_hand" in name])
 
     def _init_observation_spaces_map(self) -> dict[str, Callable]:
         """
@@ -119,8 +122,28 @@ class Twist2Env(MapEnv):
         obs_map[group_name] = lambda states, name=self.robot_name: states[name].root_state[..., 10:13].squeeze()
 
         group_name = "left_hand_dof_pos"
+        _spaces = gym.spaces.Box(
+            low=self.position_limits[self.left_hand_idx, 0],
+            high=self.position_limits[self.left_hand_idx, 1],
+            shape=(7,),
+            dtype=np.float32,
+        )
+        self._observation_space_dict[group_name] = _spaces
+        obs_map[group_name] = (
+            lambda states, name=self.robot_name: states[name].joint_pos[..., self.left_hand_idx].squeeze()
+        )
 
         group_name = "right_hand_dof_pos"
+        _spaces = gym.spaces.Box(
+            low=self.position_limits[self.right_hand_idx, 0],
+            high=self.position_limits[self.right_hand_idx, 1],
+            shape=(7,),
+            dtype=np.float32,
+        )
+        self._observation_space_dict[group_name] = _spaces
+        obs_map[group_name] = (
+            lambda states, name=self.robot_name: states[name].joint_pos[..., self.right_hand_idx].squeeze()
+        )
 
         return obs_map
 

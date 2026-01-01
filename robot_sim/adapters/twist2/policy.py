@@ -10,7 +10,7 @@ from loguru import logger
 
 from robot_sim.configs import ObjectConfig
 
-from .utils import OnnxPolicyWrapper
+from .utils import EMASmoother, OnnxPolicyWrapper
 
 
 class Twist2Policy:
@@ -19,9 +19,9 @@ class Twist2Policy:
         robot_name: str,
         policy_path: str,
         robot_config: ObjectConfig,
-        mdp_config: dict[str, Any] = None,
-        redis_config: dict[str, Any] = None,
-        logs_config: dict[str, Any] = None,
+        mdp_config: dict[str, Any],
+        redis_config: dict[str, Any],
+        logs_config: dict[str, Any],
         device="cuda",
     ):
         self.policy = OnnxPolicyWrapper.load_onnx_policy(policy_path, device)
@@ -80,6 +80,8 @@ class Twist2Policy:
         for i, k in enumerate(self.redis_recv_keys):
             self.__recv_buffer[k] = json.loads(redis_results[i])
         action_mimic = np.array(self.__recv_buffer[f"action_body_{self.robot_name}"])  # 35 dims
+        if self.smoother is not None:
+            action_mimic = self.smoother.smooth(action_mimic)
         action_left_hand = np.array(self.__recv_buffer[f"action_hand_left_{self.robot_name}"]) * self.use_hand_coeff
         action_right_hand = np.array(self.__recv_buffer[f"action_hand_right_{self.robot_name}"]) * self.use_hand_coeff
         # action_neck = json.loads(redis_results[3])
@@ -180,7 +182,7 @@ class Twist2Policy:
             dtype=np.float32,
         )
 
-        self.ankle_idx = robot_config.extra.get("ankle_idx", [4, 5, 10, 11])
+        self.ankle_idx: list = robot_config.extra.get("ankle_idx", [4, 5, 10, 11])
 
     def _init_mdp(
         self,
@@ -190,12 +192,14 @@ class Twist2Policy:
         action_clip: float | list[float] = 10.0,
         action_scale: float | list[float] = 0.5,
         use_hand_action: bool = False,
+        smooth_coeff: float = 0.0,
     ):
         n_obs_single = n_mimic_obs + n_proprio  # n_mimic_obs + n_proprio = 35 + 92 = 127
         self.total_obs_size = n_obs_single * (history_len + 1) + n_mimic_obs  # 127*11 + 35 = 1402
         self.action_clip = np.array(action_clip)
         self.action_scale = np.array(action_scale)
         self.use_hand_coeff = 1.0 if use_hand_action else 0.0
+        self.smoother = EMASmoother(alpha=smooth_coeff) if smooth_coeff > 0.0 else None
 
         # Initialize history buffer
         self.proprio_history_buf = deque(

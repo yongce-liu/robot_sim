@@ -39,3 +39,33 @@ class OnnxPolicyWrapper:
         input_name = session.get_inputs()[0].name
         print(f"ONNX policy loaded from {policy_path} using providers: {session.get_providers()}")
         return OnnxPolicyWrapper(session, input_name)
+
+
+class EMASmoother:
+    """Exponential Moving Average smoother for body actions."""
+
+    def __init__(self, alpha=0.1, initial_value=None):
+        """
+        Args:
+            alpha: Smoothing factor (0.0=no smoothing, 1.0=maximum smoothing)
+            initial_value: Initial value for smoothing (if None, will use first input)
+        """
+        self.alpha = alpha
+        self.initialized = False
+        self.smoothed_value = initial_value
+
+    def smooth(self, new_value):
+        """Apply EMA smoothing to new value."""
+        if not self.initialized:
+            self.smoothed_value = new_value.copy() if hasattr(new_value, "copy") else new_value
+            self.initialized = True
+            return self.smoothed_value
+
+        # EMA formula: smoothed = alpha * new + (1 - alpha) * previous
+        self.smoothed_value = self.alpha * new_value + (1 - self.alpha) * self.smoothed_value
+        return self.smoothed_value
+
+    def reset(self):
+        """Reset the smoother to uninitialized state."""
+        self.initialized = False
+        self.smoothed_value = None

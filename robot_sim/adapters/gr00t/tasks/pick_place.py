@@ -5,7 +5,8 @@ from typing import Any
 import numpy as np
 from loguru import logger
 
-from robot_sim.adapters.gr00t.env import Gr00tEnv, Gr00tEnvConfig
+from robot_sim.adapters.gr00t.env import Gr00tEnv
+from robot_sim.configs import SimulatorConfig
 from robot_sim.utils.helper import task_register
 
 
@@ -19,14 +20,14 @@ class PickAndPlaceTask(Gr00tEnv):
 
     def __init__(
         self,
-        config: Gr00tEnvConfig,
+        config: SimulatorConfig,
         object_name: str,
         target_name: str,
         success_threshold: float = 1e-2,
         reward_scale: float = 1.0,
         **kwargs,
     ) -> None:
-        super().__init__(config, **kwargs)
+        super().__init__(config=config, **kwargs)
         logger.info(f"PickAndPlaceTask with object: {object_name}, target: {target_name}, robot: {self.robot_name}")
 
         self.object_name = object_name

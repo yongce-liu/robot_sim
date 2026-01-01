@@ -41,7 +41,7 @@ def run(cfg: DictConfig) -> None:
 
     # Initialize Gr00tEnv
     logger.info("Initializing Gr00tEnv...")
-    task = gym.make(task_cfg.task, config=task_cfg.environment, **task_cfg.params)
+    task = gym.make(task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params)
 
     # Reset environment
     logger.info("Resetting environment...")

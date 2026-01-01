@@ -3,30 +3,19 @@ from typing import Any, Callable
 
 import gymnasium as gym
 import numpy as np
+from loguru import logger
 
 from robot_sim.configs import CameraConfig, SensorType, SimulatorConfig
 from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
 
-from .controller import (
+from .policy import (
     DecoupledWBCPolicy,
     LowerBodyPolicy,
     UpperBodyPolicy,
 )
-from .utils import act_joint_assign, obs_joint_extract, rpy_cmd_from_waist
-
-
-@configclass
-class Gr00tEnvConfig:
-    """Configuration for MapEnv environments."""
-
-    simulator: SimulatorConfig
-    """Simulator configuration for MapEnv."""
-    controller: dict[str, Any]
-    """Controller configuration for MapEnv."""
-    maps: dict[str, Any]
-    """Maps configuration for observation, action, reward, termination, truncation, and info maps."""
+from .utils import act_joint_assign, obs_joint_extract
 
 
 @configclass
@@ -37,8 +26,10 @@ class Gr00tTaskConfig:
     """Task name for Gr00t environment."""
     params: dict
     """Parameters for the specific task."""
-    environment: Gr00tEnvConfig
-    """Environment configuration for the task."""
+    maps: dict[str, Any]
+    """Maps configuration for observation, action, reward, termination, truncation, and info maps."""
+    simulator: SimulatorConfig
+    """Simulator configuration for MapEnv."""
 
 
 class Gr00tEnv(MapEnv):
@@ -53,32 +44,48 @@ class Gr00tEnv(MapEnv):
 
     def __init__(
         self,
-        config: Gr00tEnvConfig,
+        config: SimulatorConfig,
+        maps: dict[str, Any],
         **kwargs,
     ):
-        super().__init__(config=config.simulator, **kwargs)
+        super().__init__(config=config, **kwargs)
 
-        self._map_cache: MapCache = self._init_spaces_maps(**config.maps)
-        self._controller: CompositeController = self._init_controller(**config.controller)
+        self._map_cache: MapCache = self._init_spaces_maps(**maps)
+        self._controller: CompositeController = self._init_controller()
 
     def _init_spaces_maps(
         self,
         observation: dict[str, Any],
         action: dict[str, Any],
+        policy: dict[str, Any],
     ) -> MapCache:
         obs_maps = self._init_observation_spaces_map(**observation)
+        logger.info(f"Observation maps order: {list(obs_maps.keys())}")
+
         act_maps = self._init_action_spaces_map(**action)
+        act_maps[self.robot_name] = self._init_policy(**policy)
+        logger.info(f"Action maps order: {list(act_maps.keys())}")
 
         return MapCache(
             observation=obs_maps,
             action=act_maps,
         )
 
-    def _init_controller(
+    def _init_controller(self) -> CompositeController:
+        ##### Initialize PD controller
+        kp = self.robot.stiffness
+        kd = self.robot.damping
+        tor_limits = self.robot.get_joint_limits("torque", coeff=1.0)
+        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
+        return CompositeController(
+            controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
+        )
+
+    def _init_policy(
         self,
         upper_policy: dict[str, Any],
         lower_policy: dict[str, Any],
-    ) -> CompositeController:
+    ) -> Callable:
         """Initialize the composite controller for the Gr00t robot.
 
         Returns:
@@ -88,17 +95,15 @@ class Gr00tEnv(MapEnv):
         upper_body_policy = UpperBodyPolicy(**upper_policy)
         lower_body_policy = self._init_lower_policy(**lower_policy)
 
-        wbc_policy = DecoupledWBCPolicy(upper_body_policy=upper_body_policy, lower_body_policy=lower_body_policy)
-        pid_controller = self._init_pd_controller()
-
         pos_clips = self.robot.get_joint_limits("position", coeff=0.9)
-        tor_clips = self.robot.get_joint_limits("torque", coeff=0.9)
-        controller = CompositeController(
-            controllers={"wbc_policy": wbc_policy, "pd_controller": pid_controller},
-            freqs={"wbc_policy": 1, "pd_controller": self.decimation},
-            output_clips={"wbc_policy": pos_clips, "pd_controller": tor_clips},
+        wbc_policy = DecoupledWBCPolicy(
+            upper_body_policy=upper_body_policy,
+            lower_body_policy=lower_body_policy,
+            output_clips=pos_clips,
+            output_indices=None,
         )
-        return controller
+
+        return lambda name, states, action: wbc_policy(name, states, action)
 
     ############################################################################
     ########## Helper Functions for Maps Initialization and Callbacks ##########
@@ -189,17 +194,7 @@ class Gr00tEnv(MapEnv):
                 )
 
             elif group_cfg["type"] == "command":
-                if group_name in ["action.rpy_command"]:
-                    # Get torso and waist indices
-                    torso_index = self.get_body_names(self.robot_name).index("torso_link")
-                    pelvis_index = self.get_body_names(self.robot_name).index("pelvis")
-                    action_map[group_name] = partial(
-                        rpy_cmd_from_waist,
-                        torso_index=torso_index,
-                        pelvis_index=pelvis_index,
-                    )
-                elif group_name in ["action.base_height_command", "action.navigate_command"]:
-                    action_map[group_name] = lambda *args, **kwargs: None  # No processing needed; direct assignment
+                action_map[group_name] = lambda *args, **kwargs: None  # No processing needed; direct assignment
                 bound = group_cfg["bound"]
                 command_dim = len(bound["min"])
                 _spaces = gym.spaces.Box(

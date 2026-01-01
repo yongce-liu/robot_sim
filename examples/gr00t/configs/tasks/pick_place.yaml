@@ -32,8 +32,6 @@ params:
 simulator:
   scene:
     path: assets/scenes/gear_lab/gear_lab.xml
-    # terrain:
-    #   type: plane
     objects:
       apple:
         path: assets/objects/apple_0/model.xml

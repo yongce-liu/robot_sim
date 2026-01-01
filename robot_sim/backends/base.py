@@ -58,6 +58,7 @@ class BaseBackend(ABC):
         self._launch()
         self._refresh_sensors(self._sim_cnt)
         self.set_states(self.initial_states)
+        self._render()
         self.is_launched = True
 
     def _bind_sensors_queries(self) -> None:

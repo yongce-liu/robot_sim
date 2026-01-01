@@ -41,6 +41,13 @@ params:
 
 # Rewrite Environment config to build the task-specific simulator setup
 simulator:
+  # sim:
+  #   backend_spec:
+  #     render:
+  #       mode: opencv
+  #       camera: unitree_g1_with_hands/rs_camera
+  #       width: 640
+  #       height: 480
   scene:
     terrain:
       type: plane
@@ -57,7 +64,7 @@ simulator:
     visual:
       light:
         diffuse: [0.8, 0.8, 0.8]
-        ambient: [0.2, 0.2, 0.2]
+        ambient: [0.4, 0.4, 0.4]
         specular: [1.0, 1.0, 1.0]
       properties:
         rgba:
@@ -67,7 +74,7 @@ simulator:
     objects:
       # apple:
       #   path: assets/objects/apple_0/model.xml
-      #   pose: [0.4, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
+      #   pose: [0.3, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
       # plate:
       #   path: assets/objects/plate_1/model.xml
       #   pose: [0.3, 1.2, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
@@ -78,4 +85,4 @@ simulator:
       #   path: assets/objects/lab_table/model.xml
       #   pose: [0.5, 1.2, 0.0, 0.707, 0.0, 0.0, 0.707]
       unitree_g1_with_hands:
-        pose: [0.05, 0.05, 0.793, 1, 0.0, 0.0, 0.0]
+        pose: [0.0, 0.0, 0.793, 1, 0.0, 0.0, 0.0]

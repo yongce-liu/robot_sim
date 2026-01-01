@@ -315,6 +315,8 @@ class MujocoBackend(BaseBackend):
 
             obj_mjcf.model = obj_name
             obj_attached = model.attach(obj_mjcf)
+            obj_attached.pos = obj_cfg.pose[0:3]
+            obj_attached.quat = obj_cfg.pose[3:7]
 
             # FIXME: temporary fix for free joint handling in dm_control
             self._fix_attach_bugs(obj_attached, obj_name, obj_cfg)

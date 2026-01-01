@@ -49,23 +49,13 @@ def run(cfg: DictConfig) -> None:
     logger.info(f"Initial observation keys: {obs.keys() if isinstance(obs, dict) else 'N/A'}")
     check_observation_space(task, obs)
 
-    # Run a few simulation steps
-    num_steps = 1000
-    logger.info(f"Running {num_steps} simulation steps...")
-
-    for step in range(num_steps):
-        # Create a simple random action
-        # For now, just use zeros for all action groups
-
-        # Step environment
-        obs, reward, terminated, truncated, info = task.step(action=None)
-        check_observation_space(task, obs)
-
-        if step % 50 == 0:
-            logger.info(f"Step {step}: observation keys = {obs.keys() if isinstance(obs, dict) else 'N/A'}")
-
-        if terminated or truncated:
-            logger.info(f"Episode ended at step {step}")
+    while True:
+        try:
+            # Step environment
+            obs, reward, terminated, truncated, info = task.step(action=None)
+            # check_observation_space(task, obs)
+        except KeyboardInterrupt:
+            logger.info("Simulation interrupted by user.")
             break
 
     logger.info("Gr00t simulation completed successfully!")

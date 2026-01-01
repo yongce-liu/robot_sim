@@ -58,7 +58,7 @@ class LowerBodyPolicy:
         model_path: dict[Literal["stand", "walk"], str] | None = None,
         observation_params: dict[str, Any] | None = None,
         stand_mode_threshold: float = 0.05,
-        use_rpy_cmd_from_waist: bool = True,
+        use_rpy_cmd_from_waist: bool = False,
         **kwargs,
     ):
         """
@@ -83,7 +83,7 @@ class LowerBodyPolicy:
                 rpy_cmd_from_waist, torso_index=kwargs["torso_index"], pelvis_index=kwargs["pelvis_index"]
             )
         else:
-            self.rpy_cmd_from_waist = lambda state: None
+            self.rpy_cmd_from_waist = lambda state: self.default_rpy_cmd
 
     def get_target(
         self,
@@ -224,9 +224,9 @@ class DecoupledWBCPolicy:
         lower_target = self.lower_body_policy.get_target(
             state=states[name],
             target=action[name],
-            nav_cmd=action.get("navigate_command"),
-            height_cmd=action.get("base_height_command"),
-            rpy_cmd=action.get("rpy_command"),
+            nav_cmd=action.get("action.navigate_command"),
+            height_cmd=action.get("action.base_height_command"),
+            rpy_cmd=action.get("action.rpy_command"),
         )
 
         if self.lower_priority:

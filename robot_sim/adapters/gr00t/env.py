@@ -75,7 +75,7 @@ class Gr00tEnv(MapEnv):
         ##### Initialize PD controller
         kp = self.robot.stiffness
         kd = self.robot.damping
-        tor_limits = self.robot.get_joint_limits("torque", coeff=1.0)
+        tor_limits = self.robot.get_joint_limits("torque", coeff=0.9)
         pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
         return CompositeController(
             controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}

@@ -35,7 +35,7 @@ simulator:
     objects:
       apple:
         path: assets/objects/apple_0/model.xml
-        pose: [0.4, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
+        pose: [0.3, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
       plate:
         path: assets/objects/plate_1/model.xml
         pose: [0.3, 1.2, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]

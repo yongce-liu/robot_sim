@@ -96,9 +96,9 @@ class LowerBodyPolicy:
         if self.model_path is None:
             return target[..., self.actuator_indices]
 
-        nav_cmd = nav_cmd if nav_cmd is not None else self.default_nav_command
-        height_cmd = height_cmd if height_cmd is not None else self.default_height_cmd
-        rpy_cmd = rpy_cmd if rpy_cmd is not None else self.rpy_cmd_from_waist(state=state)
+        nav_cmd = np.array(nav_cmd)[np.newaxis, :] if nav_cmd is not None else self.default_nav_command
+        height_cmd = np.array(height_cmd)[np.newaxis, :] if height_cmd is not None else self.default_height_cmd
+        rpy_cmd = np.array(rpy_cmd)[np.newaxis, :] if rpy_cmd is not None else self.rpy_cmd_from_waist(state=state)
 
         with torch.no_grad():
             if np.linalg.norm(nav_cmd) < self.stand_mode_threshold:

@@ -20,6 +20,7 @@ class TeleoperationTask(Gr00tEnv):
         config: SimulatorConfig,
         body2part_indices: dict[str, list[int] | ArrayType],
         redis_config: dict[str, Any],
+        command_scale: float | list[float] = 1.0,
         **kwargs,
     ) -> None:
         super().__init__(config=config, **kwargs)
@@ -27,6 +28,10 @@ class TeleoperationTask(Gr00tEnv):
         for k, v in body2part_indices.items():
             body2part_indices[k] = np.array(v, dtype=np.int32)
         self.body2part_indices = body2part_indices
+        self.command_scale = np.array(command_scale)
+        assert self.command_scale.shape == (6,) or self.command_scale.shape == (), (
+            "command_scale must be a float or a list of 6 floats or a scalar."
+        )
         self._init_redis(**redis_config)
 
     def get_action(self) -> dict[str, ArrayType]:
@@ -34,33 +39,40 @@ class TeleoperationTask(Gr00tEnv):
         for k in self.redis_recv_keys:
             self.redis_pipeline.get(k)
         redis_results = self.redis_pipeline.execute()
-
         for i, k in enumerate(self.redis_recv_keys):
             self.__recv_buffer[k] = json.loads(redis_results[i])
-        # xy velocity, z position, roll/pitch, yaw angular velocity, 29 dof
-        action_mimic = np.array(self.__recv_buffer[f"action_body_{self.robot_name}"])  # 35 dims
-        nav_cmd, height_cmd, rp_cmd, body_dof_cmd = self.unpack_action(action_mimic)
-        action_left_hand = np.array(self.__recv_buffer[f"action_hand_left_{self.robot_name}"])[np.newaxis, :]
-        action_right_hand = np.array(self.__recv_buffer[f"action_hand_right_{self.robot_name}"])[np.newaxis, :]
-
-        dof_pos = np.concatenate([body_dof_cmd, action_left_hand, action_right_hand], axis=-1)
-
+        # mimic: xy velocity, z position, roll/pitch, yaw angular velocity, 29 dof
+        # left hand: 7 dof
+        # right hand: 7 dof
+        # nav + rpy cmd: 6 dims
+        dof_pos, nav_cmd, height_cmd, rpy_cmd = self.unpack_action()
         action = {
             "action.navigate_command": nav_cmd,
             "action.base_height_command": height_cmd,
+            "action.rpy_command": rpy_cmd,
         }
         for k, v in self.body2part_indices.items():
             action[k] = dof_pos[..., v]
 
         return action
 
-    def unpack_action(self, action_mimic: np.ndarray):
-        nav_cmd = action_mimic[0:2][np.newaxis, :]
+    def unpack_action(self):
+        action_mimic = np.array(self.__recv_buffer[f"action_body_{self.robot_name}"])  # 35 dims
+        # _ = action_mimic[0:2][np.newaxis, :]
         height_cmd = action_mimic[2:3][np.newaxis, :]
-        rp_cmd = action_mimic[3:5][np.newaxis, :]
-        yaw_cmd = action_mimic[5:6][np.newaxis, :]
-        body_dof_cmd = action_mimic[6:][np.newaxis, :]
-        return np.concatenate([nav_cmd, yaw_cmd], axis=-1), height_cmd, rp_cmd, body_dof_cmd
+        # _ = action_mimic[3:6][np.newaxis, :]
+        body_dof = action_mimic[6:][np.newaxis, :]
+
+        nav_rpy_cmd = np.array(self.__recv_buffer[f"action_cmd_{self.robot_name}"]) * self.command_scale  # 6 dims
+        nav_cmd = nav_rpy_cmd[0:3][np.newaxis, :]
+        rpy_cmd = nav_rpy_cmd[3:6][np.newaxis, :]
+
+        action_left_hand = np.array(self.__recv_buffer[f"action_hand_left_{self.robot_name}"])[np.newaxis, :]
+        action_right_hand = np.array(self.__recv_buffer[f"action_hand_right_{self.robot_name}"])[np.newaxis, :]
+
+        dof_pos = np.concatenate([body_dof, action_left_hand, action_right_hand], axis=-1)
+
+        return dof_pos, nav_cmd, height_cmd, rpy_cmd
 
     def step(self, action=None):
         action = self.get_action()

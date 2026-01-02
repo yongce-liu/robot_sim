@@ -24,6 +24,7 @@ task: Gr00tTeleoperation-v0
 
 # Task specific parameters
 params:
+  command_scale: [3.0, 3.0, 3.0, 2.0, 2.0, 2.0]
   body2part_indices:
     action.waist: [12, 13, 14]
     action.left_arm: [15, 16, 17, 18, 19, 20, 21]
@@ -34,7 +35,7 @@ params:
     # send_keys: ["state_body", "state_hand_left", "state_hand_right"]
     # send_size: [127, 7, 7]
     recv_keys:
-      ["action_body", "action_hand_left", "action_hand_right", "action_neck"]
+      ["action_body", "action_hand_left", "action_hand_right", "action_cmd"]
     host: localhost
     port: 6379
     db: 0
@@ -49,40 +50,39 @@ simulator:
   #       width: 640
   #       height: 480
   scene:
-    terrain:
-      type: plane
-      properties:
-        geom:
-          size: [0, 0, 0.01]
-          contype: 1
-          conaffinity: 0
-          priority: 1
-          friction: [0.6, 0.6, 0.6]
-          condim: 3
-        material: 
-          reflectance: 0
-    visual:
-      light:
-        diffuse: [0.8, 0.8, 0.8]
-        ambient: [0.4, 0.4, 0.4]
-        specular: [1.0, 1.0, 1.0]
-      properties:
-        rgba:
-          haze: [0.15, 0.25, 0.35, 1]
-
-    # path: assets/scenes/gear_lab/gear_lab.xml
+    # terrain:
+    #   type: plane
+    #   properties:
+    #     geom:
+    #       size: [0, 0, 0.01]
+    #       contype: 1
+    #       conaffinity: 0
+    #       priority: 1
+    #       friction: [0.6, 0.6, 0.6]
+    #       condim: 3
+    #     material:
+    #       reflectance: 0
+    # visual:
+    #   light:
+    #     diffuse: [0.8, 0.8, 0.8]
+    #     ambient: [0.4, 0.4, 0.4]
+    #     specular: [1.0, 1.0, 1.0]
+    #   properties:
+    #     rgba:
+    #       haze: [0.15, 0.25, 0.35, 1]
+    path: assets/scenes/gear_lab/gear_lab.xml
     objects:
-      # apple:
-      #   path: assets/objects/apple_0/model.xml
-      #   pose: [0.3, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
-      # plate:
-      #   path: assets/objects/plate_1/model.xml
-      #   pose: [0.3, 1.2, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
-      # object_table:
-      #   path: assets/objects/lab_table/model.xml
-      #   pose: [0.5, 0.0, 0.0, 0.707, 0.0, 0.0, 0.707]
-      # target_table:
-      #   path: assets/objects/lab_table/model.xml
-      #   pose: [0.5, 1.2, 0.0, 0.707, 0.0, 0.0, 0.707]
+      apple:
+        path: assets/objects/apple_0/model.xml
+        pose: [0.3, 0.0, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
+      plate:
+        path: assets/objects/plate_1/model.xml
+        pose: [0.3, 1.2, 0.72, 1, 0.0, 0.0, 0] # [w, x, y, z]
+      object_table:
+        path: assets/objects/lab_table/model.xml
+        pose: [0.5, 0.0, 0.0, 0.707, 0.0, 0.0, 0.707]
+      target_table:
+        path: assets/objects/lab_table/model.xml
+        pose: [0.5, 1.2, 0.0, 0.707, 0.0, 0.0, 0.707]
       unitree_g1_with_hands:
         pose: [0.0, 0.0, 0.793, 1, 0.0, 0.0, 0.0]

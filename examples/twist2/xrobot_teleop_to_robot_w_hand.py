@@ -111,7 +111,7 @@ def extract_mimic_obs_whole_body(qpos, last_qpos, dt=1 / 30):
         ]
     )
 
-    return mimic_obs
+    return mimic_obs, np.concatenate([base_vel, base_ang_vel], axis=-1)
 
 
 class StateMachine:
@@ -502,12 +502,13 @@ class XRobotTeleopToRobot:
 
         # Create mimic obs from retargeting
         if self.last_qpos is not None:
-            current_retarget_obs = extract_mimic_obs_whole_body(qpos, self.last_qpos, dt=self.measured_dt)
+            current_retarget_obs, current_cmd = extract_mimic_obs_whole_body(qpos, self.last_qpos, dt=self.measured_dt)
         else:
             current_retarget_obs = DEFAULT_MIMIC_OBS[self.robot_name]
+            current_cmd = np.array([0.0] * 6)
 
         self.last_qpos = qpos.copy()
-        return qpos, current_retarget_obs
+        return qpos, current_retarget_obs, current_cmd
 
     def update_visualization(self, qpos, smplx_data, viewer):
         """Update MuJoCo visualization"""
@@ -593,6 +594,13 @@ class XRobotTeleopToRobot:
             self.state_machine.set_last_neck_data(self.state_machine.current_neck_data)
             print("Entered pause mode, storing last neck data")
 
+    def determine_cmd_data_to_send(self, current_cmd):
+        current_state = self.state_machine.get_current_state()
+        if current_state == "teleop":
+            return current_cmd.tolist()
+        else:
+            return [0] * 6
+
     def determine_mimic_obs_to_send(self, current_retarget_obs):
         """Determine which mimic observation to send based on current state"""
         current_state = self.state_machine.get_current_state()
@@ -658,7 +666,7 @@ class XRobotTeleopToRobot:
         # Default fallback
         return [0.0, 0.0]
 
-    def send_to_redis(self, mimic_obs, neck_data=None):
+    def send_to_redis(self, mimic_obs, neck_data=None, cmd_data=None):
         """Send mimic observations to Redis"""
 
         if self.redis_client is not None and mimic_obs is not None:
@@ -676,6 +684,10 @@ class XRobotTeleopToRobot:
         # Send neck data to redis
         if neck_data is not None:
             self.redis_pipeline.set("action_neck_unitree_g1_with_hands", json.dumps(neck_data))
+
+        if cmd_data is None:
+            cmd_data = [0] * 6
+        self.redis_pipeline.set("action_cmd_unitree_g1_with_hands", json.dumps(cmd_data))
 
         # Send timestamp to redis
         t_action = int(time.time() * 1000)  # current timestamp in ms
@@ -778,9 +790,9 @@ class XRobotTeleopToRobot:
                     break
 
                 # Process retargeting if we have data
-                qpos, current_retarget_obs = None, None
+                qpos, current_retarget_obs, current_cmd = None, None, None
                 if smplx_data is not None:
-                    qpos, current_retarget_obs = self.process_retargeting(smplx_data)
+                    qpos, current_retarget_obs, current_cmd = self.process_retargeting(smplx_data)
                     self.update_visualization(qpos, smplx_data, viewer)
 
                 # Handle state transitions
@@ -789,12 +801,13 @@ class XRobotTeleopToRobot:
                 # Determine and send mimic observations
                 mimic_obs_to_send = self.determine_mimic_obs_to_send(current_retarget_obs)
                 neck_data_to_send = self.determine_neck_data_to_send(smplx_data)
+                cmd_data_to_send = self.determine_cmd_data_to_send(current_cmd)
 
                 # Store current neck data in state machine for pause state handling
                 if neck_data_to_send is not None:
                     self.state_machine.set_current_neck_data(neck_data_to_send)
 
-                self.send_to_redis(mimic_obs_to_send, neck_data_to_send)
+                self.send_to_redis(mimic_obs_to_send, neck_data_to_send, cmd_data_to_send)
 
                 # Update visualization and record video
                 viewer.sync()

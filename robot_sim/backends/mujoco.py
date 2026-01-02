@@ -155,6 +155,25 @@ class MujocoBackend(BaseBackend):
             elif self._render_cfg["mode"] == "mjviewer":
                 self._renderer()
 
+    def get_rgb_image(self) -> np.ndarray | Any | None:
+        """Get the RGB image of the environment.
+
+        Returns:
+            np.ndarray: The RGB image of the environment.
+        """
+        try:
+            assert self._mjcf_physics is not None, "MuJoCo physics must be initialized."
+            return self._mjcf_physics.render(
+                camera_id=self._render_cfg.get("camera", 0),
+                width=self._render_cfg.get("width", 640),
+                height=self._render_cfg.get("height", 480),
+            ).copy()
+        except Exception:
+            logger.warning(
+                "There are no cameras available in the MuJoCo environment. You can add cameras for the simulator, and choose the camera id to render images."
+            )
+            return None
+
     def close(self):
         if self._renderer is not None:
             if self._render_cfg["mode"] == "mjrender":
@@ -361,8 +380,7 @@ class MujocoBackend(BaseBackend):
         # Write assets + XML to disk (this version returns None and writes files)
         # model_name is not guaranteed to be respected by all versions, so we’ll glob later.
         model.model = file_name.split(".")[0]
-        if not Path(out_dir).exists():
-            Path(out_dir).mkdir(parents=True, exist_ok=True)
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
         mjcf.export_with_assets(model, out_dir, out_file_name=file_name)
         logger.info(f"Exported MJCF model and assets to: {out_dir}/{file_name}")
 

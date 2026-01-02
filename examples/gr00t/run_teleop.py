@@ -11,6 +11,7 @@ from omegaconf import DictConfig, OmegaConf
 # Also triggers task registration with gym.registry
 from robot_sim.adapters.gr00t import Gr00tTaskConfig  # noqa: F401
 from robot_sim.utils.helper import setup_logger
+from robot_sim.utils.saver import GymRecorder
 
 PROJECT_DIR = Path(__file__).parents[0].resolve()
 
@@ -41,7 +42,10 @@ def run(cfg: DictConfig) -> None:
 
     # Initialize Gr00tEnv
     logger.info("Initializing Gr00tEnv...")
-    task = gym.make(task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params)
+    env = gym.make(
+        task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params, render_mode="rgb_array"
+    )
+    task = GymRecorder(env, include_render=True)
 
     # Reset environment
     logger.info("Resetting environment...")
@@ -55,11 +59,10 @@ def run(cfg: DictConfig) -> None:
             obs, reward, terminated, truncated, info = task.step(action=None)
             # check_observation_space(task, obs)
         except KeyboardInterrupt:
+            task.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="pkl")
+            task.close()
             logger.info("Simulation interrupted by user.")
             break
-
-    logger.info("Gr00t simulation completed successfully!")
-    task.close()
 
 
 @hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="tasks/teleop")

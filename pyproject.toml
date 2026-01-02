@@ -26,11 +26,7 @@ dependencies = [
     "loguru>=0.7.3",
     "mujoco>=3.4.0",
     "numpy>=1.26.4",
-    "onnxruntime>=1.23.2",
-    "opencv-python>=4.11.0.86",
     "regex>=2025.11.3",
-    "torch>=2.7.0",
-    "torchvision>=0.22.0",
 ]
 
 
@@ -38,10 +34,6 @@ dependencies = [
 package = true
 python-preference = "managed"
 extra-index-url = ["https://pypi.nvidia.com"]
-
-[tool.uv.build-backend]
-module-name = "robot_sim"
-module-root = ""
 
 [tool.pytest.ini_options]
 log_cli = true
@@ -61,25 +53,26 @@ extend-exclude = ["third_party"]
 # allow-direct-references = true
 
 [project.optional-dependencies]
+render = ["opencv-python>=4.11.0.86", "imageio[ffmpeg]>=2.37.2"]
 teleop = [
     "general-motion-retargeting",
     "xrobotoolkit-sdk",
     "proxsuite==0.7.2",
     "pybind11>=3.0.1",
+    "onnxruntime>=1.23.2",
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
 ]
+gr00t = ["onnxruntime>=1.23.2", "torch>=2.7.0", "torchvision>=0.22.0"]
 # gr00t = ["gr00t @ git+https://github.com/NVIDIA/Isaac-GR00T.git@main"]
 # isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 
 [dependency-groups]
-dev = [
-    "ipykernel>=7.1.0",
-    "mypy>=1.19.1",
-    "pytest>=9.0.2",
-]
+dev = ["ipykernel>=7.1.0", "mypy>=1.19.1", "pytest>=9.0.2"]
 
 [tool.uv.sources]
-general-motion-retargeting = { path = "third_party/teleop/GMR", editable = true}
-xrobotoolkit-sdk = { path = "third_party/teleop/XRoboToolkit-PC-Service-Pybind", editable = true}
+general-motion-retargeting = { path = "third_party/teleop/GMR", editable = true }
+xrobotoolkit-sdk = { path = "third_party/teleop/XRoboToolkit-PC-Service-Pybind", editable = true }
 
 [tool.mypy]
 python_version = "3.11"

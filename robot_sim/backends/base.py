@@ -73,10 +73,6 @@ class BaseBackend(ABC):
         if self._sim_cnt % self.sim_config.render_interval == 0 and not self.headless:
             self._render()
 
-    # def get_world_image(self):
-    #     """Get the world image from the backend."""
-    #     raise NotImplementedError("get_world_image() is not implemented for this backend.")
-
     def reset(self, states: StatesType | None = None) -> None:
         """Reset the environment to the initial states or given states."""
         self._state_cache_expire = True
@@ -166,6 +162,14 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def _render(self) -> None:
+        raise NotImplementedError
+
+    def get_rgb_image(self) -> np.ndarray | None:
+        """Get the RGB image of the environment.
+
+        Returns:
+            np.ndarray: The RGB image of the environment.
+        """
         raise NotImplementedError
 
     @abstractmethod

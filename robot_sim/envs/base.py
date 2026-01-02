@@ -1,7 +1,7 @@
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from loguru import logger
 
@@ -30,10 +30,12 @@ class BaseEnv(ABC):
     simulator and provides the Env interface.
     """
 
+    metadata: dict[str, Any] = {"render_modes": ["human", "rgb_array"], "render_fps": None}
+
     def __init__(
         self,
         config: SimulatorConfig,
-        render_mode: str | None = None,
+        render_mode: Literal["human", "rgb_array"] | None = None,
     ) -> None:
         """Initialize the base environment with a backend.
 
@@ -43,11 +45,13 @@ class BaseEnv(ABC):
         """
         super().__init__()
 
-        assert (
-            (render_mode == "human" and not config.sim.headless)
-            or (render_mode == "rgb_array" and not config.sim.headless)
-            or render_mode is None
-        ), f"Incompatible render_mode: {render_mode} and headless: {config.sim.headless} setting."
+        assert render_mode in self.metadata["render_modes"] or render_mode is None, (
+            f"Invalid render_mode: {render_mode}. Supported modes are: {self.metadata['render_modes']}"
+        )
+        if render_mode == "human":
+            assert config.sim.headless is False, "Headless mode must be False for human rendering."
+        self.metadata["render_fps"] = int(1.0 / (config.sim.dt * config.extras.get("decimation", 1)))
+
         self._backend_type: BackendType = config.backend
         if self._backend_type in [BackendType.MUJOCO]:
             import numpy as np
@@ -171,10 +175,7 @@ class BaseEnv(ABC):
             Rendered output if render_mode requires it, otherwise None.
         """
         if self.render_mode == "rgb_array":
-            if hasattr(self._backend, "get_world_image"):
-                return self._backend.get_world_image()
-            else:
-                logger.warning("Backend does not support image rendering.")
+            return self._backend.get_rgb_image()
         elif self.render_mode == "human":
             self._backend._render()
         return None

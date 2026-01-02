@@ -42,13 +42,13 @@ params:
 
 # Rewrite Environment config to build the task-specific simulator setup
 simulator:
-  # sim:
-  #   backend_spec:
-  #     render:
-  #       mode: opencv
-  #       camera: unitree_g1_with_hands/rs_camera
-  #       width: 640
-  #       height: 480
+  sim:
+    backend_spec:
+      render:
+        mode: opencv
+        camera: unitree_g1_with_hands/rs_camera
+        width: 640
+        height: 480
   scene:
     # terrain:
     #   type: plane

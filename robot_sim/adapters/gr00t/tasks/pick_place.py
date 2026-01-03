@@ -48,7 +48,8 @@ class PickAndPlaceTask(Gr00tEnv):
 
     def compute_terminated(self, observation, action=None):
         is_success = self.obj_tgt_distance < self.success_threshold
-        return is_success.item()
+        object_pos = self.get_object_state(self.object_name).root_state[...,:3]
+        return is_success.item() or np.all(object_pos[..., 2] < 0.5) or np.all(object_pos[..., 0] > 0.4)
 
     def compute_reward(self, observation, action=None):
         reward = -self.obj_tgt_distance * self.reward_scale
@@ -77,8 +78,8 @@ class PickAndPlaceTask(Gr00tEnv):
             Distance as a numpy array.
         """
         if self._distance_cache_expire:
-            object_pos = self.get_object_state(self.object_name).root_state[:3]
-            target_pos = self.get_object_state(self.target_name).root_state[:3]
+            object_pos = self.get_object_state(self.object_name).root_state[..., :3]
+            target_pos = self.get_object_state(self.target_name).root_state[..., :3]
             self._distance_cache = np.linalg.norm(object_pos - target_pos, axis=-1)
             self._distance_cache_expire = False
         if self._distance_cache is None:

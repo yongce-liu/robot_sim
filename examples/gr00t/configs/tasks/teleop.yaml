@@ -9,7 +9,7 @@ defaults:
 teleop_params:
   robot_name: unitree_g1_with_hands
   command_index: [1, 0, 2, 4, 3, 5]
-  command_scale: [3.0, -3.0, 3.0, 2.0, -2.0, 2.0]
+  command_scale: [3.0, -3.0, -30.0, 2.0, -2.0, 2.0]
   body2part_indices:
     action.waist: [12, 13, 14]
     action.left_arm: [15, 16, 17, 18, 19, 20, 21]

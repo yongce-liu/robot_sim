@@ -29,7 +29,8 @@ class GymRecorder(gym.Wrapper):
         self._include_render = bool(include_render)
         self._copy_data = bool(copy_data)
 
-        self._records: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        self._records: dict[int, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
+        # episode_index : step_index : list of records
         self._episode_index = 0
         self._step_index = 0
         self._dirty = False
@@ -50,6 +51,7 @@ class GymRecorder(gym.Wrapper):
         return obs, info
 
     def step(self, action: Any):
+        self._step_index += 1
         obs, reward, terminated, truncated, info = self.env.step(action)
         self._append_record(
             event="step",
@@ -60,7 +62,6 @@ class GymRecorder(gym.Wrapper):
             truncated=truncated,
             info=info,
         )
-        self._step_index += 1
         if terminated or truncated:
             self._episode_index += 1
             self._step_index = 0
@@ -82,22 +83,21 @@ class GymRecorder(gym.Wrapper):
         truncated: Any,
         info: Any,
     ) -> None:
-        record = {
-            "episode": int(self._episode_index),
-            "step": int(self._step_index),
-            "event": event,
-            "timestamp": time.time(),
-            "observation": self._clone(observation) if self._copy_data else observation,
-            "action": action,
-            "reward": self._clone(reward) if self._copy_data else reward,
-            "terminated": self._clone(terminated) if self._copy_data else terminated,
-            "truncated": self._clone(truncated) if self._copy_data else truncated,
-            "info": self._clone(info) if self._copy_data else info,
-        }
-        if self._include_render:
-            record["render"] = self._clone(self.env.render()) if self._copy_data else self.env.render()
+        er = self._records[self._episode_index]  # weak ref
 
-        self._records[self._episode_index].append(record)
+        er["episode"].append(int(self._episode_index))
+        er["step"].append(int(self._step_index))
+        er["event"].append(event)
+        er["timestamp"].append(time.time())
+        er["observation"].append(self._clone(observation) if self._copy_data else observation)
+        er["action"].append(action)
+        er["reward"].append(self._clone(reward) if self._copy_data else reward)
+        er["terminated"].append(self._clone(terminated) if self._copy_data else terminated)
+        er["truncated"].append(self._clone(truncated) if self._copy_data else truncated)
+        er["info"].append(self._clone(info) if self._copy_data else info)
+        if self._include_render:
+            er["render"].append(self._clone(self.env.render()) if self._copy_data else self.env.render())
+
         self._dirty = True
 
         if self._autosave:
@@ -118,14 +118,14 @@ class GymRecorder(gym.Wrapper):
 
         for k, v in self._records.items():
             logger.info(f"Saving episode {k} with {len(v)} steps.")
-            write_records(path=f"{output_name_prefix}/episode_{k:06d}.{output_format}", records=v)
             if self._include_render:
-                data = [rec["render"] for rec in v if "render" in rec]
                 write_records(
                     path=Path(f"{output_name_prefix}/videos/episode_{k:06d}.mp4"),
-                    records=data,
+                    records=v.pop("render"),
                     video_fps=self.env.metadata.get("render_fps", 30),
                 )
+            write_records(path=f"{output_name_prefix}/episode_{k:06d}.{output_format}", records=v)
+
         self._dirty = False
         logger.info(f"Recorder saved data to {output_path}")
 

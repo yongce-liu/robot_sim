@@ -59,7 +59,7 @@ def run(cfg: DictConfig) -> None:
             obs, reward, terminated, truncated, info = task.step(action=None)
             # check_observation_space(task, obs)
         except KeyboardInterrupt:
-            task.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="pkl")
+            task.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="npy")
             task.close()
             logger.info("Simulation interrupted by user.")
             break

@@ -1,3 +1,4 @@
+import json
 from functools import partial
 from typing import Any, Callable
 
@@ -5,6 +6,7 @@ import gymnasium as gym
 import numpy as np
 from loguru import logger
 
+from robot_sim.backends.types import ArrayType
 from robot_sim.configs import CameraConfig, SensorType, SimulatorConfig
 from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
@@ -256,3 +258,104 @@ class Gr00tEnv(MapEnv):
     @property
     def robot(self):
         return self.robots[self.robot_name]
+
+
+####################################################
+### Teleoperation Wrapper #########################
+#####################################################
+class Gr00tTeleopWrapper(gym.Wrapper):
+    """Gr00t Teleoperation task for Gr00t adapter using Pico Ultra 4 and Motion Tracker."""
+
+    def __init__(
+        self,
+        env: gym.Env,
+        robot_name: str,
+        body2part_indices: dict[str, list[int] | ArrayType],
+        redis_config: dict[str, Any],
+        command_index: list[int] = [0, 1, 2, 3, 4, 5],
+        command_scale: float | list[float] = 1.0,
+        **kwargs,
+    ) -> None:
+        super().__init__(env)
+        self.robot_name: str = robot_name
+        assert self.robot_name, "TeleoperationTask requires the env to have a 'robot_name' attribute."
+        logger.info(f"TeleoperationTask with robot: {self.robot_name}")
+        for k, v in body2part_indices.items():
+            body2part_indices[k] = np.array(v, dtype=np.int32)
+        self.body2part_indices = body2part_indices
+        self.command_index = command_index
+        self.command_scale = np.array(command_scale)
+        assert self.command_scale.shape == (6,) or self.command_scale.shape == (), (
+            "command_scale must be a float or a list of 6 floats or a scalar."
+        )
+        self._init_redis(**redis_config)
+
+    def get_action(self) -> dict[str, ArrayType]:
+        # Get mimic obs from Redis
+        for k in self.redis_recv_keys:
+            self.redis_pipeline.get(k)
+        redis_results = self.redis_pipeline.execute()
+        for i, k in enumerate(self.redis_recv_keys):
+            self.__recv_buffer[k] = json.loads(redis_results[i])
+        # mimic: xy velocity, z position, roll/pitch, yaw angular velocity, 29 dof
+        # left hand: 7 dof
+        # right hand: 7 dof
+        # nav + rpy cmd: 6 dims
+        dof_pos, nav_cmd, height_cmd, rpy_cmd = self.unpack_action()
+        action = {
+            "action.navigate_command": nav_cmd,
+            "action.base_height_command": height_cmd,
+            # "action.rpy_command": rpy_cmd,
+        }
+        for k, v in self.body2part_indices.items():
+            action[k] = dof_pos[..., v]
+
+        return action
+
+    def unpack_action(self):
+        action_mimic = np.array(self.__recv_buffer[f"action_body_{self.robot_name}"])  # 35 dims
+        # _ = action_mimic[0:2]
+        height_cmd = action_mimic[2:3]
+        # _ = action_mimic[3:6]
+        body_dof = action_mimic[6:]
+
+        nav_rpy_cmd = (
+            np.array(self.__recv_buffer[f"action_cmd_{self.robot_name}"])[self.command_index] * self.command_scale
+        )  # 6 dims
+        nav_cmd = nav_rpy_cmd[0:3]
+        rpy_cmd = nav_rpy_cmd[3:6]
+
+        action_left_hand = np.array(self.__recv_buffer[f"action_hand_left_{self.robot_name}"])
+        action_right_hand = np.array(self.__recv_buffer[f"action_hand_right_{self.robot_name}"])
+
+        dof_pos = np.concatenate([body_dof, action_left_hand, action_right_hand], axis=-1)[np.newaxis, :]
+
+        return dof_pos, nav_cmd, height_cmd, rpy_cmd
+
+    def step(self, action=None):
+        action = self.get_action()
+        return super().step(action)
+
+    def _init_redis(
+        self,
+        # send_keys: list[str],
+        # send_size: list[int],
+        recv_keys: list[str],
+        host: str = "localhost",
+        port: int = 8888,
+        db: int = 0,
+    ):
+        import redis
+
+        # redis settings
+        redis_client = redis.Redis(host=host, port=port, db=db)
+        self.redis_pipeline = redis_client.pipeline()
+
+        # self.redis_send_keys = [f"{k}_{self.robot_name}" for k in send_keys]
+        # self.__send_buffer = {k: json.dumps([0] * send_size[i]) for i, k in enumerate(self.redis_send_keys)}
+        # for k in self.redis_send_keys:
+        #     self.redis_pipeline.set(k, self.__send_buffer.get(k, None))
+        # self.redis_pipeline.execute()
+
+        self.redis_recv_keys = [f"{k}_{self.robot_name}" for k in recv_keys]
+        self.__recv_buffer = {k: None for k in self.redis_recv_keys}

@@ -9,7 +9,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 # Also triggers task registration with gym.registry
-from robot_sim.adapters.gr00t import Gr00tTaskConfig  # noqa: F401
+from robot_sim.adapters.gr00t import Gr00tTaskConfig, Gr00tTeleopWrapper  # noqa: F401
 from robot_sim.utils.helper import setup_logger
 from robot_sim.utils.saver import GymRecorder
 
@@ -27,7 +27,7 @@ def check_observation_space(task: gym.Env, obs: gym.spaces.Dict) -> None:
             # input("Press Enter to continue...")
 
 
-def run(cfg: DictConfig) -> None:
+def run(cfg: dict) -> None:
     """Run Gr00t simulation.
 
     Args:
@@ -35,32 +35,37 @@ def run(cfg: DictConfig) -> None:
     """
     setup_logger(f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log")
     logger.info("Starting Gr00t simulation...")
-    cfg = OmegaConf.to_container(cfg, resolve=True)
+    teleop_cfg = cfg.pop("teleop_params", {})
     # Hydra automatically instantiates all _target_ in the config tree
     task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)
     # task_cfg.print()
 
     # Initialize Gr00tEnv
     logger.info("Initializing Gr00tEnv...")
-    env = gym.make(
+    _task = gym.make(
         task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params, render_mode="rgb_array"
     )
-    task = GymRecorder(env, include_render=True)
+    _teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)
+    env = GymRecorder(_teleop_wrapper, include_render=True)
 
     # Reset environment
     logger.info("Resetting environment...")
-    obs, info = task.reset()
+    obs, info = env.reset()
     logger.info(f"Initial observation keys: {obs.keys() if isinstance(obs, dict) else 'N/A'}")
-    check_observation_space(task, obs)
+    check_observation_space(env, obs)
 
     while True:
         try:
             # Step environment
-            obs, reward, terminated, truncated, info = task.step(action=None)
-            # check_observation_space(task, obs)
+            obs, reward, terminated, truncated, info = env.step(action=None)
+            # check_observation_space(env, obs)
+            if terminated or truncated:
+                logger.info("Episode terminated. Resetting environment...")
+                obs, info = env.reset()
+                logger.info(f"Reset observation keys: {obs.keys() if isinstance(obs, dict) else 'N/A'}")
         except KeyboardInterrupt:
-            task.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="npy")
-            task.close()
+            env.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="npy")
+            env.close()
             logger.info("Simulation interrupted by user.")
             break
 
@@ -73,7 +78,7 @@ def main(cfg: DictConfig) -> None:
         cfg: Hydra configuration
     """
     try:
-        run(cfg)
+        run(OmegaConf.to_container(cfg, resolve=True))
     except Exception as e:
         logger.exception(f"An error occurred in main: {e}")
         raise e

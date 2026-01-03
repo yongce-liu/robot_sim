@@ -18,7 +18,7 @@ defaults:
   - /default/simulator.yaml@simulator
   - /default/modality.yaml@maps
   - /default/policy.yaml@maps.policy
-  - /robots/g1_dex3_gr00t.yaml@simulator.scene.objects.g1
+  - /robots/g1_dex3_gr00t.yaml@simulator.scene.objects.unitree_g1_with_hands
 
 task: Gr00tPickAndPlace-v0
 
@@ -31,6 +31,26 @@ params:
 # Rewrite Environment config to build the task-specific simulator setup
 simulator:
   scene:
+    # terrain:
+    #   type: plane
+    #   properties:
+    #     geom:
+    #       size: [0, 0, 0.01]
+    #       contype: 1
+    #       conaffinity: 0
+    #       priority: 1
+    #       friction: [0.6, 0.6, 0.6]
+    #       condim: 3
+    #     material:
+    #       reflectance: 0
+    # visual:
+    #   light:
+    #     diffuse: [0.8, 0.8, 0.8]
+    #     ambient: [0.4, 0.4, 0.4]
+    #     specular: [1.0, 1.0, 1.0]
+    #   properties:
+    #     rgba:
+    #       haze: [0.15, 0.25, 0.35, 1]
     path: assets/scenes/gear_lab/gear_lab.xml
     objects:
       apple:
@@ -45,5 +65,5 @@ simulator:
       target_table:
         path: assets/objects/lab_table/model.xml
         pose: [0.5, 1.2, 0.0, 0.707, 0.0, 0.0, 0.707]
-      g1:
+      unitree_g1_with_hands:
         pose: [0.0, 0.0, 0.793, 1, 0.0, 0.0, 0.0]

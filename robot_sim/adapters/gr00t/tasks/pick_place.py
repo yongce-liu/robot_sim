@@ -48,12 +48,12 @@ class PickAndPlaceTask(Gr00tEnv):
 
     def compute_terminated(self, observation, action=None):
         is_success = self.obj_tgt_distance < self.success_threshold
-        return is_success
+        return is_success.item()
 
     def compute_reward(self, observation, action=None):
         reward = -self.obj_tgt_distance * self.reward_scale
 
-        return reward
+        return reward.item()
 
     def compute_info(self, observation, action=None):
         info = super().compute_info(observation, action)

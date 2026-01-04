@@ -416,8 +416,8 @@ class MujocoBackend(BaseBackend):
     def _create_builtin_xml(self, obj_cfg: ObjectConfig) -> str:
         prop: dict[str, Any] = obj_cfg.properties
         if obj_cfg.type == ObjectType.CUBE:
-            half_size = prop.get("half_size", [0.1, 0.1, 0.1])
-            size_str = f"{half_size[0]} {half_size[1]} {half_size[2]}"
+            size = prop.get("size", [0.1, 0.1, 0.1])
+            size_str = f"{size[0] / 2} {size[1] / 2} {size[2] / 2}"
             type_str = "box"
         elif obj_cfg.type == ObjectType.CYLINDER:
             radius = prop.get("radius", 0.1)

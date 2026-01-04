@@ -27,7 +27,9 @@ def check_observation_space(task: gym.Env, obs: gym.spaces.Dict) -> None:
             # input("Press Enter to continue...")
 
 
-def run(cfg: dict) -> None:
+# uv run ./examples/gr00t/run_teleop.py +teleop=default/teleop.yaml
+@hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="tasks/pick_place")
+def main(cfg: DictConfig) -> None:
     """Run Gr00t simulation.
 
     Args:
@@ -35,7 +37,9 @@ def run(cfg: dict) -> None:
     """
     setup_logger(f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log")
     logger.info("Starting Gr00t simulation...")
-    teleop_cfg = cfg.pop("teleop_params", {})
+    cfg: dict = OmegaConf.to_container(cfg, resolve=True)  # type: ignore
+    teleop_path = PROJECT_DIR / f"configs/{cfg.pop('teleop', 'default/teleop.yaml')}"
+    teleop_cfg = OmegaConf.to_container(OmegaConf.load(teleop_path), resolve=True)  # type: ignore
     # Hydra automatically instantiates all _target_ in the config tree
     task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)
     # task_cfg.print()
@@ -68,20 +72,6 @@ def run(cfg: dict) -> None:
             env.close()
             logger.info("Simulation interrupted by user.")
             break
-
-
-@hydra.main(version_base=None, config_path=str(PROJECT_DIR / "configs"), config_name="tasks/teleop")
-def main(cfg: DictConfig) -> None:
-    """Main function to run Gr00t simulation with Hydra configuration.
-
-    Args:
-        cfg: Hydra configuration
-    """
-    try:
-        run(OmegaConf.to_container(cfg, resolve=True))
-    except Exception as e:
-        logger.exception(f"An error occurred in main: {e}")
-        raise e
 
 
 if __name__ == "__main__":

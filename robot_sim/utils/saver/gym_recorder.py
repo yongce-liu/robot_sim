@@ -52,15 +52,16 @@ class GymRecorder(gym.Wrapper):
 
     def step(self, action: Any):
         self._step_index += 1
+        action_snapshot = self._clone(action)
         obs, reward, terminated, truncated, info = self.env.step(action)
         self._append_record(
             event="step",
-            observation=obs,
-            action=action,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
+            observation=self._clone(obs) if self._copy_data else obs,
+            action=action_snapshot,
+            reward=self._clone(reward) if self._copy_data else reward,
+            terminated=self._clone(terminated) if self._copy_data else terminated,
+            truncated=self._clone(truncated) if self._copy_data else truncated,
+            info=self._clone(info) if self._copy_data else info,
         )
         if terminated or truncated:
             self._episode_index += 1
@@ -89,12 +90,12 @@ class GymRecorder(gym.Wrapper):
         er["step"].append(int(self._step_index))
         er["event"].append(event)
         er["timestamp"].append(time.time())
-        er["observation"].append(self._clone(observation) if self._copy_data else observation)
+        er["observation"].append(observation)
         er["action"].append(action)
-        er["reward"].append(self._clone(reward) if self._copy_data else reward)
-        er["terminated"].append(self._clone(terminated) if self._copy_data else terminated)
-        er["truncated"].append(self._clone(truncated) if self._copy_data else truncated)
-        er["info"].append(self._clone(info) if self._copy_data else info)
+        er["reward"].append(reward)
+        er["terminated"].append(terminated)
+        er["truncated"].append(truncated)
+        er["info"].append(info)
         if self._include_render:
             er["render"].append(self._clone(self.env.render()) if self._copy_data else self.env.render())
 

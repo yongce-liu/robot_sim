@@ -29,10 +29,20 @@ def task_register(
         entry_point = register_kwargs.pop("entry_point", f"{cls.__module__}:{cls.__name__}")
         if env_id not in gym.registry:
             gym.register(id=env_id, entry_point=entry_point, **register_kwargs)
-        cls.gym_id = env_id
+        cls.env_id = env_id
         return cls
 
     return decorator
+
+
+def get_env_id(env):
+    if hasattr(env, "env_id"):
+        return env.env_id
+    if hasattr(env, "spec") and env.spec is not None:
+        return env.spec.id
+    if hasattr(env, "unwrapped") and env.unwrapped.spec:
+        return env.unwrapped.spec.id
+    return None
 
 
 def get_reindices(

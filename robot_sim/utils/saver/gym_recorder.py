@@ -118,7 +118,7 @@ class GymRecorder(gym.Wrapper):
         output_name_prefix = str(Path(output_path).with_suffix(""))
 
         for k, v in self._records.items():
-            logger.info(f"Saving episode {k} with {len(v)} steps.")
+            logger.info(f"Saving episode {k} with {len(v['episode'])} steps.")
             if self._include_render:
                 write_records(
                     path=Path(f"{output_name_prefix}/videos/episode_{k:06d}.mp4"),

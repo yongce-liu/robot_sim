@@ -51,7 +51,7 @@ def main(cfg: DictConfig) -> None:
     )
     dataset_builder = Gr00tDatasetsBuilder(env=_task.unwrapped)  # type: ignore
     teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)  # type: ignore
-    env = GymRecorder(teleop_wrapper, include_render=True, record_reset=False)
+    env = GymRecorder(teleop_wrapper, record_reset=False)
 
     # Reset environment
     logger.info("Resetting environment...")

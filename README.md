@@ -26,5 +26,5 @@ uv pip install -e ".[packs]"
 ### Now install the teleop package
 
 ```python
-pybind11_DIR=$(uv run python -m pybind11 --cmakedir) pip install ".[teleop]"
+pybind11_DIR=$(uv run python -m pybind11 --cmakedir) pip install -e ".[teleop]"
 ```

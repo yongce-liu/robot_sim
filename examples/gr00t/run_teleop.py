@@ -70,7 +70,9 @@ def main(cfg: DictConfig) -> None:
                 obs, info = env.reset()
                 logger.info(f"Reset observation keys: {obs.keys() if isinstance(obs, dict) else 'N/A'}")
         except KeyboardInterrupt:
-            # env.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="npy")
+            logger.info("KeyboardInterrupt received. Saving recordings and datasets...")
+            env.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="pkl")
+            logger.info("Fomatted recordings to gr00t/lerobot-like dataset.")
             dataset_builder.build_dataset(
                 source=env._records, output_dir=Path(HydraConfig.get().runtime.output_dir) / "gr00t_datasets"
             )

@@ -9,7 +9,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 # Also triggers task registration with gym.registry
-from robot_sim.adapters.gr00t import Gr00tTaskConfig, Gr00tTeleopWrapper  # noqa: F401
+from robot_sim.adapters.gr00t import Gr00tDatasetsBuilder, Gr00tTaskConfig, Gr00tTeleopWrapper  # noqa: F401
 from robot_sim.utils.helper import setup_logger
 from robot_sim.utils.saver import GymRecorder
 
@@ -49,8 +49,9 @@ def main(cfg: DictConfig) -> None:
     _task = gym.make(
         task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params, render_mode="rgb_array"
     )
+    dataset_builder = Gr00tDatasetsBuilder(env=_task.unwrapped)  # type: ignore
     teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)  # type: ignore
-    env = GymRecorder(teleop_wrapper, include_render=True)
+    env = GymRecorder(teleop_wrapper, include_render=True, record_reset=False)
 
     # Reset environment
     logger.info("Resetting environment...")
@@ -69,7 +70,10 @@ def main(cfg: DictConfig) -> None:
                 obs, info = env.reset()
                 logger.info(f"Reset observation keys: {obs.keys() if isinstance(obs, dict) else 'N/A'}")
         except KeyboardInterrupt:
-            env.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="npy")
+            # env.save(output_path=Path(HydraConfig.get().runtime.output_dir) / "recordings", format="npy")
+            dataset_builder.build_dataset(
+                source=env._records, output_dir=Path(HydraConfig.get().runtime.output_dir) / "gr00t_datasets"
+            )
             env.close()
             logger.info("Simulation interrupted by user.")
             break

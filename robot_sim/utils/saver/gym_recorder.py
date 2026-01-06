@@ -2,14 +2,31 @@ import copy
 import tempfile
 import time
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import gymnasium as gym
+import numpy as np
 from loguru import logger
 
 from .writers import write_records
+
+
+@dataclass
+class SingleRecord:
+    episode: list[int]
+    step: int
+    event: str
+    timestamp: float | str
+    observation: dict[str, Any]
+    action: dict[str, Any]
+    reward: float
+    terminated: bool
+    truncated: bool
+    info: dict[str, Any]
+    frame: np.ndarray | list
 
 
 class GymRecorder(gym.Wrapper):
@@ -29,15 +46,17 @@ class GymRecorder(gym.Wrapper):
         self._include_render = bool(include_render)
         self._copy_data = bool(copy_data)
 
-        self._records: dict[int, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
+        self._records: dict[int, list[SingleRecord]] = defaultdict(list)
         # episode_index : step_index : list of records
         self._episode_index = 0
         self._step_index = 0
+        self._init_timestamp = time.time()
         self._dirty = False
 
     def reset(self, **kwargs: Any):
         obs, info = self.env.reset(**kwargs)
         self._step_index = 0
+        self._init_timestamp = time.time()
         if self._record_reset:
             self._append_record(
                 event="reset",
@@ -54,6 +73,7 @@ class GymRecorder(gym.Wrapper):
         self._step_index += 1
         action_snapshot = self._clone(action)
         obs, reward, terminated, truncated, info = self.env.step(action)
+
         self._append_record(
             event="step",
             observation=self._clone(obs) if self._copy_data else obs,
@@ -73,38 +93,23 @@ class GymRecorder(gym.Wrapper):
             self.save()
         super().close()
 
-    def _append_record(
-        self,
-        *,
-        event: str,
-        observation: Any,
-        action: Any,
-        reward: Any,
-        terminated: Any,
-        truncated: Any,
-        info: Any,
-    ) -> None:
-        er = self._records[self._episode_index]  # weak ref
-
-        er["episode"].append(int(self._episode_index))
-        er["step"].append(int(self._step_index))
-        er["event"].append(event)
-        er["timestamp"].append(time.time())
-        er["observation"].append(observation)
-        er["action"].append(action)
-        er["reward"].append(reward)
-        er["terminated"].append(terminated)
-        er["truncated"].append(truncated)
-        er["info"].append(info)
-        if self._include_render:
-            er["render"].append(self._clone(self.env.render()) if self._copy_data else self.env.render())
-
+    def _append_record(self, **kwargs) -> None:
+        frame = self.env.render() if self._include_render else None
+        kwargs.update(
+            {
+                "frame": self._clone(frame) if self._copy_data else frame,
+                "episode": self._episode_index,
+                "step": self._step_index,
+                "timestamp": time.time() - self._init_timestamp,
+            }
+        )
+        self._records[self._episode_index].append(SingleRecord(**kwargs))
         self._dirty = True
 
         if self._autosave:
             self.save()
 
-    def save(self, output_path: str | Path | None = None, format: str = "pkl") -> None:
+    def save(self, output_path: str | Path | None = None, format: str = "pkl", save_video: bool = True) -> None:
         if not self._records:
             logger.warning("Recorder has no data to save.")
             return
@@ -118,11 +123,11 @@ class GymRecorder(gym.Wrapper):
         output_name_prefix = str(Path(output_path).with_suffix(""))
 
         for k, v in self._records.items():
-            logger.info(f"Saving episode {k} with {len(v['episode'])} steps.")
-            if self._include_render:
+            logger.info(f"Saving episode {k} with {len(v)} steps.")
+            if self._include_render and save_video:
                 write_records(
                     path=Path(f"{output_name_prefix}/videos/episode_{k:06d}.mp4"),
-                    records=v.pop("render"),
+                    records=[item.frame for item in v],
                     video_fps=self.env.metadata.get("render_fps", 30),
                 )
             write_records(path=f"{output_name_prefix}/episode_{k:06d}.{output_format}", records=v)
@@ -132,6 +137,8 @@ class GymRecorder(gym.Wrapper):
 
     @staticmethod
     def _clone(value: Any) -> Any:
+        if value is None:
+            return None
         try:
             return copy.deepcopy(value)
         except Exception:

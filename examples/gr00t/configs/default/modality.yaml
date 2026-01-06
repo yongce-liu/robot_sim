@@ -45,10 +45,10 @@ observation:
     type: sensor
     sensor_name: rs_camera
     data_type: rgb
-  video.tpp_view:
-    type: sensor
-    sensor_name: tpp_camera
-    data_type: rgb
+  # video.tpp_view:
+  #   type: sensor
+  #   sensor_name: tpp_camera
+  #   data_type: rgb
   ######## Task Description ########
   annotation.human.task_description:
     type: constant

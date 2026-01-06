@@ -60,6 +60,8 @@ packs = [
     "torchvision>=0.22.0",
     "onnxruntime>=1.23.2",
     "pybind11>=3.0.1",
+    "pandas>=2.3.3",
+    "pyarrow>=22.0.0",
 ]
 teleop = ["general-motion-retargeting", "xrobotoolkit-sdk", "proxsuite==0.7.2"]
 # gr00t = ["gr00t @ git+https://github.com/NVIDIA/Isaac-GR00T.git@main"]

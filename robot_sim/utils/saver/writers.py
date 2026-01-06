@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 import numpy as np
 
@@ -21,7 +21,7 @@ def register_saver(*fmts: str):
     return deco
 
 
-def write_records(records: dict[str, list[Any]] | list[Any], path: Path | str, **kwargs) -> None:
+def write_records(records: dict[str, Any] | list[Any], path: Path | str, **kwargs) -> None:
     """Write records to disk using the registered saver for the given format."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,6 +38,14 @@ def write_records(records: dict[str, list[Any]] | list[Any], path: Path | str, *
 def write_json(*, records: dict[str, list[Any]], path: Path, ensure_ascii=False) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(records, f, ensure_ascii=ensure_ascii, indent=2)
+
+
+# ---------- JSONl ----------
+@register_saver("jsonl")
+def write_jsonl(*, records: Iterable[Any], path: Path, ensure_ascii: bool = False) -> None:
+    with path.open("w", encoding="utf-8") as f:
+        for r in records:
+            f.write(json.dumps(r, ensure_ascii=ensure_ascii) + "\n")
 
 
 # ---------- Pickle ----------

@@ -52,6 +52,7 @@ class Gr00tEnv(MapEnv):
     ):
         super().__init__(config=config, **kwargs)
 
+        self._map_config = maps
         self._map_cache: MapCache = self._init_spaces_maps(**maps)
         self._controller: CompositeController = self._init_controller()
 

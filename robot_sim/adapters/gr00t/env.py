@@ -320,11 +320,10 @@ class Gr00tTeleopWrapper(gym.Wrapper):
         # _ = action_mimic[3:6]
         body_dof = action_mimic[6:]
 
-        nav_rpy_cmd = (
-            np.array(self.__recv_buffer[f"action_cmd_{self.robot_name}"])[self.command_index] * self.command_scale
-        )  # 6 dims
-        nav_cmd = nav_rpy_cmd[0:3]
-        rpy_cmd = nav_rpy_cmd[3:6]
+        lin_ang_vel = np.array(self.__recv_buffer[f"action_cmd_{self.robot_name}"])[self.command_index]  # 6 dims
+        cmd = np.concatenate([lin_ang_vel[:2], lin_ang_vel[-1:], lin_ang_vel[3:6]]) * self.command_scale
+        nav_cmd = cmd[:3]
+        rpy_cmd = cmd[3:6]
 
         action_left_hand = np.array(self.__recv_buffer[f"action_hand_left_{self.robot_name}"])
         action_right_hand = np.array(self.__recv_buffer[f"action_hand_right_{self.robot_name}"])

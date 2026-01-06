@@ -502,13 +502,13 @@ class XRobotTeleopToRobot:
 
         # Create mimic obs from retargeting
         if self.last_qpos is not None:
-            current_retarget_obs, current_cmd = extract_mimic_obs_whole_body(qpos, self.last_qpos, dt=self.measured_dt)
+            current_retarget_obs, current_lin_ang_vel = extract_mimic_obs_whole_body(qpos, self.last_qpos, dt=self.measured_dt)
         else:
             current_retarget_obs = DEFAULT_MIMIC_OBS[self.robot_name]
-            current_cmd = np.array([0.0] * 6)
+            current_lin_ang_vel = np.array([0.0] * 6)
 
         self.last_qpos = qpos.copy()
-        return qpos, current_retarget_obs, current_cmd
+        return qpos, current_retarget_obs, current_lin_ang_vel
 
     def update_visualization(self, qpos, smplx_data, viewer):
         """Update MuJoCo visualization"""
@@ -594,10 +594,10 @@ class XRobotTeleopToRobot:
             self.state_machine.set_last_neck_data(self.state_machine.current_neck_data)
             print("Entered pause mode, storing last neck data")
 
-    def determine_cmd_data_to_send(self, current_cmd):
+    def determine_vel_data_to_send(self, current_lin_ang_vel):
         current_state = self.state_machine.get_current_state()
         if current_state == "teleop":
-            return current_cmd.tolist()
+            return current_lin_ang_vel.tolist()
         else:
             return [0] * 6
 
@@ -790,9 +790,9 @@ class XRobotTeleopToRobot:
                     break
 
                 # Process retargeting if we have data
-                qpos, current_retarget_obs, current_cmd = None, None, None
+                qpos, current_retarget_obs, current_lin_ang_vel = None, None, None
                 if smplx_data is not None:
-                    qpos, current_retarget_obs, current_cmd = self.process_retargeting(smplx_data)
+                    qpos, current_retarget_obs, current_lin_ang_vel = self.process_retargeting(smplx_data)
                     self.update_visualization(qpos, smplx_data, viewer)
 
                 # Handle state transitions
@@ -801,13 +801,13 @@ class XRobotTeleopToRobot:
                 # Determine and send mimic observations
                 mimic_obs_to_send = self.determine_mimic_obs_to_send(current_retarget_obs)
                 neck_data_to_send = self.determine_neck_data_to_send(smplx_data)
-                cmd_data_to_send = self.determine_cmd_data_to_send(current_cmd)
+                lin_ang_vel = self.determine_vel_data_to_send(current_lin_ang_vel)
 
                 # Store current neck data in state machine for pause state handling
                 if neck_data_to_send is not None:
                     self.state_machine.set_current_neck_data(neck_data_to_send)
 
-                self.send_to_redis(mimic_obs_to_send, neck_data_to_send, cmd_data_to_send)
+                self.send_to_redis(mimic_obs_to_send, neck_data_to_send, lin_ang_vel)
 
                 # Update visualization and record video
                 viewer.sync()

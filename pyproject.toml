@@ -33,7 +33,7 @@ dependencies = [
 [tool.uv]
 package = true
 python-preference = "managed"
-extra-index-url = ["https://pypi.nvidia.com"]
+# extra-index-url = ["https://pypi.nvidia.com"]
 
 [tool.pytest.ini_options]
 log_cli = true
@@ -53,17 +53,15 @@ extend-exclude = ["third_party"]
 # allow-direct-references = true
 
 [project.optional-dependencies]
-packs = ["opencv-python>=4.11.0.86", "imageio[ffmpeg]>=2.37.2"]
-teleop = [
-    "general-motion-retargeting",
-    "xrobotoolkit-sdk",
-    "proxsuite==0.7.2",
-    "pybind11>=3.0.1",
-    "onnxruntime>=1.23.2",
+packs = [
+    "opencv-python>=4.11.0.86",
+    "imageio[ffmpeg]>=2.37.2",
     "torch>=2.7.0",
     "torchvision>=0.22.0",
+    "onnxruntime>=1.23.2",
+    "pybind11>=3.0.1",
 ]
-gr00t = ["onnxruntime>=1.23.2", "torch>=2.7.0", "torchvision>=0.22.0"]
+teleop = ["general-motion-retargeting", "xrobotoolkit-sdk", "proxsuite==0.7.2"]
 # gr00t = ["gr00t @ git+https://github.com/NVIDIA/Isaac-GR00T.git@main"]
 # isaac = ["isaacsim[all,extscache]==5.1.0", "isaaclab[isaacsim,all]==2.3.0"]
 

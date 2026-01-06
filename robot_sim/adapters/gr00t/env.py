@@ -332,10 +332,6 @@ class Gr00tTeleopWrapper(gym.Wrapper):
 
         return dof_pos, nav_cmd, height_cmd, rpy_cmd
 
-    def step(self, action=None):
-        action = self.get_action()
-        return super().step(action)
-
     def _init_redis(
         self,
         # send_keys: list[str],

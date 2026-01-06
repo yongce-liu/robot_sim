@@ -41,7 +41,7 @@ def main(cfg: DictConfig) -> None:
     teleop_path = PROJECT_DIR / f"configs/{cfg.pop('teleop', 'default/teleop.yaml')}"
     teleop_cfg = OmegaConf.to_container(OmegaConf.load(teleop_path), resolve=True)  # type: ignore
     # Hydra automatically instantiates all _target_ in the config tree
-    task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)
+    task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)  # type: ignore
     # task_cfg.print()
 
     # Initialize Gr00tEnv
@@ -49,8 +49,8 @@ def main(cfg: DictConfig) -> None:
     _task = gym.make(
         task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params, render_mode="rgb_array"
     )
-    _teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)
-    env = GymRecorder(_teleop_wrapper, include_render=True)
+    teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)  # type: ignore
+    env = GymRecorder(teleop_wrapper, include_render=True)
 
     # Reset environment
     logger.info("Resetting environment...")
@@ -61,7 +61,8 @@ def main(cfg: DictConfig) -> None:
     while True:
         try:
             # Step environment
-            obs, reward, terminated, truncated, info = env.step(action=None)
+            action = teleop_wrapper.get_action()
+            obs, reward, terminated, truncated, info = env.step(action=action)
             # check_observation_space(env, obs)
             if terminated or truncated:
                 logger.info("Episode terminated. Resetting environment...")

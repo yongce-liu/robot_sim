@@ -147,6 +147,7 @@ class BaseEnv(ABC):
         # Convert action to backend format
         self._episode_step += 1
 
+        action = dict(action)  # ensure action is a dict, avoid modifying the original action
         _set_action = self.action2actionsType(action)
         for _ in range(self.decimation):
             action_array = self._sub_step(_set_action)

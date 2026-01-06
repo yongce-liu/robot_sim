@@ -502,7 +502,9 @@ class XRobotTeleopToRobot:
 
         # Create mimic obs from retargeting
         if self.last_qpos is not None:
-            current_retarget_obs, current_lin_ang_vel = extract_mimic_obs_whole_body(qpos, self.last_qpos, dt=self.measured_dt)
+            current_retarget_obs, current_lin_ang_vel = extract_mimic_obs_whole_body(
+                qpos, self.last_qpos, dt=self.measured_dt
+            )
         else:
             current_retarget_obs = DEFAULT_MIMIC_OBS[self.robot_name]
             current_lin_ang_vel = np.array([0.0] * 6)

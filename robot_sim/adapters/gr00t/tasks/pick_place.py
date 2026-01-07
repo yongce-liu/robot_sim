@@ -38,7 +38,7 @@ class PickAndPlaceTask(Gr00tEnv):
         self._distance_cache: np.ndarray | None = None
         self._distance_cache_expire: bool = True
 
-    def reset(self, **kwargs):  # type: ignore
+    def reset(self, **kwargs):
         self._distance_cache_expire = True
         return super().reset(**kwargs)
 

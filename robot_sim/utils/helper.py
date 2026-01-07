@@ -50,26 +50,21 @@ def get_reindices(
     target: list[str],
     *,
     pattern_position: Literal["source", "target", "none"] = "none",
-) -> list[list[int]]:
+) -> list[int]:
+    result: list[int] = []
     if pattern_position == "source":
-        source = [re.compile(p) for p in source]
-
-    if pattern_position == "target":
-        target = [re.compile(p) for p in target]
-
-    result: list[list[int]] = []
-
-    for tgt in target:
-        if pattern_position == "source":
-            # source: pattern, target: string
-            matched = [i for i, rx in enumerate(source) if rx.fullmatch(tgt)]
-        elif pattern_position == "target":
-            # target: pattern, source: string
-            matched = [i for i, s in enumerate(source) if tgt.fullmatch(s)]
-        else:
-            matched = [i for i, s in enumerate(source) if s == tgt]
-
-        result.extend(matched)
+        # source: pattern, target: string
+        source_rx = [re.compile(p) for p in source]
+        for tgt in target:
+            result.extend([i for i, rx in enumerate(source_rx) if rx.fullmatch(tgt)])
+    elif pattern_position == "target":
+        # target: pattern, source: string
+        target_rx = [re.compile(p) for p in target]
+        for tgt_rx in target_rx:
+            result.extend([i for i, s in enumerate(source) if tgt_rx.fullmatch(s)])
+    else:
+        for tgt in target:
+            result.extend([i for i, s in enumerate(source) if s == tgt])
 
     return result
 

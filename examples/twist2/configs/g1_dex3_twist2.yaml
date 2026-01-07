@@ -527,6 +527,6 @@ properties:
   fix_base_link: false
   # imu: it is built in the xml model
 
-extra:
+extras:
   ankle_idx: [4, 5, 10, 11]
   soft_coeff: 1.0

@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import torch
 from loguru import logger
 
-from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY
+from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY, BaseSensor
 from robot_sim.backends.types import ActionsType, ArrayType, Buffer, StatesType
 from robot_sim.configs import BackendType, ObjectConfig, PhysicsConfig, SimulatorConfig, TerrainConfig, VisualConfig
 
@@ -36,19 +36,22 @@ class BaseBackend(ABC):
         """
         # TODO: maybe need to add more objects like terrains, lights, cameras, etc.
 
-        self._state_cache_expire = True
-        self._states: StatesType | None = None
-
         # Constants
         self.is_launched = False
         self._sim_cnt = 0
         self._sim_freq = int(1.0 / self.sim_config.dt)
-        self._full_env_ids = (
+        self._full_env_ids: ArrayType = (
             np.arange(self.num_envs) if self.device == "cpu" else torch.arange(self.num_envs, device=self.device)
         )
+        # State Cache
+        self._state_cache_expire = True
+        self._states: StatesType = deepcopy(self.initial_states)
         # you can use it to store anything, e.g., default joint names order/ body names order, etc.
+        self._sensors: dict[str, dict[str, BaseSensor]] = defaultdict(
+            dict
+        )  # obj_name -> sensor_name -> sensor_instance
         self._buffer_dict: dict[str, Buffer] = defaultdict(Buffer)
-        self.__cache = {}
+        self.__cache: dict[str, Any] = {}
 
     def launch(self) -> None:
         """Launch the simulation."""
@@ -63,9 +66,17 @@ class BaseBackend(ABC):
 
     def _bind_sensors_queries(self) -> None:
         """Bind sensors to the backend."""
-        for obj_name, obj_buffer in self._buffer_dict.items():
-            for sensor_name, sensor_instance in obj_buffer.sensors.items():
-                sensor_instance.bind(self, obj_name, sensor_name)
+        for obj_name, obj_cfg in self.objects.items():
+            for sensor_name, sensor_cfg in obj_cfg.sensors.items():
+                sensor_type = sensor_cfg.type
+                if sensor_type in _SENSOR_TYPE_REGISTRY:
+                    sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
+                    sensor_instance.bind(self, obj_name, sensor_name)
+                    self._sensors[obj_name][sensor_name] = sensor_instance
+                else:
+                    logger.error(
+                        f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
+                    )
         for query_name, query_type in self.optional_queries.items():
             query_type.bind(self)
 
@@ -93,8 +104,8 @@ class BaseBackend(ABC):
         self.render()
 
     def _refresh_sensors(self, cnt: int) -> None:
-        for sensor_dict in self._buffer_dict.values():
-            for sensor in sensor_dict.sensors.values():
+        for obj_name, sensors in self._sensors.items():
+            for sensor_name, sensor in sensors.items():
                 sensor(cnt)
 
     def set_states(self, states: StatesType, env_ids: ArrayType | None = None) -> None:
@@ -120,7 +131,7 @@ class BaseBackend(ABC):
             self._state_cache_expire = False
         return self._states
 
-    def get_extra(self):
+    def query(self):
         """Get the extra information of the environment."""
         ret_dict = {}
         for query_name, query_type in self.optional_queries.items():
@@ -139,16 +150,16 @@ class BaseBackend(ABC):
             self._buffer_dict[obj_name].joint_names = list(obj_cfg.joints.keys()) if obj_cfg.joints else None
             self._buffer_dict[obj_name].body_names = list(obj_cfg.bodies.keys()) if obj_cfg.bodies else None
 
-            for sensor_name, sensor_cfg in obj_cfg.sensors.items():
-                sensor_type = sensor_cfg.type
-                if sensor_type in _SENSOR_TYPE_REGISTRY:
-                    sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
-                    # sensor_instance.bind(self, obj_name, sensor_name)
-                    self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
-                else:
-                    logger.error(
-                        f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
-                    )
+            # for sensor_name, sensor_cfg in obj_cfg.sensors.items():
+            #     sensor_type = sensor_cfg.type
+            #     if sensor_type in _SENSOR_TYPE_REGISTRY:
+            #         sensor_instance = _SENSOR_TYPE_REGISTRY[sensor_type](sensor_cfg)
+            #         # sensor_instance.bind(self, obj_name, sensor_name)
+            #         self._buffer_dict[obj_name].sensors[sensor_name] = sensor_instance
+            #     else:
+            #         logger.error(
+            #             f"Unsupported sensor type '{sensor_type}' for sensor '{sensor_name}' in object '{obj_name}'"
+            #         )
             # self._buffer_dict[obj_name].config = obj_cfg
         self._update_buffer_indices()
 
@@ -236,7 +247,7 @@ class BaseBackend(ABC):
         return self.sim_config.device
 
     @property
-    def full_env_ids(self) -> torch.Tensor:
+    def full_env_ids(self) -> ArrayType:
         """Get all environment ids."""
         return self._full_env_ids
 
@@ -280,11 +291,11 @@ class BaseBackend(ABC):
                     template[obj_name].root_state = torch.tensor(root_state, device=self.device)[None, ...].repeat(
                         self.num_envs
                     )
-                    template[obj_name].joint_pos[..., 0] = torch.tensor(i_j_pos, device=self.device)[None, ...].repeat(
+                    template[obj_name].joint_pos = torch.tensor(i_j_pos, device=self.device)[None, ...].repeat(
                         self.num_envs
                     )
             self.__cache["_initial_states"] = deepcopy(template)
-        return self.__cache["_initial_states"]
+        return cast(StatesType, self.__cache["_initial_states"])
 
     # Utility functions for buffers
     # public functions
@@ -292,42 +303,59 @@ class BaseBackend(ABC):
         """Get the joint indices of all robots and objects."""
         idx = f"joint_names/{name}/{prefix}"
         if idx not in self.__cache:
-            self.__cache[idx] = [prefix + jn for jn in self._buffer_dict[name].joint_names]
-        return self.__cache[idx]
+            joint_names = self._buffer_dict[name].joint_names
+            assert joint_names is not None, (
+                f"Joint names for '{name}' is not set. Hint: rewrite _update_buffer_indices() to set it."
+            )
+            self.__cache[idx] = [prefix + jn for jn in joint_names]
+        return cast(list[str], self.__cache[idx])
 
     def get_body_names(self, name: str, prefix: str = "") -> list[str]:
         """Get the body indices of all robots and objects."""
         idx = f"body_names/{name}/{prefix}"
         if idx not in self.__cache:
-            self.__cache[idx] = [prefix + bn for bn in self._buffer_dict[name].body_names]
-        return self.__cache[idx]
+            body_names = self._buffer_dict[name].body_names
+            assert body_names is not None, (
+                f"Body names for '{name}' is not set. Hint: rewrite _update_buffer_indices() to set it."
+            )
+            self.__cache[idx] = [prefix + bn for bn in body_names]
+        return cast(list[str], self.__cache[idx])
 
     def get_actuator_names(self, name: str, prefix: str = "") -> list[str]:
         """Get the actuator names of all robots and objects."""
         idx = f"actuator_names/{name}/{prefix}"
         if idx not in self.__cache:
-            self.__cache[idx] = [prefix + an for an in self._buffer_dict[name].actuator_names]
-        return self.__cache[idx]
+            actuator_names = self._buffer_dict[name].actuator_names
+            assert actuator_names is not None, (
+                f"Actuator names for '{name}' is not set. Hint: rewrite _update_buffer_indices() to set it."
+            )
+            self.__cache[idx] = [prefix + an for an in actuator_names]
+        return cast(list[str], self.__cache[idx])
 
     # private functions
-    # def get_sensors(self, name: str) -> dict[str, SensorConfig]:
-    #     """Get the sensor configs of all robots and objects."""
-    #     return self._buffer_dict[name].sensors
+    def get_sensors(self, name: str) -> dict[str, BaseSensor]:
+        """Get the sensor instances of a robot, an object, or world."""
+        return self._sensors[name]
 
     def _get_joint_indices_map(self, name: str, reverse: bool = False) -> list[int]:
         """Get the joint indices map between backend and config order of all robots and objects."""
         if reverse:
-            return self._buffer_dict[name].joint_indices_reverse
-        return self._buffer_dict[name].joint_indices
+            return cast(list[int], self._buffer_dict[name].joint_indices_reverse)
+        return cast(list[int], self._buffer_dict[name].joint_indices)
 
     def _get_body_indices_map(self, name: str, reverse: bool = False) -> list[int]:
         """Get the body indices map between backend and config order of all robots and objects."""
         if reverse:
-            return self._buffer_dict[name].body_indices_reverse
-        return self._buffer_dict[name].body_indices
+            return cast(list[int], self._buffer_dict[name].body_indices_reverse)
+        return cast(list[int], self._buffer_dict[name].body_indices)
 
     def _get_action_indices_map(self, name: str, reverse: bool = False) -> list[int]:
         """Get the action indices map between backend and config order of all robots and objects."""
         if reverse:
-            return self._buffer_dict[name].action_indices_reverse
-        return self._buffer_dict[name].action_indices
+            return cast(list[int], self._buffer_dict[name].action_indices_reverse)
+        return cast(list[int], self._buffer_dict[name].action_indices)
+
+    def get_buffer_info(self) -> dict[str, Buffer]:
+        """Get a snapshot of buffer metadata for IPC or debugging."""
+        info: dict[str, Buffer] = deepcopy(self._buffer_dict)
+        return info

@@ -5,13 +5,12 @@ from typing import Any
 import numpy as np
 import torch
 
-from robot_sim.backends.sensors import BaseSensor
-
 ########################## Data Structures ##########################
 
 ArrayType = torch.Tensor | np.ndarray
 
 
+@dataclass
 class BaseState(ABC):
     """Base class for states."""
 
@@ -130,15 +129,15 @@ ActionsType = dict[str, ArrayType]
 @dataclass
 class Buffer:
     # config: ObjectConfig | None = None
-    sensors: dict[str, BaseSensor] = field(default_factory=dict)  # buffer -> Sensor Instance
+    # sensors: dict[str, BaseSensor] | None = field(default_factory=dict)  # buffer -> Sensor Instance
     # the joint order follows the config.joints order
-    joint_names: list[str] = field(default_factory=list)  # buffer -> list[joint name]
+    joint_names: list[str] | None = None  # buffer -> list[joint name]
     default_joint_positions: np.ndarray = field(
         default_factory=lambda: np.array([], dtype=np.float32)
     )  # buffer -> (num_joints,)
     # the body order follows the urdf/sdf/model file order if not specified in the config
-    body_names: list[str] = field(default_factory=list)  # buffer -> list[body name]
-    actuator_names: list[str] = field(default_factory=list)  # buffer -> list[actuator name]
+    body_names: list[str] | None = None  # buffer -> list[body name]
+    actuator_names: list[str] | None = None  # buffer -> list[actuator name]
     # source: backend order, target: config order
     joint_indices: list[int] | None = None  # source -> target
     joint_indices_reverse: list[int] | None = None  # target -> source

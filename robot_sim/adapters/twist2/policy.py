@@ -182,7 +182,7 @@ class Twist2Policy:
             dtype=np.float32,
         )
 
-        self.ankle_idx: list = robot_config.extra.get("ankle_idx", [4, 5, 10, 11])
+        self.ankle_idx: list = robot_config.extras.get("ankle_idx", [4, 5, 10, 11])
 
     def _init_mdp(
         self,

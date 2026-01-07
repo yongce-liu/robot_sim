@@ -2,7 +2,7 @@ import os
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import cv2
 import mujoco
@@ -13,20 +13,20 @@ from loguru import logger
 
 from robot_sim.backends.base import BaseBackend
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
-from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig, TerrainType
+from robot_sim.configs import ObjectConfig, ObjectType, TerrainType
 from robot_sim.utils.helper import get_reindices, recursive_setattr, resolve_asset_path
 
 
 class MujocoBackend(BaseBackend):
-    def __init__(self, config: SimulatorConfig, optional_queries: dict[str, Any] | None = None):
-        super().__init__(config, optional_queries)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         self._actions_cache: ActionsType = {}  # robot: action
         assert self.num_envs == 1, f"Mujoco only supports single env, got {self.num_envs}."
         assert self.device == "cpu", f"Mujoco only supports CPU device, got {self.device}."
 
         # self._mjcf_sub_models: dict[str, mjcf.RootElement] = {}  # robot/object name -> mjcf model
-        self._mjcf_model: mjcf.RootElement | None = None
-        self._mjcf_physics: mjcf.Physics | None = None
+        self._mjcf_model: mjcf.RootElement = None
+        self._mjcf_physics: mjcf.Physics = None
         self._renderer: Callable | None = None
         self._mjcf_model = self._init_mujoco()
 
@@ -50,7 +50,7 @@ class MujocoBackend(BaseBackend):
         return mjcf_model
 
     @staticmethod
-    def __update_from_set(obj_name: str, sets: list[str]) -> list[str]:
+    def __update_from_set(obj_name: str, sets: list[mjcf.Element]) -> list[str]:
         # In dm_control, attached elements are prefixed with the model name
         obj_prefix = f"{obj_name}/"
         ans = []
@@ -71,7 +71,7 @@ class MujocoBackend(BaseBackend):
 
     def _update_buffer_indices(self) -> None:
         """Update joint and body name indices for the given model."""
-        model = self._mjcf_model
+        model: mjcf.RootElement = self._mjcf_model
         all_joints = model.find_all("joint")
         all_bodies = model.find_all("body")
         all_actuators = model.find_all("actuator")
@@ -88,21 +88,21 @@ class MujocoBackend(BaseBackend):
             # JOINT
             if self._buffer_dict[obj_name].joint_names is None:
                 self._buffer_dict[obj_name].joint_names = joint_src
-            joint_tgt = self._buffer_dict[obj_name].joint_names
+            joint_tgt = cast(list[str], self._buffer_dict[obj_name].joint_names)
             self._buffer_dict[obj_name].joint_indices = get_reindices(source=joint_src, target=joint_tgt)
             self._buffer_dict[obj_name].joint_indices_reverse = get_reindices(source=joint_tgt, target=joint_src)
 
             # BODY
             if self._buffer_dict[obj_name].body_names is None:
                 self._buffer_dict[obj_name].body_names = body_src
-            body_tgt = self._buffer_dict[obj_name].body_names
+            body_tgt = cast(list[str], self._buffer_dict[obj_name].body_names)
             self._buffer_dict[obj_name].body_indices = get_reindices(source=body_src, target=body_tgt)
             self._buffer_dict[obj_name].body_indices_reverse = get_reindices(source=body_tgt, target=body_src)
 
             # actuator
             if self._buffer_dict[obj_name].actuator_names is None:
                 self._buffer_dict[obj_name].actuator_names = actuator_src
-            actuator_tgt = self._buffer_dict[obj_name].actuator_names
+            actuator_tgt = cast(list[str], self._buffer_dict[obj_name].actuator_names)
             self._buffer_dict[obj_name].action_indices = get_reindices(source=actuator_src, target=actuator_tgt)
             self._buffer_dict[obj_name].action_indices_reverse = get_reindices(source=actuator_tgt, target=actuator_src)
 
@@ -224,7 +224,7 @@ class MujocoBackend(BaseBackend):
                 joint_pos=None if len(joint_names) == 0 else _pnd.qpos[joint_names].copy()[None, ...].astype(dtype),
                 joint_vel=None if len(joint_names) == 0 else _pnd.qvel[joint_names].copy()[None, ...].astype(dtype),
                 joint_action=None,
-                sensors={k: deepcopy(v.data) for k, v in self._buffer_dict[obj_name].sensors.items()},
+                sensors={k: deepcopy(v.data) for k, v in self._sensors[obj_name].items()},
             )
             states[obj_name] = state
 
@@ -323,6 +323,7 @@ class MujocoBackend(BaseBackend):
                         continue
                     if getattr(joint, "type", None) == "free":
                         continue
+                    assert obj_cfg.joints is not None, f"Object {obj_name} has joints, but no joint config provided."
                     for prop_key, prop_val in obj_cfg.joints[joint.name].properties.items():
                         try:
                             setattr(joint, prop_key, prop_val)
@@ -403,7 +404,7 @@ class MujocoBackend(BaseBackend):
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set joint positions."""
         joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
-        if len(joint_names) > 0:
+        if len(joint_names) > 0 and obj_state.joint_pos and obj_state.joint_vel:
             self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
             self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
 

@@ -134,7 +134,7 @@ class MapEnv(BaseEnv, gym.Env):
         return info
 
     @property
-    def observation_space(self) -> gym.spaces.Dict:  # type: ignore[override]
+    def observation_space(self) -> gym.spaces.Dict:
         assert len(self._observation_space) > 0, "Observation space not initialized."
         assert not (set(self._observation_space.keys()) & set(self.robot_names)), (
             "Observation space keys must not include any robot names; "
@@ -143,7 +143,7 @@ class MapEnv(BaseEnv, gym.Env):
         return gym.spaces.Dict(self._observation_space)
 
     @property
-    def action_space(self) -> gym.spaces.Dict:  # type: ignore[override]
+    def action_space(self) -> gym.spaces.Dict:
         assert len(self._action_space) > 0, "Action space not initialized."
         assert not (set(self._action_space.keys()) & set(self.robot_names)), (
             "Action space keys must not include any robot names; "

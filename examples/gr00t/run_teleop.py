@@ -37,11 +37,11 @@ def main(cfg: DictConfig) -> None:
     """
     setup_logger(f"{HydraConfig.get().runtime.output_dir}/{HydraConfig.get().job.name}.loguru.log")
     logger.info("Starting Gr00t simulation...")
-    cfg: dict = OmegaConf.to_container(cfg, resolve=True)  # type: ignore
+    cfg: dict = OmegaConf.to_container(cfg, resolve=True)
     teleop_path = PROJECT_DIR / f"configs/{cfg.pop('teleop', 'default/teleop.yaml')}"
-    teleop_cfg = OmegaConf.to_container(OmegaConf.load(teleop_path), resolve=True)  # type: ignore
+    teleop_cfg = OmegaConf.to_container(OmegaConf.load(teleop_path), resolve=True)
     # Hydra automatically instantiates all _target_ in the config tree
-    task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)  # type: ignore
+    task_cfg: Gr00tTaskConfig = Gr00tTaskConfig.from_dict(cfg)
     # task_cfg.print()
 
     # Initialize Gr00tEnv
@@ -49,8 +49,8 @@ def main(cfg: DictConfig) -> None:
     _task = gym.make(
         task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params, render_mode="rgb_array"
     )
-    dataset_builder = Gr00tDatasetsBuilder(env=_task.unwrapped)  # type: ignore
-    teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)  # type: ignore
+    dataset_builder = Gr00tDatasetsBuilder(env=_task.unwrapped)
+    teleop_wrapper = Gr00tTeleopWrapper(env=_task, **teleop_cfg)
     env = GymRecorder(teleop_wrapper, record_reset=False)
 
     # Reset environment

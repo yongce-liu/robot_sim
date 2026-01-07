@@ -42,7 +42,7 @@ class StackTask(Gr00tEnv):
         self._diff_cache: np.ndarray | None = None
         self._diff_cache_expire: bool = True
 
-    def reset(self, **kwargs):  # type: ignore
+    def reset(self, **kwargs):
         self._diff_cache_expire = True
         return super().reset(**kwargs)
 

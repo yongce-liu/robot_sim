@@ -11,7 +11,7 @@ from .base import BaseBackend
 from .types import ActionsType, ArrayType, StatesType
 
 
-class ElasticBridgeBackend(BaseBackend):
+class ElasticBackend(BaseBackend):
     """Backend that exchanges state/action via a communication bridge."""
 
     def __init__(
@@ -164,24 +164,3 @@ class ElasticBridgeBackend(BaseBackend):
             buf.body_indices_reverse = list(range(body_count))
             buf.action_indices = list(range(action_count))
             buf.action_indices_reverse = list(range(action_count))
-
-
-class ElasticServerBackend(ElasticBridgeBackend):
-    """Server-side wrapper: read state, send actions."""
-
-    def __init__(self, config: SimulatorConfig, **kwargs):
-        super().__init__(config, mode="server", **kwargs)
-
-
-class ElasticClientBackend(ElasticBridgeBackend):
-    """Client-side wrapper: send state, read actions."""
-
-    def __init__(self, config: SimulatorConfig, **kwargs):
-        super().__init__(config, mode="client", **kwargs)
-
-
-class ElasticBackend(ElasticBridgeBackend):
-    """Backwards compatible wrapper that picks mode from config/bridge."""
-
-    def __init__(self, config: SimulatorConfig, **kwargs):
-        super().__init__(config, mode=None, **kwargs)

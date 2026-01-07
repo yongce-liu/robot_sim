@@ -6,7 +6,7 @@ import numpy as np
 
 from robot_sim.backends.types import ActionsType, StatesType
 from robot_sim.configs import SimulatorConfig
-from robot_sim.controllers import CompositeController
+from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs.base import BaseEnv
 
 
@@ -50,20 +50,57 @@ class MapEnv(BaseEnv, gym.Env):
         - _init_maps: Initialize the observation, action, reward, termination, truncation, and info maps.
     """
 
+    observation_space: gym.spaces.Dict
+    action_space: gym.spaces.Dict
+
     def __init__(
         self,
         config: SimulatorConfig,
         **kwargs,
     ) -> None:
         super().__init__(config=config, **kwargs)
-        assert config.sim.num_envs == 1, "Only single environment supported in MapEnv currently."
-        assert len(self.robot_names) == 1, "Only single robot supported in MapEnv currently."
-        self._observation_space: dict[str, gym.spaces.Space] = {}
-        self._action_space: dict[str, gym.spaces.Space] = {}
-        self._controller: CompositeController | None = None
+        assert self.num_envs == 1, "Only single environment supported in MapEnv currently."
         self._map_cache: MapCache | None = None
 
-    def statesType2observation(self, states: StatesType) -> gym.spaces.Dict:
+    def reset(  # gym-like signature
+        self,
+        states: StatesType | None = None,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[Any, dict[str, Any]]:
+        """Reset the environment to an initial state.
+
+        Args:
+            states: Optional initial states to reset the environment to.
+            seed: Optional seed for random number generators.
+            options: Optional dictionary of additional options for resetting the environment.
+
+        Returns:
+            observation: The initial observation.
+            info: Additional information dictionary.
+        """
+        gym.Env.reset(self, seed=seed, options=options)
+        # Reset the backend state
+        if states is None:
+            states = options.get("initial_states", self.initial_states) if options is not None else self.initial_states
+
+        return BaseEnv.reset(self, states=states)
+
+    def create_controllers(self, coeff: float = 0.9, **kwargs) -> dict[str, CompositeController]:
+        # Initialize PD controller for low-level control
+        controllers = {}
+        for name, robot in self.robots.items():
+            kp = robot.stiffness
+            kd = robot.damping
+            tor_limits = robot.get_joint_limits("torque", coeff=coeff)
+            pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
+            controllers[name] = CompositeController(
+                controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
+            )
+        return controllers
+
+    def statesType2observation(self, states: StatesType) -> dict:
         observation_dict = {}
         for name in self.robot_names:
             for group_name, map_func in self.observation_map.items():
@@ -88,18 +125,11 @@ class MapEnv(BaseEnv, gym.Env):
                 shape=(self.num_envs, self.robots[name].num_dofs), fill_value=np.nan, dtype=np.float32
             )  # It is used to output the final action array (ActionsType) for the backend
             for group_name, map_func in self.action_map.items():
-                res = map_func(name=name, action=action, states=self.states)
+                res = map_func(name=name, action=action, states=self.get_states())
                 if res is not None:
                     action[group_name] = res
 
         return {name: action[name] for name in self.robot_names}
-
-    def _sub_step(self, action: ActionsType) -> ActionsType:
-        output: ActionsType = {}
-        states = self.states
-        for name in self.robot_names:
-            output[name] = self.controller.compute(state=states[name], target=action[name])
-        return output
 
     def compute_reward(self, observation, action=None):
         reward = 0.0
@@ -134,53 +164,30 @@ class MapEnv(BaseEnv, gym.Env):
         return info
 
     @property
-    def observation_space(self) -> gym.spaces.Dict:
-        assert len(self._observation_space) > 0, "Observation space not initialized."
-        assert not (set(self._observation_space.keys()) & set(self.robot_names)), (
-            "Observation space keys must not include any robot names; "
-            f"overlap: {set(self._observation_space.keys()) & set(self.robot_names)}"
-        )
-        return gym.spaces.Dict(self._observation_space)
-
-    @property
-    def action_space(self) -> gym.spaces.Dict:
-        assert len(self._action_space) > 0, "Action space not initialized."
-        assert not (set(self._action_space.keys()) & set(self.robot_names)), (
-            "Action space keys must not include any robot names; "
-            f"overlap: {set(self._action_space.keys()) & set(self.robot_names)}"
-        )
-        return gym.spaces.Dict(self._action_space)
-
-    @property
-    def controller(self) -> CompositeController:
-        assert self._controller is not None, "Controller not initialized."
-        return self._controller
-
-    @property
     def map_cache(self) -> MapCache:
         assert self._map_cache is not None, "Map cache not initialized."
         return self._map_cache
 
     @property
     def observation_map(self) -> dict[str, Callable]:
-        return self._map_cache.observation if self._map_cache.observation is not None else {}
+        return self.map_cache.observation if self.map_cache.observation is not None else {}
 
     @property
     def action_map(self) -> dict[str, Callable]:
-        return self._map_cache.action if self._map_cache.action is not None else {}
+        return self.map_cache.action if self.map_cache.action is not None else {}
 
     @property
     def reward_map(self) -> dict[str, Callable]:
-        return self._map_cache.reward if self._map_cache.reward is not None else {}
+        return self.map_cache.reward if self.map_cache.reward is not None else {}
 
     @property
     def termination_map(self) -> dict[str, Callable]:
-        return self._map_cache.termination if self._map_cache.termination is not None else {}
+        return self.map_cache.termination if self.map_cache.termination is not None else {}
 
     @property
     def truncation_map(self) -> dict[str, Callable]:
-        return self._map_cache.truncation if self._map_cache.truncation is not None else {}
+        return self.map_cache.truncation if self.map_cache.truncation is not None else {}
 
     @property
     def info_map(self) -> dict[str, Any]:
-        return self._map_cache.info if self._map_cache.info is not None else {}
+        return self.map_cache.info if self.map_cache.info is not None else {}

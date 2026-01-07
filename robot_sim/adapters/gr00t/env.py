@@ -8,7 +8,6 @@ from loguru import logger
 
 from robot_sim.backends.types import ArrayType
 from robot_sim.configs import CameraConfig, SensorType, SimulatorConfig
-from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
 
@@ -51,10 +50,11 @@ class Gr00tEnv(MapEnv):
         **kwargs,
     ):
         super().__init__(config=config, **kwargs)
-
+        assert len(self.robot_names) == 1 and len(self.robots) == 1, "Gr00tEnv only supports single robot."
+        self.robot_name = self.robot_names[0]
+        self.robot = self.robots[self.robot_name]
         self._map_config = maps
         self._map_cache: MapCache = self._init_spaces_maps(**maps)
-        self._controller: CompositeController = self._init_controller()
 
     def _init_spaces_maps(
         self,
@@ -74,27 +74,11 @@ class Gr00tEnv(MapEnv):
             action=act_maps,
         )
 
-    def _init_controller(self) -> CompositeController:
-        ##### Initialize PD controller
-        kp = self.robot.stiffness
-        kd = self.robot.damping
-        tor_limits = self.robot.get_joint_limits("torque", coeff=0.9)
-        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
-        return CompositeController(
-            controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
-        )
-
     def _init_policy(
         self,
         upper_policy: dict[str, Any],
         lower_policy: dict[str, Any],
     ) -> Callable:
-        """Initialize the composite controller for the Gr00t robot.
-
-        Returns:
-            An instance of CompositeController.
-        """
-
         upper_body_policy = UpperBodyPolicy(**upper_policy)
         lower_body_policy = self._init_lower_policy(**lower_policy)
 
@@ -175,7 +159,7 @@ class Gr00tEnv(MapEnv):
             else:
                 raise ValueError(f"Unsupported observation map type '{group_cfg['type']}' for group '{group_name}'.")
 
-            self._observation_space[group_name] = _spaces
+            self.observation_space[group_name] = _spaces
 
         return obs_map
 
@@ -210,7 +194,7 @@ class Gr00tEnv(MapEnv):
             else:
                 raise ValueError(f"Unsupported action map type '{group_cfg['type']}' for group '{group_name}'.")
 
-            self._action_space[group_name] = _spaces
+            self.action_space[group_name] = _spaces
 
         return action_map
 
@@ -243,22 +227,7 @@ class Gr00tEnv(MapEnv):
         )
         return lower_body_policy
 
-    def _init_pd_controller(self) -> PIDController:
-        kp = np.array(self.robot.stiffness, dtype=np.float32)
-        kd = np.array(self.robot.damping, dtype=np.float32)
-        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
-
-        return pd_controller
-
     ####################################################################
-
-    @property
-    def robot_name(self) -> str:
-        return self.robot_names[0]
-
-    @property
-    def robot(self):
-        return self.robots[self.robot_name]
 
 
 ####################################################

@@ -4,7 +4,6 @@ import gymnasium as gym
 import numpy as np
 
 from robot_sim.configs import SimulatorConfig
-from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.math_array import euler_xyz_from_quat
 
@@ -12,25 +11,16 @@ from robot_sim.utils.math_array import euler_xyz_from_quat
 class Twist2Env(MapEnv):
     def __init__(self, config: SimulatorConfig, **kwargs):
         super().__init__(config, **kwargs)
-
+        assert len(self.robot_names) == 1 and len(self.robots) == 1, "Twist2Env only supports single robot."
+        self.robot_name = self.robot_names[0]
+        self.robot = self.robots[self.robot_name]
         self._map_cache: MapCache = self._init_spaces_maps()
-        self._controller: CompositeController = self._init_controller()
 
     def _init_spaces_maps(self) -> MapCache:
         obs_map = self._init_observation_spaces_map()
         action_map = self._init_action_spaces_map()
 
         return MapCache(observation=obs_map, action=action_map)
-
-    def _init_controller(self) -> CompositeController:
-        ##### Initialize PD controller
-        kp = self.robot.stiffness
-        kd = self.robot.damping
-        tor_limits = self.robot.get_joint_limits("torque", coeff=1.0)
-        pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
-        return CompositeController(
-            controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
-        )
 
     def _init_observation_spaces_map(self) -> dict[str, Callable]:
         """
@@ -53,7 +43,7 @@ class Twist2Env(MapEnv):
             shape=(len(body_idx),),
             dtype=np.float32,
         )
-        self._observation_space[group_name] = _spaces
+        self.observation_space[group_name] = _spaces
         obs_map[group_name] = (
             lambda states, name=self.robot_name, body_idx=body_idx: states[name].joint_pos[..., body_idx].squeeze()
         )
@@ -65,7 +55,7 @@ class Twist2Env(MapEnv):
             shape=(len(body_idx),),
             dtype=np.float32,
         )
-        self._observation_space[group_name] = _spaces
+        self.observation_space[group_name] = _spaces
         obs_map[group_name] = (
             lambda states, name=self.robot_name, idx=body_idx: states[name].joint_vel[..., idx].squeeze()
         )
@@ -77,7 +67,7 @@ class Twist2Env(MapEnv):
             shape=(3,),
             dtype=np.float32,
         )
-        self._observation_space[group_name] = _spaces
+        self.observation_space[group_name] = _spaces
         obs_map[group_name] = lambda states, name=self.robot_name: np.stack(
             euler_xyz_from_quat(states[name].root_state[..., 3:7]), axis=-1
         ).squeeze()
@@ -89,7 +79,7 @@ class Twist2Env(MapEnv):
             shape=(3,),
             dtype=np.float32,
         )
-        self._observation_space[group_name] = _spaces
+        self.observation_space[group_name] = _spaces
         obs_map[group_name] = lambda states, name=self.robot_name: states[name].root_state[..., 10:13].squeeze()
 
         group_name = "left_hand_dof_pos"
@@ -99,7 +89,7 @@ class Twist2Env(MapEnv):
             shape=(7,),
             dtype=np.float32,
         )
-        self._observation_space[group_name] = _spaces
+        self.observation_space[group_name] = _spaces
         obs_map[group_name] = (
             lambda states, name=self.robot_name, idx=left_hand_idx: states[name].joint_pos[..., idx].squeeze()
         )
@@ -111,7 +101,7 @@ class Twist2Env(MapEnv):
             shape=(7,),
             dtype=np.float32,
         )
-        self._observation_space[group_name] = _spaces
+        self.observation_space[group_name] = _spaces
         obs_map[group_name] = (
             lambda states, name=self.robot_name, idx=right_hand_idx: states[name].joint_pos[..., idx].squeeze()
         )
@@ -119,23 +109,14 @@ class Twist2Env(MapEnv):
         return obs_map
 
     def _init_action_spaces_map(self) -> dict[str, Callable]:
-        self._action_space = {}
         act_map: dict[str, Callable] = {}
         pos_limits = self.robot.get_joint_limits("position", coeff=0.9)
 
         group_name = "dof_pos"
-        self._action_space[group_name] = gym.spaces.Box(
+        self.action_space[group_name] = gym.spaces.Box(
             low=pos_limits[0], high=pos_limits[1], shape=(self.robot.num_dofs,), dtype=np.float32
         )
         act_map[group_name] = lambda action, name=self.robot_name, group_name=group_name, **kwargs: action.update(
             {name: action[group_name]}
         )
         return act_map
-
-    @property
-    def robot_name(self) -> str:
-        return self.robot_names[0]
-
-    @property
-    def robot(self):
-        return self.robots[self.robot_name]

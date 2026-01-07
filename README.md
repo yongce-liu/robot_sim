@@ -28,3 +28,8 @@ uv pip install -e ".[packs]"
 ```python
 pybind11_DIR=$(uv run python -m pybind11 --cmakedir) pip install -e ".[teleop]"
 ```
+
+## Hardware Experiments
+```bash
+pip install -e ".[hardware]"
+```

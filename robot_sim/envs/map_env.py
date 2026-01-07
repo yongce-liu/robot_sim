@@ -50,9 +50,6 @@ class MapEnv(BaseEnv, gym.Env):
         - _init_maps: Initialize the observation, action, reward, termination, truncation, and info maps.
     """
 
-    observation_space: gym.spaces.Dict
-    action_space: gym.spaces.Dict
-
     def __init__(
         self,
         config: SimulatorConfig,
@@ -60,6 +57,9 @@ class MapEnv(BaseEnv, gym.Env):
     ) -> None:
         super().__init__(config=config, **kwargs)
         assert self.num_envs == 1, "Only single environment supported in MapEnv currently."
+        # Initialize Gym spaces early so map builders can populate them.
+        self.observation_space: gym.spaces.Dict = gym.spaces.Dict({})
+        self.action_space: gym.spaces.Dict = gym.spaces.Dict({})
         self._map_cache: MapCache | None = None
 
     def reset(  # gym-like signature
@@ -148,7 +148,7 @@ class MapEnv(BaseEnv, gym.Env):
         return terminated
 
     def compute_truncated(self, observation, action=None):
-        truncated = self.episode_step >= self.max_episode_steps
+        truncated = (self.episode_step >= self.max_episode_steps).item()
         for group_name, map_func in self.truncation_map.items():
             res = map_func(observation=observation, action=action)
             if res is not None:

@@ -39,7 +39,7 @@ class SimulatorConfig:
     """Configuration for the physics simulation."""
     scene: SceneConfig
     """Configuration for the simulation scene."""
-    spec: dict[BackendType, dict] = field(default_factory=dict)
+    spec: dict[str, dict] = field(default_factory=dict)
     """Backend-specific configuration options."""
     extras: dict = field(default_factory=dict)
     """Additional task-specific configuration options, e.g., you can assign decimation, max_episode_steps here."""

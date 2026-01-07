@@ -4,10 +4,11 @@ from typing import Literal
 import numpy as np
 from loguru import logger
 
-from robot_sim.backends.base import BaseBackend
-from robot_sim.backends.types import ActionsType, ArrayType, StatesType
 from robot_sim.bridges import BridgeFactory
 from robot_sim.configs import SimulatorConfig
+
+from .base import BaseBackend
+from .types import ActionsType, ArrayType, StatesType
 
 
 class ElasticBridgeBackend(BaseBackend):
@@ -21,7 +22,7 @@ class ElasticBridgeBackend(BaseBackend):
     ):
         super().__init__(config, **kwargs)
         assert len(self.robot_names) == 1, "Elastic backend only supports single robot."
-        spec = self.config.spec.get(self.type, {})
+        spec = self.config.spec.get(self.type.value, {})
         bridge_cfg = spec.get("bridge", {})
         self._bridge = BridgeFactory.create(**bridge_cfg)
 

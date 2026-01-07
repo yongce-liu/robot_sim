@@ -75,7 +75,7 @@ dev = ["ipykernel>=7.1.0", "mypy>=1.19.1", "pytest>=9.0.2"]
 [tool.uv.sources]
 general-motion-retargeting = { path = "third_party/teleop/GMR", editable = true }
 xrobotoolkit-sdk = { path = "third_party/teleop/XRoboToolkit-PC-Service-Pybind", editable = true }
-unitree-sdk2py = { git = "https://github.com/unitreerobotics/unitree_sdk2_python.git" }
+unitree-sdk2py = {path = "third_party/hardware/unitree_sdk2_python", editable = true }
 
 
 [tool.mypy]

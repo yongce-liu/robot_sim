@@ -124,7 +124,7 @@ class MujocoBackend(BaseBackend):
             self._init_renderer()
 
     def _init_renderer(self) -> None:
-        self._render_cfg: dict = self.config.spec.get(self.type, {}).get("render", {})
+        self._render_cfg: dict = self.config.spec.get(self.type.value, {}).get("render", {})
         self._render_cfg["mode"] = self._render_cfg.get("mode", "mjviewer")
         if self._render_cfg["mode"] == "mjviewer":
             self.__viewer = mujoco.viewer.launch_passive(
@@ -404,7 +404,7 @@ class MujocoBackend(BaseBackend):
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set joint positions."""
         joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
-        if len(joint_names) > 0 and obj_state.joint_pos and obj_state.joint_vel:
+        if len(joint_names) > 0 and obj_state.joint_pos is not None and obj_state.joint_vel is not None:
             self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
             self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
 

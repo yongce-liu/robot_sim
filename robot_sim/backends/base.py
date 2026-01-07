@@ -60,7 +60,7 @@ class BaseBackend(ABC):
         )
         # State Cache
         self._state_cache_expire = True
-        self._states: StatesType = deepcopy(self.initial_states)
+        # self._states: StatesType = deepcopy(self.initial_states)
         # you can use it to store anything, e.g., default joint names order/ body names order, etc.
         self._sensors: dict[str, dict[str, BaseSensor]] = defaultdict(
             dict

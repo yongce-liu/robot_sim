@@ -96,7 +96,7 @@ def payload_to_actions(payload: dict[str, Any]) -> ActionsType:
     return actions
 
 
-@bridge_register("dds", "DDS")
+@bridge_register("dds")
 class UnitreeDDSBridge(BaseBridge):
     """DDS bridge using Unitree SDK channel APIs."""
 

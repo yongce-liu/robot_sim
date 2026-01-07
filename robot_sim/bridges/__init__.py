@@ -1,12 +1,6 @@
 """Communication module for robot simulation."""
 
-from .base import BaseBridge, Message
-from .unitree import UnitreeBridge
-from .zmq import ZMQBridge
+from .base import BridgeFactory, bridge_register
+from .unitree import UnitreeDDSBridge
 
-__all__ = [
-    "Message",
-    "BaseBridge",
-    "UnitreeBridge",
-    "ZMQBridge",
-]
+__all__ = ["BridgeFactory", "UnitreeDDSBridge", "bridge_register"]

@@ -6,7 +6,8 @@ sim:
   gravity: [0.0, 0.0, -9.81]
   headless: false
   device: "cpu"
-  backend_spec:
+spec:
+  mujoco:
     render:
       mode: mjviewer
       camera: g1/tpp_camera
@@ -28,7 +29,7 @@ scene:
         priority: 1
         friction: [0.6, 0.6, 0.6]
         condim: 3
-      material: 
+      material:
         reflectance: 0
   visual:
     light:

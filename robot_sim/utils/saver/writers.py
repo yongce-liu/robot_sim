@@ -4,18 +4,18 @@ from typing import Any, Callable, Iterable
 
 import numpy as np
 
-_SAVERS: dict[str, Callable] = {}
+_WRITER_REGISTRY: dict[str, Callable] = {}
 
 
-def register_saver(*fmts: str):
+def writer_register(*fmts: str):
     """Register a saver under one or multiple format aliases."""
     norm = [f.lower().lstrip(".") for f in fmts]
 
     def deco(func: Callable) -> Callable:
         for f in norm:
-            if f in _SAVERS:
+            if f in _WRITER_REGISTRY:
                 raise ValueError(f"Duplicate saver for format: {f}")
-            _SAVERS[f] = func
+            _WRITER_REGISTRY[f] = func
         return func
 
     return deco
@@ -28,20 +28,20 @@ def write_records(records: dict[str, Any] | list[Any], path: Path | str, **kwarg
     fmt = path.suffix.lstrip(".").lower()
     if fmt == "":
         raise ValueError("Output path must have a file extension indicating the format.")
-    elif fmt not in _SAVERS:
+    elif fmt not in _WRITER_REGISTRY:
         raise ValueError(f"No saver registered for format: {fmt}")
-    _SAVERS[fmt](records=records, path=path, **kwargs)
+    _WRITER_REGISTRY[fmt](records=records, path=path, **kwargs)
 
 
 # ---------- JSON ----------
-@register_saver("json")
+@writer_register("json")
 def write_json(*, records: dict[str, list[Any]], path: Path, ensure_ascii=False) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(records, f, ensure_ascii=ensure_ascii, indent=2)
 
 
 # ---------- JSONl ----------
-@register_saver("jsonl")
+@writer_register("jsonl")
 def write_jsonl(*, records: Iterable[Any], path: Path, ensure_ascii: bool = False) -> None:
     with path.open("w", encoding="utf-8") as f:
         for r in records:
@@ -49,7 +49,7 @@ def write_jsonl(*, records: Iterable[Any], path: Path, ensure_ascii: bool = Fals
 
 
 # ---------- Pickle ----------
-@register_saver("pkl", "pickle")
+@writer_register("pkl", "pickle")
 def write_pickle(*, records: dict[str, list[Any]], path: Path) -> None:
     import pickle
 
@@ -58,13 +58,13 @@ def write_pickle(*, records: dict[str, list[Any]], path: Path) -> None:
 
 
 # ---------- NPY ----------
-@register_saver("numpy", "npy")
+@writer_register("numpy", "npy")
 def write_npy(*, records: dict[str, list[Any]], path: Path) -> None:
     np.save(path, np.array(records, dtype=object), allow_pickle=True)
 
 
 # ---------- Parquet ----------
-@register_saver("parquet")
+@writer_register("parquet")
 def write_parquet(*, records: dict[str, list[Any]], path: Path) -> None:
     import pandas as pd
 
@@ -73,7 +73,7 @@ def write_parquet(*, records: dict[str, list[Any]], path: Path) -> None:
 
 
 # ---------- Video ----------
-@register_saver("video", "mp4")
+@writer_register("video", "mp4")
 def write_video_imageio(*, records: list[np.ndarray], path: Path, video_fps=30) -> None:
     import imageio.v3 as iio
     import numpy as np

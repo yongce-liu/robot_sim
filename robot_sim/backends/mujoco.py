@@ -13,13 +13,13 @@ from loguru import logger
 
 from robot_sim.backends.base import BaseBackend
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
-from robot_sim.configs import ObjectConfig, ObjectType, TerrainType
+from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig, TerrainType
 from robot_sim.utils.helper import get_reindices, recursive_setattr, resolve_asset_path
 
 
 class MujocoBackend(BaseBackend):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, config: SimulatorConfig, **kwargs) -> None:
+        super().__init__(config, **kwargs)
         self._actions_cache: ActionsType = {}  # robot: action
         assert self.num_envs == 1, f"Mujoco only supports single env, got {self.num_envs}."
         assert self.device == "cpu", f"Mujoco only supports CPU device, got {self.device}."
@@ -124,7 +124,7 @@ class MujocoBackend(BaseBackend):
             self._init_renderer()
 
     def _init_renderer(self) -> None:
-        self._render_cfg: dict = self.config.sim.backend_spec.get("render", {})
+        self._render_cfg: dict = self.config.spec.get(self.type, {}).get("render", {})
         self._render_cfg["mode"] = self._render_cfg.get("mode", "mjviewer")
         if self._render_cfg["mode"] == "mjviewer":
             self.__viewer = mujoco.viewer.launch_passive(

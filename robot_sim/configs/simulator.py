@@ -11,6 +11,8 @@ class BackendType(Enum):
 
     ISAAC = "isaac"
     MUJOCO = "mujoco"
+    UNITREE = "unitree"
+    ELASTIC = "elastic"
 
 
 @dataclass
@@ -27,17 +29,18 @@ class PhysicsConfig:
     """Whether to run the simulation in headless mode (no GUI)."""
     num_envs: int = 1
     """Number of parallel simulation environments."""
-    backend_spec: dict = field(default_factory=dict)
-    """Backend-specific configuration options."""
 
 
 @configclass
 class SimulatorConfig:
     backend: BackendType
+    """Type of simulation backend to use."""
     sim: PhysicsConfig
     """Configuration for the physics simulation."""
     scene: SceneConfig
     """Configuration for the simulation scene."""
+    spec: dict[BackendType, dict] = field(default_factory=dict)
+    """Backend-specific configuration options."""
     extras: dict = field(default_factory=dict)
     """Additional task-specific configuration options, e.g., you can assign decimation, max_episode_steps here."""
 

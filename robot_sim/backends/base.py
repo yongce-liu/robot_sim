@@ -9,14 +9,29 @@ from loguru import logger
 
 from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY, BaseSensor
 from robot_sim.backends.types import ActionsType, ArrayType, Buffer, StatesType
-from robot_sim.configs import BackendType, ObjectConfig, PhysicsConfig, SimulatorConfig, TerrainConfig, VisualConfig
+from robot_sim.configs import (
+    BackendType,
+    ObjectConfig,
+    ObjectType,
+    PhysicsConfig,
+    SimulatorConfig,
+    TerrainConfig,
+    VisualConfig,
+)
+from robot_sim.controllers import CompositeController
 
 
 ########################### Base Backend ##########################
 class BaseBackend(ABC):
     """Base class for simulation handler."""
 
-    def __init__(self, config: SimulatorConfig, optional_queries: dict[str, Any] | None = None):
+    def __init__(
+        self,
+        config: SimulatorConfig,
+        controllers: dict[str, CompositeController] | None = None,
+        optional_queries: dict[str, Any] | None = None,
+    ):
+        self._controllers = controllers if controllers is not None else {}
         self.optional_queries = optional_queries if optional_queries is not None else {}
         self.type: BackendType = config.backend
 
@@ -120,7 +135,11 @@ class BaseBackend(ABC):
             obj_name (str): The name of the robot
             actions (dict[str, ActionsType]): The target actions for the robot
         """
-        self._set_actions(actions)
+        states = self.get_states()
+        outputs: ActionsType = dict(actions)
+        for name, controller in self.controllers.items():
+            outputs[name] = controller.compute(state=states[name], target=actions[name])
+        self._set_actions(outputs)
 
     def get_states(self) -> StatesType:
         """Get the states of the environment.
@@ -296,6 +315,24 @@ class BaseBackend(ABC):
                     )
             self.__cache["_initial_states"] = deepcopy(template)
         return cast(StatesType, self.__cache["_initial_states"])
+
+    @property
+    def controllers(self) -> dict[str, CompositeController]:
+        """Get the controllers of the robots."""
+        return self._controllers
+
+    @property
+    def robot_names(self) -> list[str]:
+        """Get the robot configurations in the environment.
+
+        Returns:
+            robots: A dictionary of robot configurations keyed by robot name.
+        """
+        if "_robot_names" not in self.__cache:
+            self.__cache["_robot_names"] = [
+                name for name, obj in self.config.scene.objects.items() if obj.type == ObjectType.ROBOT
+            ]
+        return cast(list[str], self.__cache["_robot_names"])
 
     # Utility functions for buffers
     # public functions

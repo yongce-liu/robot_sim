@@ -6,7 +6,8 @@ sim:
   gravity: [0.0, 0.0, -9.81]
   headless: false
   device: "cpu"
-  backend_spec:
+spec:
+  mujoco:
     render:
       mode: opencv
       camera: unitree_g1_with_hands/rs_camera

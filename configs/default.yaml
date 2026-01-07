@@ -28,7 +28,9 @@ sim:
   headless: false
   device: "cpu"
   num_envs: 1
-  backend_spec:
+
+spec:
+  mujoco:
     render:
       mode: opencv # or opencv
       camera: g1/tpp_camera

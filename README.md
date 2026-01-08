@@ -13,7 +13,7 @@ uv pip install -e .
 git submodule update --init --recursive && \
 cd third_party/teleop && proj_dir=$(pwd) && \
 cd $proj_dir/XRoboToolkit-PC-Service/RoboticsService/PXREARobotSDK  && \
-rm -rf ./build && bash build.sh  && \
+# rm -rf ./build && bash build.sh  && \
 mkdir -p $proj_dir/XRoboToolkit-PC-Service-Pybind/lib && \
 cp ./build/libPXREARobotSDK.so $proj_dir/XRoboToolkit-PC-Service-Pybind/lib && \
 mkdir -p $proj_dir/XRoboToolkit-PC-Service-Pybind/include && \

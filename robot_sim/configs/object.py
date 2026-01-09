@@ -91,6 +91,20 @@ class RobotModel:
         assert config.type == ObjectType.ROBOT, "RobotModel must be initialized with a robot ObjectConfig."
         self.cfg = config
         self._cache: dict[str, Any] = {}
+        self.initialize()
+
+    def initialize(self) -> None:
+        """Initialize the robot model."""
+        _ = self.num_dofs
+        _ = self.default_joint_positions
+        _ = self.joint_names
+        _ = self.actuator_names
+        _ = self.actuator_indices
+        _ = self.stiffness
+        _ = self.damping
+        self._sensor_names = list(self.cfg.sensors.keys())
+        for t in ControlType:
+            _ = self.get_joint_limits(t)
 
     @property
     def num_dofs(self) -> int:
@@ -108,19 +122,73 @@ class RobotModel:
         return default_positions
 
     @property
-    def actuated_joint_names(self) -> list[str]:
+    def joint_names(self) -> list[str]:
         assert self.cfg.joints is not None, "Robot configuration must have joints defined."
-        if "actuated_joint_names" in self._cache:
-            return cast(list[str], self._cache["actuated_joint_names"])
-        self._cache["actuated_joint_names"] = names = [name for name, obj in self.cfg.joints.items() if obj.actuated]
+        if "joint_names" in self._cache:
+            return cast(list[str], self._cache["joint_names"])
+        self._cache["joint_names"] = names = list(self.cfg.joints.keys())
+        return names
+
+    @joint_names.setter
+    def joint_names(self, value: list[str]) -> None:
+        self._cache["joint_names"] = value
+
+    @property
+    def body_names(self) -> list[str] | None:
+        return self._cache.get("body_names")
+
+    @body_names.setter
+    def body_names(self, value: list[str]) -> None:
+        self._cache["body_names"] = value
+
+    def get_body_names(self, prefix: str | None = None) -> list[str]:
+        """Get the names of all bodies."""
+        if prefix is None:
+            return cast(list[str], self._cache["body_names"])
+        hashed_key = f"body_names_with_prefix_{prefix}"
+        if hashed_key in self._cache:
+            return cast(list[str], self._cache[hashed_key])
+        self._cache[hashed_key] = names = [f"{prefix}{name}" for name in cast(list[str], self._cache["body_names"])]
         return names
 
     @property
-    def actuated_joint_indices(self) -> np.ndarray:
+    def actuator_names(self) -> list[str]:
         assert self.cfg.joints is not None, "Robot configuration must have joints defined."
-        if "actuated_joint_indices" in self._cache:
-            return cast(np.ndarray, self._cache["actuated_joint_indices"])
-        self._cache["actuated_joint_indices"] = indices = np.array(
+        if "actuator_names" in self._cache:
+            return cast(list[str], self._cache["actuator_names"])
+        self._cache["actuator_names"] = names = [name for name, obj in self.cfg.joints.items() if obj.actuated]
+        return names
+
+    @actuator_names.setter
+    def actuator_names(self, value: list[str]) -> None:
+        self._cache["actuator_names"] = value
+
+    def get_actuator_names(self, prefix: str | None = None) -> list[str]:
+        """Get the names of actuated joints."""
+        if prefix is None:
+            return self.actuator_names
+        hashed_key = f"actuator_names_with_prefix_{prefix}"
+        if hashed_key in self._cache:
+            return cast(list[str], self._cache[hashed_key])
+        self._cache[hashed_key] = names = [f"{prefix}{name}" for name in self.actuator_names]
+        return names
+
+    def get_joint_names(self, prefix: str | None = None) -> list[str]:
+        """Get the names of all joints."""
+        if prefix is None:
+            return self.joint_names
+        hashed_key = f"joint_names_with_prefix_{prefix}"
+        if hashed_key in self._cache:
+            return cast(list[str], self._cache[hashed_key])
+        self._cache[hashed_key] = names = [f"{prefix}{name}" for name in self.joint_names]
+        return names
+
+    @property
+    def actuator_indices(self) -> np.ndarray:
+        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
+        if "actuator_indices" in self._cache:
+            return cast(np.ndarray, self._cache["actuator_indices"])
+        self._cache["actuator_indices"] = indices = np.array(
             [i for i, obj in enumerate(self.cfg.joints.values()) if obj.actuated], dtype=np.int32
         )
         return indices
@@ -148,8 +216,8 @@ class RobotModel:
         return damping
 
     @property
-    def sensors(self) -> dict[str, SensorConfig]:
-        return self.cfg.sensors
+    def sensor_names(self) -> list[str]:
+        return self._sensor_names
 
     def get_joint_limits(self, key: ControlType | str, coeff=1.0) -> tuple[np.ndarray, np.ndarray]:
         """Get joint limits for the specified control type."""

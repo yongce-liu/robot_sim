@@ -2,7 +2,7 @@ import os
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable
 
 import cv2
 import mujoco
@@ -13,13 +13,13 @@ from loguru import logger
 
 from robot_sim.backends.base import BaseBackend
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
-from robot_sim.configs import ObjectConfig, ObjectType, SimulatorConfig, TerrainType
-from robot_sim.utils.helper import get_reindices, recursive_setattr, resolve_asset_path
+from robot_sim.configs import ObjectConfig, ObjectType, TerrainType
+from robot_sim.utils.helper import recursive_setattr, resolve_asset_path
 
 
 class MujocoBackend(BaseBackend):
-    def __init__(self, config: SimulatorConfig, **kwargs) -> None:
-        super().__init__(config, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         self._actions_cache: ActionsType = {}  # robot: action
         assert self.num_envs == 1, f"Mujoco only supports single env, got {self.num_envs}."
         assert self.device == "cpu", f"Mujoco only supports CPU device, got {self.device}."
@@ -29,10 +29,11 @@ class MujocoBackend(BaseBackend):
         self._mjcf_physics: mjcf.Physics = None
         self._renderer: Callable | None = None
         self._mjcf_model = self._init_mujoco()
+        self._update_robot_model()
 
     def _init_mujoco(self) -> mjcf.RootElement:
-        if self.config.scene.path is not None:
-            _asset_path = resolve_asset_path(self.config.scene.path)
+        if self._config.scene.path is not None:
+            _asset_path = resolve_asset_path(self._config.scene.path)
             mjcf_model = mjcf.from_path(_asset_path)
             logger.info(f"Loaded scene from: {_asset_path}")
         else:
@@ -42,9 +43,9 @@ class MujocoBackend(BaseBackend):
         self._add_visual(mjcf_model)
         self._add_objects(mjcf_model)
         # dt
-        mjcf_model.option.timestep = self.sim_config.dt
+        mjcf_model.option.timestep = self.cfg_sim.dt
         # gravity
-        mjcf_model.option.gravity = self.sim_config.gravity
+        mjcf_model.option.gravity = self.cfg_sim.gravity
         self.export_mjcf(model=mjcf_model, out_dir="outputs/mujoco/", file_name="robot_sim.xml")
 
         return mjcf_model
@@ -69,42 +70,19 @@ class MujocoBackend(BaseBackend):
                     logger.error(f"Duplicate name detected: {name} in object {obj_name}")
         return ans
 
-    def _update_buffer_indices(self) -> None:
+    def _update_robot_model(self) -> None:
         """Update joint and body name indices for the given model."""
         model: mjcf.RootElement = self._mjcf_model
         all_joints = model.find_all("joint")
         all_bodies = model.find_all("body")
         all_actuators = model.find_all("actuator")
-
-        # update names if not specified in the object config
-        for obj_name in self.objects.keys():
-            # Only find joints and bodies belonging to this specific object
-            # define the source names in the backend order
-            joint_src = self.__update_from_set(obj_name, all_joints)
-            body_src = self.__update_from_set(obj_name, all_bodies)
-            actuator_src = self.__update_from_set(obj_name, all_actuators)
-
-            # define the target names in the config order
-            # JOINT
-            if self._buffer_dict[obj_name].joint_names is None:
-                self._buffer_dict[obj_name].joint_names = joint_src
-            joint_tgt = cast(list[str], self._buffer_dict[obj_name].joint_names)
-            self._buffer_dict[obj_name].joint_indices = get_reindices(source=joint_src, target=joint_tgt)
-            self._buffer_dict[obj_name].joint_indices_reverse = get_reindices(source=joint_tgt, target=joint_src)
-
-            # BODY
-            if self._buffer_dict[obj_name].body_names is None:
-                self._buffer_dict[obj_name].body_names = body_src
-            body_tgt = cast(list[str], self._buffer_dict[obj_name].body_names)
-            self._buffer_dict[obj_name].body_indices = get_reindices(source=body_src, target=body_tgt)
-            self._buffer_dict[obj_name].body_indices_reverse = get_reindices(source=body_tgt, target=body_src)
-
-            # actuator
-            if self._buffer_dict[obj_name].actuator_names is None:
-                self._buffer_dict[obj_name].actuator_names = actuator_src
-            actuator_tgt = cast(list[str], self._buffer_dict[obj_name].actuator_names)
-            self._buffer_dict[obj_name].action_indices = get_reindices(source=actuator_src, target=actuator_tgt)
-            self._buffer_dict[obj_name].action_indices_reverse = get_reindices(source=actuator_tgt, target=actuator_src)
+        for name, robot in self.robots.items():
+            if robot.joint_names is None:
+                robot.joint_names = self.__update_from_set(name, all_joints)
+            if robot.actuator_names is None:
+                robot.actuator_names = self.__update_from_set(name, all_actuators)
+            if robot.body_names is None:
+                robot.body_names = self.__update_from_set(name, all_bodies)
 
     def _launch(self) -> None:
         """Initialize MuJoCo model with optional scene support."""
@@ -124,7 +102,7 @@ class MujocoBackend(BaseBackend):
             self._init_renderer()
 
     def _init_renderer(self) -> None:
-        self._render_cfg: dict = self.config.spec.get(self.type.value, {}).get("render", {})
+        self._render_cfg: dict = self.cfg_spec.get("render", {})
         self._render_cfg["mode"] = self._render_cfg.get("mode", "mjviewer")
         if self._render_cfg["mode"] == "mjviewer":
             self.__viewer = mujoco.viewer.launch_passive(
@@ -189,24 +167,19 @@ class MujocoBackend(BaseBackend):
 
         self._mjcf_physics.step()
 
-    def _set_states(self, states: StatesType, env_ids: ArrayType | None = None):
+    def _set_states(self, states: StatesType, env_ids: ArrayType):
         """Set the states of all objects and robots."""
-        if env_ids is None:
-            env_ids = self._full_env_ids
+
         for obj_name, obj_state in states.items():
             self._set_root_state(obj_name, obj_state, env_ids)
             self._set_joint_state(obj_name, obj_state, env_ids)
         self._mjcf_physics.forward()
 
-    def _set_actions(self, actions: ActionsType, env_ids: ArrayType | None = None) -> None:
+    def _set_actions(self, actions: ActionsType, env_ids: ArrayType) -> None:
         """Set actions for all robots/objects with ctrl entrypoint."""
         self._actions_cache = actions  # dict[str, np.ndarray (num_envs, num_dofs)]
-
-        if env_ids is None:
-            env_ids = self._full_env_ids
-
         for obj_name, obj_action in actions.items():
-            actuator_names = self.get_actuator_names(obj_name, prefix=obj_name + "/")
+            actuator_names = self.robots[obj_name].get_actuator_names(prefix=f"{obj_name}/")
             # Here, we also use the default order index when adding a object/robot
             self._mjcf_physics.named.data.ctrl[actuator_names] = obj_action[env_ids]
 
@@ -215,8 +188,8 @@ class MujocoBackend(BaseBackend):
 
         states: dict[str, ObjectState] = {}
         _pnd = self._mjcf_physics.named.data
-        for obj_name in self.objects.keys():
-            joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
+        for obj_name in self.cfg_objects.keys():
+            joint_names = self.robots[obj_name].get_joint_names(prefix=f"{obj_name}/")
             _root_state, _body_state = self._pack_state(obj_name)
             state = ObjectState(
                 root_state=_root_state.astype(dtype).copy(),
@@ -242,7 +215,7 @@ class MujocoBackend(BaseBackend):
             body_np: numpy (n_body,13)     — n_body bodies
         """
         data = self._mjcf_physics.named.data
-        body_names = [obj_name + "/"] + self.get_body_names(obj_name, prefix=obj_name + "/")
+        body_names = [f"{obj_name}/"] + self.robots[obj_name].get_body_names(prefix=f"{obj_name}/")
         pos = data.xpos[body_names]
         quat = data.xquat[body_names]
 
@@ -261,21 +234,21 @@ class MujocoBackend(BaseBackend):
 
     def _add_terrain(self, model: mjcf.RootElement) -> None:
         """Add default ground plane."""
-        if self.terrain is None:
+        if self.cfg_terrain is None:
             logger.warning("No terrain configuration provided; skipping terrain addition.")
             return
         texture_name = "texplane"
         material_name = "matplane"
         geom_name = "ground_plane"
-        if self.terrain.type == TerrainType.CUSTOM:
-            terrain_mjcf = mjcf.from_path(self.terrain.path)
+        if self.cfg_terrain.type == TerrainType.CUSTOM:
+            terrain_mjcf = mjcf.from_path(self.cfg_terrain.path)
             terrain_mjcf.model = "terrain"
             terrain_mjcf.find("texture")[0].name = texture_name
             terrain_mjcf.find("material")[0].name = material_name
             terrain_mjcf.find("geom")[0].name = geom_name
             model.worldbody.add(terrain_mjcf)
-            logger.info(f"Loaded terrain from: {self.terrain.path}")
-        elif self.terrain.type == TerrainType.PLANE:
+            logger.info(f"Loaded terrain from: {self.cfg_terrain.path}")
+        elif self.cfg_terrain.type == TerrainType.PLANE:
             model.asset.add(
                 "texture",
                 name=texture_name,
@@ -289,23 +262,25 @@ class MujocoBackend(BaseBackend):
             model.asset.add("material", name=material_name, texture=texture_name, texrepeat=[2, 2], texuniform=True)
             model.worldbody.add("geom", name=geom_name, type="plane", size="0 0 0.001", material=material_name)
         else:
-            raise ValueError(f"Unknown terrain type: {self.terrain.type}")
+            raise ValueError(f"Unknown terrain type: {self.cfg_terrain.type}")
 
-        recursive_setattr(model.asset.texture[texture_name], self.terrain.properties.get("texture"), tag="texture")
-        recursive_setattr(model.asset.material[material_name], self.terrain.properties.get("material"), tag="material")
-        recursive_setattr(model.worldbody.geom[geom_name], self.terrain.properties.get("geom"), tag="geom")
+        recursive_setattr(model.asset.texture[texture_name], self.cfg_terrain.properties.get("texture"), tag="texture")
+        recursive_setattr(
+            model.asset.material[material_name], self.cfg_terrain.properties.get("material"), tag="material"
+        )
+        recursive_setattr(model.worldbody.geom[geom_name], self.cfg_terrain.properties.get("geom"), tag="geom")
 
     def _add_visual(self, model: mjcf.RootElement) -> None:
-        if self.visual is None:
+        if self.cfg_visual is None:
             logger.warning("No visual configuration provided; skipping visual addition.")
             return
 
-        recursive_setattr(model.visual.headlight, self.visual.light, tag="headlight")
-        recursive_setattr(model.visual, self.visual.properties, tag="visual")
+        recursive_setattr(model.visual.headlight, self.cfg_visual.light, tag="headlight")
+        recursive_setattr(model.visual, self.cfg_visual.properties, tag="visual")
 
     def _add_objects(self, model: mjcf.RootElement) -> None:
         """Add individual objects to the model."""
-        for obj_name, obj_cfg in self.objects.items():
+        for obj_name, obj_cfg in self.cfg_objects.items():
             if obj_cfg.type in [ObjectType.CUSTOM, ObjectType.ROBOT]:
                 _asset_path = resolve_asset_path(obj_cfg.path)
                 obj_mjcf = mjcf.from_path(_asset_path)
@@ -389,7 +364,7 @@ class MujocoBackend(BaseBackend):
         """Set root position and rotation."""
 
         identifier = obj_name + "/"  # MuJoCo joint/body names are prefixed with model name
-        if not self.objects[obj_name].properties.get("fix_base_link", False):
+        if not self.cfg_objects[obj_name].properties.get("fix_base_link", False):
             # when the object is not fixed-base-link
             root_joint = self._mjcf_physics.data.joint(identifier)
             root_joint.qpos[:7] = obj_state.root_state[env_ids, :7]
@@ -403,7 +378,7 @@ class MujocoBackend(BaseBackend):
 
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set joint positions."""
-        joint_names = self.get_joint_names(obj_name, prefix=obj_name + "/")
+        joint_names = self.robots[obj_name].get_joint_names(prefix=f"{obj_name}/")
         if len(joint_names) > 0 and obj_state.joint_pos is not None and obj_state.joint_vel is not None:
             self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
             self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]

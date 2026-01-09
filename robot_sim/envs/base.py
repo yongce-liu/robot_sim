@@ -1,15 +1,14 @@
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 from loguru import logger
 
 from robot_sim.backends import BackendFactory
 from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
-from robot_sim.configs import ObjectConfig, ObjectType, RobotModel, SimulatorConfig
-from robot_sim.controllers import CompositeController
+from robot_sim.configs import ObjectConfig, RobotModel, SimulatorConfig
 
 
 @dataclass
@@ -34,11 +33,13 @@ class BaseEnv(ABC):
 
     metadata: dict[str, Any] = {"render_modes": ["human", "rgb_array"], "render_fps": None}
 
-    def __init__(
-        self,
-        config: SimulatorConfig,
-        render_mode: str | None = None,
-    ) -> None:
+    def __init__(self, config: SimulatorConfig, render_mode: str | None = None, **kwargs) -> None:
+        # Create backend
+        self._backend = BackendFactory.create(config=config, **kwargs)
+        # Launch the backend if not already launched
+        if not self._backend.is_launched:
+            self._backend.launch()
+
         """Initialize the base environment with a backend.
 
         Args:
@@ -51,6 +52,8 @@ class BaseEnv(ABC):
         if render_mode == "human":
             assert config.sim.headless is False, "Headless mode must be False for human rendering."
         self.metadata["render_fps"] = int(1.0 / (config.sim.dt * config.extras.get("decimation", 1)))
+        self.render_mode = render_mode
+
         # constant
         self._decimation: int = config.extras.get("decimation", 1)
         logger.info(f"Decimation factor set to: {self._decimation}")
@@ -61,21 +64,9 @@ class BaseEnv(ABC):
         )
         logger.info(f"Max episode steps set to: {self._max_episode_steps}")
 
-        self.render_mode = render_mode
-        # self._observation_space: Any = None  # to be defined in subclass
-        # self._action_space: Any = None  # to be defined in subclass
+        # cache
         self._mdp_cache: MDPCache = MDPCache()
-        # need it to initialize property before backend created
-        # because some property maybe used for creat_controllers, etc
-        self.__cache: dict[str, Any] = {"_config": config}
-
-        # Create backend
-        self._backend = BackendFactory.create_backend(
-            config=config, controllers=self.create_controllers(**config.extras.get("controllers", {}))
-        )
-        # Launch the backend if not already launched
-        if not self._backend.is_launched:
-            self._backend.launch()
+        self.__cache: dict[str, Any] = {}
 
     def reset(self, states: StatesType) -> tuple[Any, dict[str, Any]]:
         """Reset the environment to an initial state.
@@ -157,11 +148,6 @@ class BaseEnv(ABC):
     def close(self) -> None:
         """Close the environment and cleanup resources."""
         self._backend.close()
-
-    # init the lowest/high-frequency controller here if needed
-    def create_controllers(self, **kwargs) -> None | dict[str, CompositeController]:
-        """Initialize the low-level controller for the environment."""
-        return None
 
     # Abstract methods to be implemented by subclasses
     @abstractmethod
@@ -246,36 +232,6 @@ class BaseEnv(ABC):
         """
         return self._backend.get_states()[name]
 
-    def get_joint_names(self, name: str) -> list[str]:
-        """Get the joint names of the specified robot/object.
-
-        Args:
-            name: The name of the robot/object.
-        Returns:
-            joint_names: List of joint names.
-        """
-        return self._backend.get_joint_names(name)
-
-    def get_actuator_names(self, name: str) -> list[str]:
-        """Get the actuator names of the specified robot/object.
-
-        Args:
-            name: The name of the robot/object.
-        Returns:
-            actuator_names: List of actuator names.
-        """
-        return self._backend.get_actuator_names(name)
-
-    def get_body_names(self, name: str) -> list[str]:
-        """Get the body names of the specified robot/object.
-
-        Args:
-            name: The name of the robot/object.
-        Returns:
-            body_names: List of body names.
-        """
-        return self._backend.get_body_names(name)
-
     def get_states(self) -> StatesType:
         """Get the current states from the backend.
 
@@ -293,16 +249,6 @@ class BaseEnv(ABC):
         """
         return self._backend.initial_states
 
-    ######################### __cache ########################
-    @property
-    def config(self) -> SimulatorConfig:
-        """Get the simulator configuration.
-
-        Returns:
-            config: The simulator configuration object.
-        """
-        return cast(SimulatorConfig, self.__cache["_config"])
-
     def get_object_config(self, name: str) -> ObjectConfig:
         """Get the configuration of the specified robot/object.
 
@@ -311,7 +257,7 @@ class BaseEnv(ABC):
         Returns:
             config: The configuration object of the robot/object.
         """
-        return self.config.scene.objects[name]
+        return self._backend.cfg_objects[name]
 
     @property
     def step_dt(self) -> float:
@@ -320,12 +266,12 @@ class BaseEnv(ABC):
         Returns:
             step_dt: The time duration of a single environment step.
         """
-        return self.config.sim.dt * self.decimation
+        return self._backend.cfg_sim.dt * self.decimation
 
     @property
     def num_envs(self) -> int:
         """Get the number of parallel environments."""
-        return self.config.sim.num_envs
+        return self._backend.num_envs
 
     @property
     def robot_names(self) -> list[str]:
@@ -334,11 +280,7 @@ class BaseEnv(ABC):
         Returns:
             robots: A dictionary of robot configurations keyed by robot name.
         """
-        if "_robot_names" not in self.__cache:
-            self.__cache["_robot_names"] = [
-                name for name, obj in self.config.scene.objects.items() if obj.type == ObjectType.ROBOT
-            ]
-        return cast(list[str], self.__cache["_robot_names"])
+        return self._backend.robot_names
 
     @property
     def robots(self) -> dict[str, RobotModel]:
@@ -347,22 +289,9 @@ class BaseEnv(ABC):
         Returns:
             An instance of RobotModel representing the Gr00t robot.
         """
-        if "_robots" not in self.__cache:
-            self.__cache["_robots"] = {name: RobotModel(self.get_object_config(name)) for name in self.robot_names}
-        return cast(dict[str, RobotModel], self.__cache["_robots"])
+        return self._backend.robots
 
     ######################### Env ########################
-    # @property
-    # @abstractmethod
-    # def observation_space(self) -> Any:
-    #     """It can be any type that constrains the observation."""
-    #     return self._observation_space
-
-    # @property
-    # @abstractmethod
-    # def action_space(self) -> Any:
-    #     """It can be any type that constrains the action."""
-    #     return self._action_space
 
     @property
     def episode_step(self) -> ArrayType:

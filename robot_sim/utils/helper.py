@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import Any, Callable, Literal
 
 import gymnasium as gym
+import numpy as np
 import regex as re
+import torch
 from loguru import logger
 
 
@@ -33,6 +35,14 @@ def task_register(
         return cls
 
     return decorator
+
+
+def wrap_array(val: np.ndarray | torch.Tensor | list, device: str = "cpu") -> np.ndarray | torch.Tensor:
+    """Get the array type of the simulation."""
+    if device == "cpu":
+        return np.array(val)
+    else:
+        return torch.tensor(val, device=device)
 
 
 def get_env_id(env):

@@ -5,8 +5,6 @@ import gymnasium as gym
 import numpy as np
 
 from robot_sim.backends.types import ActionsType, StatesType
-from robot_sim.configs import SimulatorConfig
-from robot_sim.controllers import CompositeController, PIDController
 from robot_sim.envs.base import BaseEnv
 
 
@@ -50,12 +48,9 @@ class MapEnv(BaseEnv, gym.Env):
         - _init_maps: Initialize the observation, action, reward, termination, truncation, and info maps.
     """
 
-    def __init__(
-        self,
-        config: SimulatorConfig,
-        **kwargs,
-    ) -> None:
-        super().__init__(config=config, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        BaseEnv.__init__(self, **kwargs)
+        gym.Env.__init__(self)
         assert self.num_envs == 1, "Only single environment supported in MapEnv currently."
         # Initialize Gym spaces early so map builders can populate them.
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({})
@@ -86,19 +81,6 @@ class MapEnv(BaseEnv, gym.Env):
             states = options.get("initial_states", self.initial_states) if options is not None else self.initial_states
 
         return BaseEnv.reset(self, states=states)
-
-    def create_controllers(self, coeff: float = 0.9, **kwargs) -> dict[str, CompositeController]:
-        # Initialize PD controller for low-level control
-        controllers = {}
-        for name, robot in self.robots.items():
-            kp = robot.stiffness
-            kd = robot.damping
-            tor_limits = robot.get_joint_limits("torque", coeff=coeff)
-            pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
-            controllers[name] = CompositeController(
-                controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
-            )
-        return controllers
 
     def statesType2observation(self, states: StatesType) -> dict:
         observation_dict = {}

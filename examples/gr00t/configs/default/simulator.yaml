@@ -13,6 +13,14 @@ spec:
       camera: unitree_g1_with_hands/rs_camera
       width: 640
       height: 480
+  unitree:
+    network: lo
+    robot_type: g1
+    mode_pr: 0
+    mode_machine: 0
+    state_queue_len: 10
+    control_dt: 0.002
+    decimation: 10
 extras:
   decimation: 10
   max_episode_steps: 1000

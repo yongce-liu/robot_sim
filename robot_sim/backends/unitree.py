@@ -309,6 +309,7 @@ class UnitreeLowLevelBackend(BaseBackend):
         if self._joystick_thread is not None:
             self._joystick_thread.Wait(1.0)
             self._joystick_thread = None
+
         for subscriber in self._subscribers.values():
             subscriber.Close()
         for publisher in self._publishers.values():

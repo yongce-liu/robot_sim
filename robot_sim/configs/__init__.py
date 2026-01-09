@@ -22,5 +22,5 @@ __all__ = [
     "CameraConfig",
     "SensorType",
     "VisualConfig",
-    "ObjectModel"
+    "ObjectModel",
 ]

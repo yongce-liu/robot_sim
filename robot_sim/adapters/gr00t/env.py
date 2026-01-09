@@ -120,7 +120,7 @@ class Gr00tEnv(MapEnv):
             elif group_cfg["type"] == "sensor":
                 sensor_name = group_cfg["sensor_name"]
                 sensor_data_type = group_cfg.get("data_type", None)
-                sensor_cfg = self.robot.sensors[sensor_name]
+                sensor_cfg = self.robot.cfg_sensors[sensor_name]
                 # map
                 if sensor_data_type:
                     obs_map[group_name] = lambda name, states, sn=sensor_name, dt=sensor_data_type: states[
@@ -213,8 +213,8 @@ class Gr00tEnv(MapEnv):
 
         observation_params["used_joint_indices"] = used_joint_indices_in_env
         observation_params["default_joint_position"] = self.robot.default_joint_positions
-        torso_index = self.get_body_names(self.robot_name).index("torso_link")
-        pelvis_index = self.get_body_names(self.robot_name).index("pelvis")
+        torso_index = self.robot.get_body_names().index("torso_link")
+        pelvis_index = self.robot.get_body_names().index("pelvis")
 
         lower_body_policy = LowerBodyPolicy(
             actuator_indices=actuator_indices,

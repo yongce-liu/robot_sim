@@ -101,13 +101,19 @@ class ObjectModel:
         _ = self.actuator_indices
         _ = self.stiffness
         _ = self.damping
-        self._sensor_names = list(self.cfg.sensors.keys())
         for t in ControlType:
             _ = self.get_joint_limits(t)
 
     @property
-    def num_dofs(self):
-        return None
+    def cfg_sensors(self) -> dict[str, SensorConfig]:
+        return self.cfg.sensors
+
+    @property
+    def num_dofs(self) -> int:
+        if "num_dofs" in self._cache:
+            return cast(int, self._cache["num_dofs"])
+        self._cache["num_dofs"] = num_dofs = len(self.cfg.joints.values()) if self.cfg.joints else 0
+        return num_dofs
 
     @property
     def default_joint_positions(self):
@@ -172,11 +178,6 @@ class RobotModel(ObjectModel):
     def __init__(self, config: ObjectConfig):
         assert config.type == ObjectType.ROBOT, "RobotModel must be initialized with a robot ObjectConfig."
         super().__init__(config=config)
-
-    @property
-    def num_dofs(self) -> int:
-        assert self.cfg.joints is not None, "Robot configuration must have joints defined."
-        return len(self.cfg.joints.values())
 
     @property
     def default_joint_positions(self) -> np.ndarray:
@@ -263,10 +264,6 @@ class RobotModel(ObjectModel):
             dtype=np.float32,
         )
         return damping
-
-    @property
-    def sensor_names(self) -> list[str]:
-        return self._sensor_names
 
     def get_joint_limits(self, key: ControlType | str, coeff=1.0) -> tuple[np.ndarray, np.ndarray]:
         """Get joint limits for the specified control type."""

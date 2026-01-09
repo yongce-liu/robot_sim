@@ -29,7 +29,7 @@ class MujocoBackend(BaseBackend):
         self._mjcf_physics: mjcf.Physics = None
         self._renderer: Callable | None = None
         self._mjcf_model = self._init_mujoco()
-        self._update_robot_model()
+        self._update_object_model()
 
     def _init_mujoco(self) -> mjcf.RootElement:
         if self._config.scene.path is not None:
@@ -70,19 +70,15 @@ class MujocoBackend(BaseBackend):
                     logger.error(f"Duplicate name detected: {name} in object {obj_name}")
         return ans
 
-    def _update_robot_model(self) -> None:
+    def _update_object_model(self) -> None:
         """Update joint and body name indices for the given model."""
         model: mjcf.RootElement = self._mjcf_model
-        all_joints = model.find_all("joint")
+        # all_joints = model.find_all("joint")
         all_bodies = model.find_all("body")
-        all_actuators = model.find_all("actuator")
-        for name, robot in self.robots.items():
-            if robot.joint_names is None:
-                robot.joint_names = self.__update_from_set(name, all_joints)
-            if robot.actuator_names is None:
-                robot.actuator_names = self.__update_from_set(name, all_actuators)
-            if robot.body_names is None:
-                robot.body_names = self.__update_from_set(name, all_bodies)
+        # all_actuators = model.find_all("actuator")
+        for name, obj in self.objects.items():
+            if obj.body_names is None:
+                obj.body_names = self.__update_from_set(name, all_bodies)
 
     def _launch(self) -> None:
         """Initialize MuJoCo model with optional scene support."""
@@ -179,7 +175,7 @@ class MujocoBackend(BaseBackend):
         """Set actions for all robots/objects with ctrl entrypoint."""
         self._actions_cache = actions  # dict[str, np.ndarray (num_envs, num_dofs)]
         for obj_name, obj_action in actions.items():
-            actuator_names = self.robots[obj_name].get_actuator_names(prefix=f"{obj_name}/")
+            actuator_names = self.objects[obj_name].get_actuator_names(prefix=f"{obj_name}/")
             # Here, we also use the default order index when adding a object/robot
             self._mjcf_physics.named.data.ctrl[actuator_names] = obj_action[env_ids]
 
@@ -189,13 +185,13 @@ class MujocoBackend(BaseBackend):
         states: dict[str, ObjectState] = {}
         _pnd = self._mjcf_physics.named.data
         for obj_name in self.cfg_objects.keys():
-            joint_names = self.robots[obj_name].get_joint_names(prefix=f"{obj_name}/")
+            joint_names = self.objects[obj_name].get_joint_names(prefix=f"{obj_name}/")
             _root_state, _body_state = self._pack_state(obj_name)
             state = ObjectState(
                 root_state=_root_state.astype(dtype).copy(),
                 body_state=_body_state.astype(dtype).copy(),
-                joint_pos=None if len(joint_names) == 0 else _pnd.qpos[joint_names].copy()[None, ...].astype(dtype),
-                joint_vel=None if len(joint_names) == 0 else _pnd.qvel[joint_names].copy()[None, ...].astype(dtype),
+                joint_pos=_pnd.qpos[joint_names].copy()[None, ...].astype(dtype) if joint_names else None,
+                joint_vel=_pnd.qvel[joint_names].copy()[None, ...].astype(dtype) if joint_names else None,
                 joint_action=None,
                 sensors={k: deepcopy(v.data) for k, v in self._sensors[obj_name].items()},
             )
@@ -215,7 +211,7 @@ class MujocoBackend(BaseBackend):
             body_np: numpy (n_body,13)     — n_body bodies
         """
         data = self._mjcf_physics.named.data
-        body_names = [f"{obj_name}/"] + self.robots[obj_name].get_body_names(prefix=f"{obj_name}/")
+        body_names = [f"{obj_name}/"] + self.objects[obj_name].get_body_names(prefix=f"{obj_name}/")
         pos = data.xpos[body_names]
         quat = data.xquat[body_names]
 
@@ -378,8 +374,8 @@ class MujocoBackend(BaseBackend):
 
     def _set_joint_state(self, obj_name: str, obj_state: ObjectState, env_ids: ArrayType):
         """Set joint positions."""
-        joint_names = self.robots[obj_name].get_joint_names(prefix=f"{obj_name}/")
-        if len(joint_names) > 0 and obj_state.joint_pos is not None and obj_state.joint_vel is not None:
+        joint_names = self.objects[obj_name].get_joint_names(prefix=f"{obj_name}/")
+        if joint_names is not None and obj_state.joint_pos is not None and obj_state.joint_vel is not None:
             self._mjcf_physics.named.data.qpos[joint_names] = obj_state.joint_pos[env_ids]
             self._mjcf_physics.named.data.qvel[joint_names] = obj_state.joint_vel[env_ids]
 

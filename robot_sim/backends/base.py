@@ -315,18 +315,16 @@ class BaseBackend(ABC):
 
         return cast(dict[str, RobotModel | ObjectModel], self._cache["_objects"])
 
-    # @property
-    # def robot_names(self) -> list[str]:
-    #     """Get the robot names in the environment."""
-    #     if "_robot_names" not in self._cache:
-    #         self._cache["_robot_names"] = list(self.robots.keys())
-    #     return cast(list[str], self._cache["_robot_names"])
+    @property
+    def robot_names(self) -> list[str]:
+        """Get the robot names in the environment."""
+        if "_robot_names" not in self._cache:
+            self._cache["_robot_names"] = [name for name, cfg in self.cfg_objects.items() if cfg.joints is not None]
+        return cast(list[str], self._cache["_robot_names"])
 
-    # @property
-    # def robots(self) -> dict[str, RobotModel]:
-    #     """Get the robot models in the environment."""
-    #     if "_robots" not in self._cache:
-    #         self._cache["_robots"] = {
-    #             name: RobotModel(cfg) for name, cfg in self.cfg_objects.items() if cfg.joints is not None
-    #         }
-    #     return cast(dict[str, RobotModel], self._cache["_robots"])
+    @property
+    def robots(self) -> dict[str, RobotModel]:
+        """Get the robot models in the environment."""
+        if "_robots" not in self._cache:
+            self._cache["_robots"] = {name: self.objects[name] for name in self.robot_names}
+        return cast(dict[str, RobotModel], self._cache["_robots"])

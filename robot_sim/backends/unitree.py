@@ -37,7 +37,7 @@ _UNITREE_GO_PAIR = (
     unitree_default.unitree_go_msg_dds__LowCmd_,
 )
 _DEFAULT_TOPIC_MSG_JOINT_MAP: dict[
-    str, dict[str, tuple[IdlStruct, IdlStruct, Callable[..., IdlStruct], Callable[..., IdlStruct], list[str]]]
+    str, dict[str, tuple[IdlStruct, IdlStruct, Callable[..., Any], Callable[..., Any], list[str]]]
 ] = {
     "g1": {
         "rt/low": (
@@ -102,6 +102,87 @@ _DEFAULT_TOPIC_MSG_JOINT_MAP: dict[
 }
 
 
+class UnitreeRemoteController:
+    def __init__(self) -> None:
+        self.Lx = 0.0
+        self.Rx = 0.0
+        self.Ry = 0.0
+        self.Ly = 0.0
+
+        self.L1 = 0
+        self.L2 = 0
+        self.R1 = 0
+        self.R2 = 0
+        self.A = 0
+        self.B = 0
+        self.X = 0
+        self.Y = 0
+        self.Up = 0
+        self.Down = 0
+        self.Left = 0
+        self.Right = 0
+        self.Select = 0
+        self.F1 = 0
+        self.F3 = 0
+        self.Start = 0
+
+    def _parse_buttons(self, data1: int, data2: int) -> None:
+        self.R1 = (data1 >> 0) & 1
+        self.L1 = (data1 >> 1) & 1
+        self.Start = (data1 >> 2) & 1
+        self.Select = (data1 >> 3) & 1
+        self.R2 = (data1 >> 4) & 1
+        self.L2 = (data1 >> 5) & 1
+        self.F1 = (data1 >> 6) & 1
+        self.F3 = (data1 >> 7) & 1
+        self.A = (data2 >> 0) & 1
+        self.B = (data2 >> 1) & 1
+        self.X = (data2 >> 2) & 1
+        self.Y = (data2 >> 3) & 1
+        self.Up = (data2 >> 4) & 1
+        self.Right = (data2 >> 5) & 1
+        self.Down = (data2 >> 6) & 1
+        self.Left = (data2 >> 7) & 1
+
+    def _parse_axes(self, data: bytes) -> None:
+        self.Lx = float(np.frombuffer(data, dtype=np.float32, count=1, offset=4)[0])
+        self.Rx = float(np.frombuffer(data, dtype=np.float32, count=1, offset=8)[0])
+        self.Ry = float(np.frombuffer(data, dtype=np.float32, count=1, offset=12)[0])
+        self.Ly = float(np.frombuffer(data, dtype=np.float32, count=1, offset=20)[0])
+
+    def parse(self, remote_data: Any) -> dict[str, float | int]:
+        data = bytes(remote_data)
+        if len(data) < 24:
+            raise ValueError(f"Remote data too short: {len(data)} bytes.")
+        self._parse_axes(data)
+        self._parse_buttons(data[2], data[3])
+        return self.to_dict()
+
+    def to_dict(self) -> dict[str, float | int]:
+        return {
+            "Lx": self.Lx,
+            "Rx": self.Rx,
+            "Ry": self.Ry,
+            "Ly": self.Ly,
+            "L1": self.L1,
+            "L2": self.L2,
+            "R1": self.R1,
+            "R2": self.R2,
+            "A": self.A,
+            "B": self.B,
+            "X": self.X,
+            "Y": self.Y,
+            "Up": self.Up,
+            "Down": self.Down,
+            "Left": self.Left,
+            "Right": self.Right,
+            "Select": self.Select,
+            "F1": self.F1,
+            "F3": self.F3,
+            "Start": self.Start,
+        }
+
+
 class UnitreeLowLevelBackend(BaseBackend):
     def __init__(
         self, controllers: dict[str, CompositeController] | None = None, disable_controllers: bool = True, **kwargs
@@ -135,20 +216,22 @@ class UnitreeLowLevelBackend(BaseBackend):
         self._latest_state: ObjectState = ObjectState(
             root_state=None,
             body_state=None,
-            joint_pos=np.zeros((1, len(self._robot.num_dofs)), dtype=np.float32),
-            joint_vel=np.zeros((1, len(self._robot.num_dofs)), dtype=np.float32),
+            joint_pos=np.zeros((self.num_envs, self._robot.num_dofs), dtype=np.float32),
+            joint_vel=np.zeros((self.num_envs, self._robot.num_dofs), dtype=np.float32),
             joint_action=None,
             sensors={},
             extras={"mode_machine": 0, "tick": 0, "time_ns": 0},
         )  # latter overwrite ranther than rebuild
         self._state_lock = threading.Lock()
 
-        self._latest_action: np.ndarray = np.zeros((len(self._robot.num_dofs),), dtype=np.float32)
+        self._latest_action: np.ndarray = np.zeros((self.num_envs, self._robot.num_dofs), dtype=np.float32)
         self._action_lock = threading.Lock()
 
         self._state_ready = threading.Event()
         self._start_task = threading.Event()
         self._crc = CRC()
+
+        self._remote_controller = UnitreeRemoteController()
 
         self._joystick_thread: RecurrentThread | None = None
         self._control_thread: RecurrentThread | None = None
@@ -209,8 +292,10 @@ class UnitreeLowLevelBackend(BaseBackend):
         self._control_thread = RecurrentThread(interval=self._control_dt, target=self._write_cmd, name="unitree")
         self._control_thread.Start()
 
-        # self._joystick_thread = RecurrentThread()
-        # self._joystick_thread.Start()
+        self._joystick_thread = RecurrentThread(
+            interval=0.1, target=self._joystick_loop, name="unitree_joystick"
+        )  # 10 hz
+        self._joystick_thread.Start()
 
     def _render(self) -> None:
         logger.error("UnitreeBackend does not support rendering.")
@@ -221,6 +306,9 @@ class UnitreeLowLevelBackend(BaseBackend):
         if self._control_thread is not None:
             self._control_thread.Wait(1.0)
             self._control_thread = None
+        if self._joystick_thread is not None:
+            self._joystick_thread.Wait(1.0)
+            self._joystick_thread = None
         for subscriber in self._subscribers.values():
             subscriber.Close()
         for publisher in self._publishers.values():
@@ -311,8 +399,49 @@ class UnitreeLowLevelBackend(BaseBackend):
                 self._mode_machine = int(msg.mode_machine)
             if hasattr(msg, "tick"):
                 self._latest_state.extras["tick"] = int(msg.tick)
-            if self._state_ready.is_set() is False:
-                self._state_ready.set()
+        if self._state_ready.is_set() is False:
+            self._state_ready.set()
+
+    def _joystick_loop(self) -> None:
+        last_start = 0
+        last_select = 0
+
+        while True:
+            with self._state_lock:
+                msg = self._latest_state.extras.get("rt/low/raw_msg", None)
+
+            if msg is None:
+                time.sleep(0.05)
+                continue
+
+            # Unitree LowState generally has wireless_remote
+            if not hasattr(msg, "wireless_remote"):
+                time.sleep(0.05)
+                continue
+
+            try:
+                remote = self._remote_controller.parse(msg.wireless_remote)
+            except Exception as e:
+                logger.warning(f"Failed to parse remote data: {e}")
+                time.sleep(0.05)
+                continue
+
+            start = remote["Start"]
+            select = remote["Select"]
+
+            # rising edge trigger
+            if start == 1 and last_start == 0:
+                logger.info("Remote: START pressed -> Start task")
+                self._start_task.set()
+
+            if select == 1 and last_select == 0:
+                logger.info("Remote: SELECT pressed -> Stop task")
+                self._start_task.clear()
+
+            last_start = start
+            last_select = select
+
+            time.sleep(0.02)  # 50Hz
 
 
 class UnitreeHighLevelBackend(BaseBackend):

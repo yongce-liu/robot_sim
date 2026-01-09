@@ -7,8 +7,8 @@ import numpy as np
 from loguru import logger
 
 from robot_sim.backends import BackendFactory
-from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import ObjectConfig, RobotModel, SimulatorConfig
+from robot_sim.configs.types import ActionsType, ArrayType, ObjectState, StatesType
 
 
 @dataclass

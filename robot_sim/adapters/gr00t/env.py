@@ -6,11 +6,11 @@ import gymnasium as gym
 import numpy as np
 from loguru import logger
 
-from robot_sim.backends.types import ArrayType
-from robot_sim.configs import CameraConfig, ObjectConfig, ObjectType, RobotModel, SensorType, SimulatorConfig
-from robot_sim.controllers import CompositeController, PIDController
+from robot_sim.configs import CameraConfig, ObjectType, SensorType, SimulatorConfig
+from robot_sim.configs.types import ArrayType
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
+from robot_sim.utils.helper import create_pid_controllers
 
 from .policy import (
     DecoupledWBCPolicy,
@@ -44,36 +44,16 @@ class Gr00tEnv(MapEnv):
 
     """
 
-    def __init__(
-        self,
-        config: SimulatorConfig,
-        maps: dict[str, Any],
-        **kwargs,
-    ):
-        robot_config = [cfg for cfg in config.scene.objects.values() if cfg.type == ObjectType.ROBOT]
-        assert len(robot_config) == 1, "Gr00tEnv only supports single robot."
-        controllers = self.create_controllers(robot_config[0])
+    def __init__(self, config: SimulatorConfig, maps: dict[str, Any], **kwargs):
+        robot_configs = {name: cfg for name, cfg in config.scene.objects.items() if cfg.type == ObjectType.ROBOT}
+        assert len(robot_configs) == 1, "Gr00tEnv only supports single robot."
+        controllers = create_pid_controllers(configs=robot_configs, dt=config.sim.dt)
 
         super().__init__(config=config, controllers=controllers, **kwargs)
         self.robot_name = self.robot_names[0]
         self.robot = self.robots[self.robot_name]
         self._map_config = maps
         self._map_cache: MapCache = self._init_spaces_maps(**maps)
-
-    def create_controllers(self, robot_cfg: ObjectConfig) -> dict[str, CompositeController]:
-        # Initialize PD controller for low-level control
-        controllers = {}
-        coeff: float = 0.9
-        robot = RobotModel(robot_cfg)
-        for name, robot in self.robots.items():
-            kp = robot.stiffness
-            kd = robot.damping
-            tor_limits = robot.get_joint_limits("torque", coeff=coeff)
-            pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
-            controllers[name] = CompositeController(
-                controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
-            )
-        return controllers
 
     def _init_spaces_maps(
         self,

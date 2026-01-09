@@ -3,7 +3,7 @@
 import numpy as np
 
 from robot_sim.backends import MujocoBackend
-from robot_sim.backends.types import StatesType
+from robot_sim.configs.types import StatesType
 
 
 class TestMuJoCoBackend:

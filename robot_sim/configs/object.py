@@ -89,6 +89,7 @@ class ObjectConfig:
 class RobotModel:
     def __init__(self, config: ObjectConfig):
         assert config.type == ObjectType.ROBOT, "RobotModel must be initialized with a robot ObjectConfig."
+        
         self.cfg = config
         self._cache: dict[str, Any] = {}
         self.initialize()

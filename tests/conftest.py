@@ -8,8 +8,8 @@ from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
 
 from robot_sim.backends import BackendFactory
-from robot_sim.backends.types import ObjectState, StatesType
 from robot_sim.configs import SimulatorConfig
+from robot_sim.configs.types import ObjectState, StatesType
 
 
 @pytest.fixture(scope="session")

@@ -10,7 +10,7 @@ from loguru import logger
 
 import robot_sim
 import robot_sim.utils.math_array as rmath
-from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
+from robot_sim.configs.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.utils.math_array import quat_apply_inverse
 
 

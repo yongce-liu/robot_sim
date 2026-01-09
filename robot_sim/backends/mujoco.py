@@ -12,8 +12,8 @@ from dm_control import mjcf
 from loguru import logger
 
 from robot_sim.backends.base import BaseBackend
-from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import ObjectConfig, ObjectType, TerrainType
+from robot_sim.configs.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.utils.helper import recursive_setattr, resolve_asset_path
 
 

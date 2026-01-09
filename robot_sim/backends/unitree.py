@@ -14,8 +14,8 @@ from unitree_sdk2py.utils.crc import CRC
 from unitree_sdk2py.utils.thread import RecurrentThread
 
 from robot_sim.backends.base import BaseBackend
-from robot_sim.backends.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.configs import SimulatorConfig
+from robot_sim.configs.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.controllers import CompositeController
 
 _UNITREE_HG_LOW_PAIR = (

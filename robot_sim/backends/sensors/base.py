@@ -37,7 +37,7 @@ class BaseSensor(ABC):
     def bind(self, backend: "BaseBackend", obj_name: str, sensor_name: str, **kwargs) -> None:
         self._backend = backend
         # Compute update interval based on frequency, if not specified, update every step
-        self._update_interval = int(backend._sim_freq / self.config.freq) if self.config.freq is not None else 1
+        self._update_interval = int(backend.sim_freq / self.config.freq) if self.config.freq is not None else 1
         assert self._update_interval > 0, "Sensor update frequency must be less than or equal to simulation frequency."
         self._bind(obj_name=obj_name, sensor_name=sensor_name, **kwargs)
 

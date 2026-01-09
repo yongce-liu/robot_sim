@@ -3,36 +3,23 @@ from typing import Callable
 import gymnasium as gym
 import numpy as np
 
-from robot_sim.configs import ObjectConfig, ObjectType, RobotModel, SimulatorConfig
-from robot_sim.controllers import CompositeController, PIDController
+from robot_sim.configs import ObjectType, SimulatorConfig
 from robot_sim.envs import MapCache, MapEnv
+from robot_sim.utils.helper import create_pid_controllers
 from robot_sim.utils.math_array import euler_xyz_from_quat
 
 
 class Twist2Env(MapEnv):
     def __init__(self, config: SimulatorConfig, **kwargs):
-        robot_config = [cfg for cfg in config.scene.objects.values() if cfg.type == ObjectType.ROBOT]
-        controllers = self.create_controllers(robot_config[0])
+        robot_configs = {name: cfg for name, cfg in config.scene.objects.items() if cfg.type == ObjectType.ROBOT}
+        assert len(robot_configs) == 1, "Gr00tEnv only supports single robot."
+        controllers = create_pid_controllers(configs=robot_configs, dt=config.sim.dt)
+
         super().__init__(config=config, controllers=controllers, **kwargs)
         assert len(self.robot_names) == 1 and len(self.robots) == 1, "Twist2Env only supports single robot."
         self.robot_name = self.robot_names[0]
         self.robot = self.robots[self.robot_name]
         self._map_cache: MapCache = self._init_spaces_maps()
-
-    def create_controllers(self, robot_cfg: ObjectConfig) -> dict[str, CompositeController]:
-        # Initialize PD controller for low-level control
-        controllers = {}
-        coeff: float = 0.9
-        robot = RobotModel(robot_cfg)
-        for name, robot in self.robots.items():
-            kp = robot.stiffness
-            kd = robot.damping
-            tor_limits = robot.get_joint_limits("torque", coeff=coeff)
-            pd_controller = PIDController(kp=kp, kd=kd, dt=self.step_dt / self.decimation)
-            controllers[name] = CompositeController(
-                controllers={"pd_controller": pd_controller}, output_clips={"pd_controller": tor_limits}
-            )
-        return controllers
 
     def _init_spaces_maps(self) -> MapCache:
         obs_map = self._init_observation_spaces_map()

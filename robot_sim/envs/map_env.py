@@ -4,7 +4,7 @@ from typing import Any, Callable
 import gymnasium as gym
 import numpy as np
 
-from robot_sim.backends.types import ActionsType, StatesType
+from robot_sim.configs.types import ActionsType, StatesType
 from robot_sim.envs.base import BaseEnv
 
 

@@ -8,6 +8,24 @@ import regex as re
 import torch
 from loguru import logger
 
+from robot_sim.configs import ObjectConfig, RobotModel
+from robot_sim.controllers import CompositeController, PIDController
+
+
+def create_pid_controllers(configs: dict[str, ObjectConfig], dt: float = 0.001) -> dict[str, CompositeController]:
+    # Initialize PD controller for low-level control
+    controllers = {}
+    for name, cfg in configs.items():
+        robot = RobotModel(cfg)
+        kp = robot.stiffness
+        kd = robot.damping
+        tor_limits = robot.get_joint_limits("torque", coeff=cfg.extras.get("torque_coeff", 0.9))
+        pd_controller = PIDController(kp=kp, kd=kd, dt=dt)
+        controllers[name] = CompositeController(
+            controllers={"pd": pd_controller}, output_clips={"pd_controller": tor_limits}
+        )
+    return controllers
+
 
 def setup_logger(log_file: str, max_file_size: int = 10, mode: str = "w") -> None:
     """

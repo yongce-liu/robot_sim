@@ -1,6 +1,6 @@
 from typing import Literal
 
-from robot_sim.backends.types import ActionsType, ArrayType, StatesType
+from robot_sim.configs.types import ActionsType, ArrayType, StatesType
 
 
 def obs_joint_extract(

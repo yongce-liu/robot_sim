@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from robot_sim.backends.types import ArrayType, ObjectState
+from robot_sim.configs.types import ArrayType, ObjectState
 
 
 class BaseController(ABC):

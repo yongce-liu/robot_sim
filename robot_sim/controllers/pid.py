@@ -3,8 +3,9 @@
 import numpy as np
 import torch
 
-from robot_sim.backends.types import ArrayType, ObjectState
-from robot_sim.controllers import BaseController
+from robot_sim.configs.types import ArrayType, ObjectState
+
+from .base import BaseController
 
 
 class PIDController(BaseController):

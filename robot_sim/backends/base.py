@@ -8,8 +8,8 @@ import torch
 from loguru import logger
 
 from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY, BaseSensor
-from robot_sim.backends.types import ActionsType, ArrayType, StatesType
 from robot_sim.configs import (
+    BackendType,
     ObjectConfig,
     PhysicsConfig,
     RobotModel,
@@ -17,6 +17,7 @@ from robot_sim.configs import (
     TerrainConfig,
     VisualConfig,
 )
+from robot_sim.configs.types import ActionsType, ArrayType, StatesType
 from robot_sim.controllers import CompositeController
 from robot_sim.utils.helper import wrap_array
 
@@ -223,11 +224,16 @@ class BaseBackend(ABC):
 
     @property
     def cfg_spec(self) -> dict:
-        return self._config.spec.get(self._config.backend.value, {})
+        return self._config.spec.get(self.type.value, {})
 
     @property
     def cfg_extras(self) -> dict:
         return self._config.extras
+
+    @property
+    def type(self) -> BackendType:
+        """return the backend type"""
+        return self._config.backend
 
     # Quick ref config properties
     @property
@@ -296,7 +302,7 @@ class BaseBackend(ABC):
     def robot_names(self) -> list[str]:
         """Get the robot names in the environment."""
         if "_robot_names" not in self._cache:
-            self._cache["_robot_names"] = self._get_robot_names()
+            self._cache["_robot_names"] = list(self.robots.keys())
         return cast(list[str], self._cache["_robot_names"])
 
     @property

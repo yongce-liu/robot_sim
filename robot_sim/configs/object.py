@@ -86,10 +86,8 @@ class ObjectConfig:
         assert len(self.twist) == 6, "Twist must be a list of 6 elements [vx, vy, vz, wx, wy, wz]."
 
 
-class RobotModel:
+class ObjectModel:
     def __init__(self, config: ObjectConfig):
-        assert config.type == ObjectType.ROBOT, "RobotModel must be initialized with a robot ObjectConfig."
-        
         self.cfg = config
         self._cache: dict[str, Any] = {}
         self.initialize()
@@ -106,6 +104,74 @@ class RobotModel:
         self._sensor_names = list(self.cfg.sensors.keys())
         for t in ControlType:
             _ = self.get_joint_limits(t)
+
+    @property
+    def num_dofs(self):
+        return None
+
+    @property
+    def default_joint_positions(self):
+        return None
+
+    @property
+    def joint_names(self):
+        return None
+
+    @property
+    def actuator_names(self):
+        return None
+
+    @property
+    def actuator_indices(self):
+        return None
+
+    @property
+    def stiffness(self):
+        return None
+
+    @property
+    def damping(self):
+        return None
+
+    @property
+    def sensor_names(self):
+        return None
+
+    def get_joint_limits(self, *args, **kwargs):
+        return None
+
+    def get_group_joint_indices(self, *args, **kwargs):
+        return None
+
+    def get_joint_names(self, *args, **kwargs):
+        return None
+
+    def get_actuator_names(self, *args, **kwargs):
+        return None
+
+    @property
+    def body_names(self) -> list[str] | None:
+        return self._cache.get("body_names")
+
+    @body_names.setter
+    def body_names(self, value: list[str]) -> None:
+        self._cache["body_names"] = value
+
+    def get_body_names(self, prefix: str | None = None) -> list[str]:
+        """Get the names of all bodies."""
+        if prefix is None:
+            return cast(list[str], self._cache["body_names"])
+        hashed_key = f"body_names_with_prefix_{prefix}"
+        if hashed_key in self._cache:
+            return cast(list[str], self._cache[hashed_key])
+        self._cache[hashed_key] = names = [f"{prefix}{name}" for name in cast(list[str], self._cache["body_names"])]
+        return names
+
+
+class RobotModel(ObjectModel):
+    def __init__(self, config: ObjectConfig):
+        assert config.type == ObjectType.ROBOT, "RobotModel must be initialized with a robot ObjectConfig."
+        super().__init__(config=config)
 
     @property
     def num_dofs(self) -> int:
@@ -133,24 +199,6 @@ class RobotModel:
     @joint_names.setter
     def joint_names(self, value: list[str]) -> None:
         self._cache["joint_names"] = value
-
-    @property
-    def body_names(self) -> list[str] | None:
-        return self._cache.get("body_names")
-
-    @body_names.setter
-    def body_names(self, value: list[str]) -> None:
-        self._cache["body_names"] = value
-
-    def get_body_names(self, prefix: str | None = None) -> list[str]:
-        """Get the names of all bodies."""
-        if prefix is None:
-            return cast(list[str], self._cache["body_names"])
-        hashed_key = f"body_names_with_prefix_{prefix}"
-        if hashed_key in self._cache:
-            return cast(list[str], self._cache[hashed_key])
-        self._cache[hashed_key] = names = [f"{prefix}{name}" for name in cast(list[str], self._cache["body_names"])]
-        return names
 
     @property
     def actuator_names(self) -> list[str]:

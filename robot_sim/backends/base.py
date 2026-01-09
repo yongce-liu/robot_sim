@@ -11,6 +11,7 @@ from robot_sim.backends.sensors import _SENSOR_TYPE_REGISTRY, BaseSensor
 from robot_sim.configs import (
     BackendType,
     ObjectConfig,
+    ObjectModel,
     PhysicsConfig,
     RobotModel,
     SimulatorConfig,
@@ -299,17 +300,33 @@ class BaseBackend(ABC):
         return cast(StatesType, self._cache["_initial_states"])
 
     @property
-    def robot_names(self) -> list[str]:
-        """Get the robot names in the environment."""
-        if "_robot_names" not in self._cache:
-            self._cache["_robot_names"] = list(self.robots.keys())
-        return cast(list[str], self._cache["_robot_names"])
+    def object_names(self) -> list[str]:
+        if "_object_names" not in self._cache:
+            self._cache["_object_names"] = list(self.objects.keys())
+        return cast(list[str], self._cache["_object_names"])
 
     @property
-    def robots(self) -> dict[str, RobotModel]:
-        """Get the robot models in the environment."""
-        if "_robots" not in self._cache:
-            self._cache["_robots"] = {
-                name: RobotModel(cfg) for name, cfg in self.cfg_objects.items() if cfg.joints is not None
+    def objects(self) -> dict[str, RobotModel | ObjectModel]:
+        if "_objects" not in self._cache:
+            self._cache["_objects"] = {
+                name: RobotModel(cfg) if cfg.joints is not None else ObjectModel(cfg)
+                for name, cfg in self.cfg_objects.items()
             }
-        return cast(dict[str, RobotModel], self._cache["_robots"])
+
+        return cast(dict[str, RobotModel | ObjectModel], self._cache["_objects"])
+
+    # @property
+    # def robot_names(self) -> list[str]:
+    #     """Get the robot names in the environment."""
+    #     if "_robot_names" not in self._cache:
+    #         self._cache["_robot_names"] = list(self.robots.keys())
+    #     return cast(list[str], self._cache["_robot_names"])
+
+    # @property
+    # def robots(self) -> dict[str, RobotModel]:
+    #     """Get the robot models in the environment."""
+    #     if "_robots" not in self._cache:
+    #         self._cache["_robots"] = {
+    #             name: RobotModel(cfg) for name, cfg in self.cfg_objects.items() if cfg.joints is not None
+    #         }
+    #     return cast(dict[str, RobotModel], self._cache["_robots"])

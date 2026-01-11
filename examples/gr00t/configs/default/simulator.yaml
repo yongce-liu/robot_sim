@@ -14,8 +14,10 @@ spec:
       width: 640
       height: 480
   unitree:
-    network: lo
-    robot_type: g1
+    dds:
+      domain_id: 1
+      interface: lo
+    robot_type: g1_dex3
     mode_pr: 0
     mode_machine: 0
     state_queue_len: 10

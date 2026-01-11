@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING
 
 import numpy as np
 from loguru import logger
@@ -8,21 +7,17 @@ from robot_sim.configs import BackendType, CameraConfig
 
 from .base import BaseSensor
 
-if TYPE_CHECKING:
-    from robot_sim.backends import MujocoBackend
-
 
 class Camera(BaseSensor):
     """Camera sensor for RGB, depth, and segmentation."""
 
-    _backend: "MujocoBackend | None" = None
-    """Backend simulator instance reference."""
+    config: CameraConfig
+    """Camera sensor configuration for the camera."""
 
     def __init__(self, config, **kwargs):
         super().__init__(config, **kwargs)
         self._data = defaultdict(lambda: None)
         """Camera data dictionary with keys: 'rgb', 'depth', 'segmentation'."""
-        self.config: CameraConfig = config
 
     def _bind(self, obj_name: str, sensor_name: str, **kwargs) -> None:
         """Bind to mujoco backend and setup camera."""
@@ -55,13 +50,9 @@ class Camera(BaseSensor):
         """Setup a world-frame camera using pos and look_at."""
         # Compute camera orientation from pos and look_at
         mjcf_model = self._backend._mjcf_model
-        direction = np.array(
-            [
-                self.config.look_at[0] - self.config.pose[0],
-                self.config.look_at[1] - self.config.pose[1],
-                self.config.look_at[2] - self.config.pose[2],
-            ]
-        )
+        lookat, pose = self.config.look_at, self.config.pose
+        assert lookat is not None, "look_at must be specified for world camera."
+        direction = np.array([lookat[0] - pose[0], lookat[1] - pose[1], lookat[2] - pose[2]])
         direction = direction / np.linalg.norm(direction)
         up = np.array([0, 0, 1])
         right = np.cross(direction, up)
@@ -69,9 +60,9 @@ class Camera(BaseSensor):
         up = np.cross(right, direction)
 
         camera_params = {
-            "pos": f"{self.pos[0]} {self.pos[1]} {self.pos[2]}",
+            "pos": f"{pose[0]} {pose[1]} {pose[2]}",
             "mode": "fixed",
-            "fovy": self.vertical_fov,
+            "fovy": self.config.vertical_fov,
             "xyaxes": f"{right[0]} {right[1]} {right[2]} {up[0]} {up[1]} {up[2]}",
         }
         mjcf_model.worldbody.add("camera", name=self.sensor_name, **camera_params)
@@ -80,9 +71,8 @@ class Camera(BaseSensor):
         """Setup a camera mounted to a specific link."""
         # Find the target body (link) to mount the camera
         model = self._backend._mjcf_model
-        if model is None:
-            raise ValueError(f"Mount target '{self.config.mount_to}' not found in the model.")
-
+        assert model is not None, "Mujoco model is not initialized in the backend."
+        pose = self.config.pose
         # Find the specific link body
         target_body = None
         for body_name in self._backend.objects[self.obj_name].get_body_names(prefix=self.obj_name + "/"):
@@ -94,10 +84,10 @@ class Camera(BaseSensor):
             raise ValueError(f"Link '{self.config.mount_to}' not found in '{self.obj_name}'.")
 
         camera_params = {
-            "pos": f"{self.config.pose[0]} {self.config.pose[1]} {self.config.pose[2]}",
+            "pos": f"{pose[0]} {pose[1]} {pose[2]}",
             "mode": "fixed",
             "fovy": self.config.vertical_fov,
-            "quat": f"{self.config.pose[3]} {self.config.pose[4]} {self.config.pose[5]} {self.config.pose[6]}",
+            "quat": f"{pose[3]} {pose[4]} {pose[5]} {pose[6]}",
             # "euler": "0 -0.8 -1.57",  # in radians
         }
         # logger.info(f"euler angles (rad): roll={roll.item()}, pitch={pitch.item()}, yaw={yaw.item()}")

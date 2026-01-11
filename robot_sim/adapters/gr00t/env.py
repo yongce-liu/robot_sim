@@ -6,7 +6,7 @@ import gymnasium as gym
 import numpy as np
 from loguru import logger
 
-from robot_sim.configs import CameraConfig, ObjectType, SensorType, SimulatorConfig
+from robot_sim.configs import BackendType, CameraConfig, ObjectType, SensorType, SimulatorConfig
 from robot_sim.configs.types import ArrayType
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.config import configclass
@@ -47,7 +47,11 @@ class Gr00tEnv(MapEnv):
     def __init__(self, config: SimulatorConfig, maps: dict[str, Any], **kwargs):
         robot_configs = {name: cfg for name, cfg in config.scene.objects.items() if cfg.type == ObjectType.ROBOT}
         assert len(robot_configs) == 1, "Gr00tEnv only supports single robot."
-        controllers = create_pid_controllers(configs=robot_configs, dt=config.sim.dt)
+        controllers = (
+            None
+            if config.backend == BackendType.UNITREE
+            else create_pid_controllers(configs=robot_configs, dt=config.sim.dt)
+        )
 
         super().__init__(config=config, controllers=controllers, **kwargs)
         self.robot_name = self.robot_names[0]
@@ -213,8 +217,8 @@ class Gr00tEnv(MapEnv):
 
         observation_params["used_joint_indices"] = used_joint_indices_in_env
         observation_params["default_joint_position"] = self.robot.default_joint_positions
-        torso_index = self.robot.get_body_names().index("torso_link")
-        pelvis_index = self.robot.get_body_names().index("pelvis")
+        torso_index = self.robot.get_body_names().index("torso_link") if use_rpy_cmd_from_waist else None
+        pelvis_index = self.robot.get_body_names().index("pelvis") if use_rpy_cmd_from_waist else None
 
         lower_body_policy = LowerBodyPolicy(
             actuator_indices=actuator_indices,

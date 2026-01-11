@@ -104,7 +104,7 @@ class ObjectState(BaseState):
 
     root_state: ArrayType
     """Root state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, 13)."""
-    body_state: ArrayType
+    body_state: ArrayType | None = None
     """Body state ``[pos, quat, lin_vel, ang_vel]``. Shape is (num_envs, num_bodies, 13)."""
     joint_pos: ArrayType | None = None
     """Joint positions. Shape is (num_envs, num_joints). If it is None, the object has no joints."""

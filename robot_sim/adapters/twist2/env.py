@@ -4,6 +4,7 @@ import gymnasium as gym
 import numpy as np
 
 from robot_sim.configs import ObjectType, SimulatorConfig
+from robot_sim.configs.simulator import BackendType
 from robot_sim.envs import MapCache, MapEnv
 from robot_sim.utils.helper import create_pid_controllers
 from robot_sim.utils.math_array import euler_xyz_from_quat
@@ -13,7 +14,11 @@ class Twist2Env(MapEnv):
     def __init__(self, config: SimulatorConfig, **kwargs):
         robot_configs = {name: cfg for name, cfg in config.scene.objects.items() if cfg.type == ObjectType.ROBOT}
         assert len(robot_configs) == 1, "Gr00tEnv only supports single robot."
-        controllers = create_pid_controllers(configs=robot_configs, dt=config.sim.dt)
+        controllers = (
+            None
+            if config.backend == BackendType.UNITREE
+            else create_pid_controllers(configs=robot_configs, dt=config.sim.dt)
+        )
 
         super().__init__(config=config, controllers=controllers, **kwargs)
         assert len(self.robot_names) == 1 and len(self.robots) == 1, "Twist2Env only supports single robot."

@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
 import torch
+from loguru import logger
 
 from robot_sim.configs import SensorConfig
 
 if TYPE_CHECKING:
     from robot_sim.backends import BaseBackend
+
+SensorData: TypeAlias = torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray]
 
 
 class BaseSensor(ABC):
@@ -18,17 +21,19 @@ class BaseSensor(ABC):
     """Backend simulator instance reference. All class share the common backend instance."""
     config: SensorConfig
     """Sensor configuration."""
+    _data: SensorData
+    """the latest sensor data."""
+    _data_queue: deque[SensorData]
+    """Current sensor data."""
 
     def __init__(self, config: SensorConfig, **kwargs) -> None:
         ################### private attributes ###################
-        self._data: torch.Tensor | np.ndarray | dict[str, torch.Tensor | np.ndarray] | None = None
-        """the latest sensor data."""
-        self._data_queue: deque | None = None
-        """Current sensor data."""
         self._last_update_cnt_stamp: int = 0
         """Last update count stamp."""
         self._update_interval: int = 1
         """Update interval in simulation steps."""
+        self._binded = False
+        """Whether Bind finished"""
 
         self.config = config
         self._data_queue = deque(maxlen=self.config.data_buffer_length)
@@ -42,8 +47,9 @@ class BaseSensor(ABC):
         self._update_interval = int(backend.sim_freq / self.config.freq) if self.config.freq is not None else 1
         assert self._update_interval > 0, "Sensor update frequency must be less than or equal to simulation frequency."
         self._bind(obj_name=obj_name, sensor_name=sensor_name, **kwargs)
+        self._binded = True
 
-    def __call__(self, cnt: int, **kwargs) -> torch.Tensor | np.ndarray | None:
+    def __call__(self, cnt: int, **kwargs) -> SensorData | None:
         """Update sensor data if frequency allows.
 
         Args:
@@ -52,11 +58,15 @@ class BaseSensor(ABC):
         """
         # cnt: [0, self._backend._sim_freq-1]
         # scenerio: cnt=10 last_cnt=490
-        if (cnt - self._last_update_cnt_stamp) % self._update_interval == 0:
-            self._update(**kwargs)
-            self._data_queue.append(self._data)
-            self._last_update_cnt_stamp = cnt
-        return self.data
+        if self._binded:
+            if (cnt - self._last_update_cnt_stamp) % self._update_interval == 0:
+                self._update(**kwargs)
+                self._data_queue.append(self._data)
+                self._last_update_cnt_stamp = cnt
+            return self.data
+        else:
+            logger.warning("Sensor not binded yet. Call 'bind' method before using the sensor.")
+            return None
 
     @abstractmethod
     def _update(self) -> None:
@@ -66,7 +76,7 @@ class BaseSensor(ABC):
         raise NotImplementedError
 
     @property
-    def data(self):
+    def data(self) -> SensorData:
         """Get the latest sensor data."""
         return self._data
 

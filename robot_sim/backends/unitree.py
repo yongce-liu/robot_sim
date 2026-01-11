@@ -349,7 +349,9 @@ class UnitreeLowLevelBackend(BaseBackend):
             last_action = self._latest_robot_action
         with self._state_lock:
             self._latest_robot_state.joint_action = last_action
+            self._latest_robot_state.sensors = {k: deepcopy(v.data) for k, v in self._sensors[self._robot_name].items()}
             state = deepcopy(self._latest_robot_state)
+
         self._latest_states[self._robot_name] = state
         return self._latest_states
 

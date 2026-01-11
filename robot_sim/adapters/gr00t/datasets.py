@@ -88,7 +88,7 @@ class Gr00tDatasetsBuilder:
                     }
                 )
                 write_records(
-                    [item.observation[video_key] for item in records], path=output_name, video_fps=int(1 / self.step_dt)
+                    [item.observation[video_key] for item in records], path=output_name, fps=int(1 / self.step_dt)
                 )
 
     def _build_episodes(self, suffix: str = "jsonl"):
@@ -281,7 +281,7 @@ class Gr00tDatasetsBuilder:
                 }
             )
             write_records(
-                [item.observation[video_key] for item in records], path=output_name, video_fps=int(1 / self.step_dt)
+                [item.observation[video_key] for item in records], path=output_name, fps=int(1 / self.step_dt)
             )
 
         items = [(video_key, ep_idx, records) for video_key in video_keys for ep_idx, records in self.src.items()]

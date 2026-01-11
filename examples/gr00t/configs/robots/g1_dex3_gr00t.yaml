@@ -482,22 +482,16 @@ joints:
 sensors:
   # rs_camera:
   #   type: camera
+  #   series: realsense
   #   width: 640
   #   height: 480
   #   freq: 30.0
   #   vertical_fov: 59.
   #   mount_to: torso_link
   #   pose: [0.07555294, 0.02579919, 0.49719054, 0.67876761, 0.20864099, -0.20567003, -0.67338199]
-  # rs_camera:
-  #   type: camera
-  #   width: 640
-  #   height: 480
-  #   freq: 30.0
-  #   vertical_fov: 40.
-  #   mount_to: torso_link
-  #   pose: [0.07555294, 0.02579919, 0.49719054, 0.67876761, 0.20864099, -0.20567003, -0.67338199]
   rs_camera: # actually oak camera
     type: camera
+    series: realsense
     width: 640
     height: 480
     freq: 30.0

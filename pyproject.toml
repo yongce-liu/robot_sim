@@ -62,7 +62,7 @@ packs = [
     "pybind11>=3.0.1",
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",
-    "msgpack>=1.1.2",
+    "tyro>=1.0.3",
 ]
 teleop = ["general-motion-retargeting", "xrobotoolkit-sdk", "proxsuite==0.7.2"]
 hardware = [

@@ -74,7 +74,7 @@ def write_parquet(*, records: dict[str, list[Any]], path: Path) -> None:
 
 # ---------- Video ----------
 @writer_register("video", "mp4")
-def write_video_imageio(*, records: list[np.ndarray], path: Path, video_fps=30) -> None:
+def write_video_imageio(*, records: list[np.ndarray], path: Path, fps=30) -> None:
     import imageio.v3 as iio
     import numpy as np
 
@@ -95,4 +95,4 @@ def write_video_imageio(*, records: list[np.ndarray], path: Path, video_fps=30) 
 
         frames.append(rgb)
 
-    iio.imwrite(uri=path, image=frames, fps=video_fps, codec="libx264", pixelformat="yuv420p")
+    iio.imwrite(uri=path, image=frames, fps=fps, codec="libx264", pixelformat="yuv420p")

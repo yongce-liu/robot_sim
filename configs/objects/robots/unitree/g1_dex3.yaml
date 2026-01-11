@@ -480,6 +480,7 @@ joints:
 sensors:
   rs_camera:
     type: camera
+    series: realsense
     width: 640
     height: 480
     freq: 10.0

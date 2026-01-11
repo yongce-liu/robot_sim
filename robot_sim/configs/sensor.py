@@ -27,6 +27,9 @@ class SensorConfig:
 class CameraConfig(SensorConfig):
     """Camera sensor for RGB, depth, and segmentation."""
 
+    series: str | None = None
+    """Camera series for hardware experiments, e.g., 'realsense', 'opencv'."""
+
     width: int = 640
     """Image width in pixels."""
     height: int = 480

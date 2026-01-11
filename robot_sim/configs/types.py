@@ -2,7 +2,6 @@ from abc import ABC
 from dataclasses import dataclass, field, fields, replace
 from typing import Any
 
-import msgpack
 import numpy as np
 import torch
 
@@ -39,20 +38,6 @@ class BaseState(ABC):
             value = getattr(self, f.name)
             kwargs[f.name] = self._deep_clone(value)
         return replace(self, **kwargs)
-
-    def to_bytes(self) -> bytes:
-        """Serialize the state into msgpack bytes with numpy buffers."""
-        payload = _pack_value(self)
-        return msgpack.packb(payload, use_bin_type=True)
-
-    @classmethod
-    def from_bytes(cls, payload: bytes) -> "ObjectState":
-        """Deserialize msgpack bytes into an ObjectState."""
-        data = msgpack.unpackb(payload, raw=False)
-        state = _unpack_value(data)
-        if not isinstance(state, ObjectState):
-            raise ValueError("Payload does not contain an ObjectState.")
-        return state
 
     @staticmethod
     def _deep_clone(value: Any) -> Any:
@@ -141,95 +126,3 @@ class Buffer:
     body_indices_reverse: list[int] | None = None  # target -> source
     action_indices: list[int] | None = None  # source -> target
     action_indices_reverse: list[int] | None = None  # target -> source
-
-
-########################### Helper Functions ##########################
-def _pack_array(value: np.ndarray) -> dict[str, Any]:
-    if not value.flags["C_CONTIGUOUS"]:
-        value = np.ascontiguousarray(value)
-    return {
-        "__ndarray__": True,
-        "dtype": str(value.dtype),
-        "shape": list(value.shape),
-        "data": value.tobytes(),
-    }
-
-
-def _pack_state(state: ObjectState) -> dict[str, Any]:
-    state_np = state.to_numpy()
-    payload: dict[str, Any] = {}
-    for f in fields(state_np):
-        payload[f.name] = _pack_value(getattr(state_np, f.name))
-    return payload
-
-
-def _pack_value(value: Any) -> Any:
-    if isinstance(value, ObjectState):
-        return {"__object_state__": True, "data": _pack_state(value)}
-    if isinstance(value, torch.Tensor):
-        value = value.detach().cpu().numpy()
-    if isinstance(value, np.ndarray):
-        return _pack_array(value)
-    if isinstance(value, dict):
-        return {k: _pack_value(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_pack_value(v) for v in value]
-    return value
-
-
-def _unpack_array(value: dict[str, Any]) -> np.ndarray:
-    dtype = np.dtype(value["dtype"])
-    data = value["data"]
-    array = np.frombuffer(data, dtype=dtype)
-    shape = value.get("shape", [])
-    if shape:
-        array = array.reshape(tuple(shape))
-    return array.copy()
-
-
-def _unpack_state(payload: dict[str, Any]) -> ObjectState:
-    kwargs: dict[str, Any] = {}
-    for f in fields(ObjectState):
-        kwargs[f.name] = _unpack_value(payload.get(f.name))
-    return ObjectState(**kwargs)
-
-
-def _unpack_value(value: Any) -> Any:
-    if isinstance(value, dict):
-        if value.get("__object_state__") is True:
-            return _unpack_state(value.get("data", {}))
-        if value.get("__ndarray__") is True:
-            return _unpack_array(value)
-        return {k: _unpack_value(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_unpack_value(v) for v in value]
-    return value
-
-
-def states_to_bytes(states: StatesType) -> bytes:
-    payload = {name: _pack_value(state) for name, state in states.items()}
-    return msgpack.packb(payload, use_bin_type=True)
-
-
-def bytes_to_states(payload: bytes) -> StatesType:
-    data = msgpack.unpackb(payload, raw=False)
-    states: StatesType = {}
-    for name, value in data.items():
-        states[name] = _unpack_value(value)
-    return states
-
-
-def actions_to_bytes(actions: ActionsType) -> bytes:
-    payload = {name: _pack_value(action) for name, action in actions.items()}
-    return msgpack.packb(payload, use_bin_type=True)
-
-
-def bytes_to_actions(payload: bytes) -> ActionsType:
-    data = msgpack.unpackb(payload, raw=False)
-    actions: ActionsType = {}
-    for name, value in data.items():
-        decoded = _unpack_value(value)
-        if not isinstance(decoded, np.ndarray):
-            decoded = np.asarray(decoded, dtype=np.float32)
-        actions[name] = decoded
-    return actions

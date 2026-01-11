@@ -128,7 +128,7 @@ class GymRecorder(gym.Wrapper):
                 write_records(
                     path=Path(f"{output_name_prefix}/videos/episode_{k:06d}.mp4"),
                     records=[item.frame for item in v],
-                    video_fps=self.env.metadata.get("render_fps", 30),
+                    fps=self.env.metadata.get("render_fps", 30),
                 )
             write_records(path=f"{output_name_prefix}/episode_{k:06d}.{output_format}", records=v)
 

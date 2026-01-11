@@ -40,11 +40,11 @@ observation:
   #   - _target_: robot_sim.adapters.gr00t.utils.obs_body_state_split
   #   - body_patterns: [right_wrist_yaw.*]
   #     mode: quaternion
-  ######## Video ########
-  video.ego_view:
-    type: sensor
-    sensor_name: rs_camera
-    data_type: rgb
+  # ######## Video ########
+  # video.ego_view:
+  #   type: sensor
+  #   sensor_name: rs_camera
+  #   data_type: rgb
   # video.tpp_view:
   #   type: sensor
   #   sensor_name: tpp_camera

@@ -6,7 +6,7 @@ path: assets/robots/unitree/g1/g1_dex3_rev_1_0.xml
 joints:
   left_hip_pitch_joint:
     control_type: torque
-    stiffness: 150.0
+    stiffness: 100.0
     damping: 2.0
     velocity_limit: 32.0
     torque_limit: 88.0
@@ -17,7 +17,7 @@ joints:
       frictionloss: 0.2
   left_hip_roll_joint:
     control_type: torque
-    stiffness: 150.0
+    stiffness: 100.0
     damping: 2.0
     velocity_limit: 20.0
     torque_limit: 139.0
@@ -28,7 +28,7 @@ joints:
       frictionloss: 0.2
   left_hip_yaw_joint:
     control_type: torque
-    stiffness: 150.0
+    stiffness: 100.0
     damping: 2.0
     velocity_limit: 32.0
     torque_limit: 88.0
@@ -39,7 +39,7 @@ joints:
       frictionloss: 0.2
   left_knee_joint:
     control_type: torque
-    stiffness: 300.0
+    stiffness: 150.0
     damping: 4.0
     velocity_limit: 20.0
     torque_limit: 139.0
@@ -72,7 +72,7 @@ joints:
       frictionloss: 0.2
   right_hip_pitch_joint:
     control_type: torque
-    stiffness: 150.0
+    stiffness: 100.0
     damping: 2.0
     velocity_limit: 32.0
     torque_limit: 88.0
@@ -83,7 +83,7 @@ joints:
       frictionloss: 0.2
   right_hip_roll_joint:
     control_type: torque
-    stiffness: 150.0
+    stiffness: 100.0
     damping: 2.0
     velocity_limit: 20.0
     torque_limit: 139.0
@@ -94,7 +94,7 @@ joints:
       frictionloss: 0.2
   right_hip_yaw_joint:
     control_type: torque
-    stiffness: 150.0
+    stiffness: 100.0
     damping: 2.0
     velocity_limit: 32.0
     torque_limit: 88.0
@@ -105,7 +105,7 @@ joints:
       frictionloss: 0.2
   right_knee_joint:
     control_type: torque
-    stiffness: 200.0
+    stiffness: 150.0
     damping: 4.0
     velocity_limit: 20.0
     torque_limit: 139.0
@@ -138,8 +138,8 @@ joints:
       frictionloss: 0.2
   waist_yaw_joint:
     control_type: torque
-    stiffness: 250.0
-    damping: 5.0
+    stiffness: 150.0
+    damping: 4.0
     velocity_limit: 32.0
     torque_limit: 88.0
     position_limit: [-2.618, 2.618]
@@ -149,8 +149,8 @@ joints:
       frictionloss: 0.2
   waist_roll_joint:
     control_type: torque
-    stiffness: 250.0
-    damping: 5.0
+    stiffness: 150.0
+    damping: 4.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-0.52, 0.52]
@@ -160,8 +160,8 @@ joints:
       frictionloss: 0.2
   waist_pitch_joint:
     control_type: torque
-    stiffness: 250.0
-    damping: 5.0
+    stiffness: 150.0
+    damping: 4.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-0.52, 0.52]
@@ -171,7 +171,7 @@ joints:
       frictionloss: 0.2
   left_shoulder_pitch_joint:
     control_type: torque
-    stiffness: 100.0
+    stiffness: 40.0
     damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
@@ -182,7 +182,7 @@ joints:
       frictionloss: 0.2
   left_shoulder_roll_joint:
     control_type: torque
-    stiffness: 100.0
+    stiffness: 40.0
     damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
@@ -194,7 +194,7 @@ joints:
   left_shoulder_yaw_joint:
     control_type: torque
     stiffness: 40.0
-    damping: 2.0
+    damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-2.618, 2.618]
@@ -205,7 +205,7 @@ joints:
   left_elbow_joint:
     control_type: torque
     stiffness: 40.0
-    damping: 2.0
+    damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-1.0472, 2.0944]
@@ -216,7 +216,7 @@ joints:
   left_wrist_roll_joint:
     control_type: torque
     stiffness: 20.0
-    damping: 2.0
+    damping: 1.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-1.972222054, 1.972222054]
@@ -227,7 +227,7 @@ joints:
   left_wrist_pitch_joint:
     control_type: torque
     stiffness: 20.0
-    damping: 2.0
+    damping: 1.0
     velocity_limit: 22.0
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
@@ -238,7 +238,7 @@ joints:
   left_wrist_yaw_joint:
     control_type: torque
     stiffness: 20.0
-    damping: 2.0
+    damping: 1.0
     velocity_limit: 22.0
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
@@ -250,7 +250,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [-1.57079632, 0.0]
     default_position: 0.0
@@ -261,7 +261,7 @@ joints:
     control_type: position #torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
     default_position: 0.0
@@ -272,7 +272,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [-1.57079632, 0.0]
     default_position: 0.0
@@ -283,7 +283,7 @@ joints:
     control_type: position #torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
     default_position: 0.0
@@ -294,7 +294,7 @@ joints:
     control_type: position #torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 2.45
     position_limit: [-1.04719755, 1.04719755]
     default_position: 0.0
@@ -305,7 +305,7 @@ joints:
     control_type: position #torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [-0.724312, 1.04719755]
     default_position: 0.0
@@ -316,7 +316,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [0.0, 1.74532925]
     default_position: 0.0
@@ -325,7 +325,7 @@ joints:
       frictionloss: 0.01
   right_shoulder_pitch_joint:
     control_type: torque
-    stiffness: 100.0
+    stiffness: 40.0
     damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
@@ -336,7 +336,7 @@ joints:
       frictionloss: 0.2
   right_shoulder_roll_joint:
     control_type: torque
-    stiffness: 100.0
+    stiffness: 40.0
     damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
@@ -348,7 +348,7 @@ joints:
   right_shoulder_yaw_joint:
     control_type: torque
     stiffness: 40.0
-    damping: 2.0
+    damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-2.618, 2.618]
@@ -359,7 +359,7 @@ joints:
   right_elbow_joint:
     control_type: torque
     stiffness: 40.0
-    damping: 2.0
+    damping: 5.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-1.0472, 2.0944]
@@ -370,7 +370,7 @@ joints:
   right_wrist_roll_joint:
     control_type: torque
     stiffness: 20.0
-    damping: 2.0
+    damping: 1.0
     velocity_limit: 37.0
     torque_limit: 25.0
     position_limit: [-1.972222054, 1.972222054]
@@ -381,7 +381,7 @@ joints:
   right_wrist_pitch_joint:
     control_type: torque
     stiffness: 20.0
-    damping: 2.0
+    damping: 1.0
     velocity_limit: 22.0
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
@@ -392,7 +392,7 @@ joints:
   right_wrist_yaw_joint:
     control_type: torque
     stiffness: 20.0
-    damping: 2.0
+    damping: 1.0
     velocity_limit: 22.0
     torque_limit: 5.0
     position_limit: [-1.614429558, 1.614429558]
@@ -404,7 +404,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [0.0, 1.57079632]
     default_position: 0.0
@@ -415,7 +415,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [0.0, 1.74532925]
     default_position: 0.0
@@ -426,7 +426,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [0.0, 1.57079632]
     default_position: 0.0
@@ -437,7 +437,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [0.0, 1.74532925]
     default_position: 0.0
@@ -448,7 +448,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 2.45
     position_limit: [-1.04719755, 1.04719755]
     default_position: 0.0
@@ -459,7 +459,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     # position_limit: [-1.04719755, 1.04719755]
     position_limit: [-1.04719755, 0.61086523]
@@ -471,7 +471,7 @@ joints:
     control_type: position # torque
     stiffness: 5.0
     damping: 1.0
-    velocity_limit: 1e15
+    velocity_limit: 10
     torque_limit: 1.4
     position_limit: [-1.74532925, 0.0]
     default_position: 0.0
@@ -499,7 +499,7 @@ sensors:
     pose: [0.1021, -0.0094, 0.4245, 0.64367, 0.26524, -0.27106, -0.66472]
     series: zmq
     extras:
-      ip: 192.168.123.222
+      ip: 192.168.123.164
       port: 5555
       unit_test: false
   tpp_camera:

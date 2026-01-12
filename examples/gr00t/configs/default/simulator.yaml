@@ -18,6 +18,8 @@ spec:
     dds:
       domain_id: 1
       interface: lo
+      # domain_id: 0
+      # interface: enp49s0
     robot_type: g1_dex3
     mode_pr: 0
     mode_machine: 0

@@ -14,6 +14,7 @@ spec:
       width: 640
       height: 480
   unitree:
+    mode: low_level
     dds:
       domain_id: 1
       interface: lo

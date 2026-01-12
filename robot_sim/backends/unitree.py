@@ -169,7 +169,7 @@ class UnitreeRemoteController:
         self._parse_axes(data)
         self._parse_buttons(data[2], data[3])
 
-    def to_dict(self) -> dict[str, float | int]:
+    def get_dict(self) -> dict[str, float | int]:
         return {
             "Lx": self.Lx,
             "Rx": self.Rx,
@@ -290,19 +290,19 @@ class UnitreeLowLevelBackend(BaseBackend):
         for publisher in self._publishers.values():
             publisher.Init()
 
-        if not self._state_ready.wait(timeout=2.0):
-            logger.warning(
-                "UnitreeBackend did not receive initial state in time; commands will be sent after state arrives."
-            )
-
         self._init_cmd_msgs(joint_targets=self._default_joint_positions)
-        self._control_thread = RecurrentThread(interval=self._control_dt, target=self._write_cmd, name="unitree")
+        self._control_thread = RecurrentThread(interval=self._control_dt, target=self._write_cmd_loop, name="unitree")
         self._control_thread.Start()
 
         self._joystick_thread = RecurrentThread(
-            interval=0.1, target=self._joystick_loop, name="unitree_joystick"
-        )  # 10 hz
+            interval=self._control_dt * 10, target=self._joystick_loop, name="unitree_joystick"
+        )  # 10 * control dt = 10 * 0.002 = 0.02s
         self._joystick_thread.Start()
+
+        while not self._state_ready.wait(timeout=2.0):
+            logger.warning(
+                "UnitreeBackend did not receive initial state in time; commands will be sent after state arrives."
+            )
 
     def _render(self) -> None:
         # logger.error("UnitreeBackend does not support rendering.")
@@ -360,7 +360,7 @@ class UnitreeLowLevelBackend(BaseBackend):
         if self._cmd_cnt % self._decimation == 0:
             with self._action_lock:
                 self._latest_robot_action = actions[self._robot_name].clip(self._pos_limits[0], self._pos_limits[1])
-                targets = self._latest_robot_action if self._start_task.is_set() else self._default_joint_positions
+                targets = self._latest_robot_action if self._state_ready.is_set() else self._default_joint_positions
             self._build_cmd_msgs(targets)
         self._cmd_cnt = (self._cmd_cnt + 1) % self._decimation
 
@@ -396,13 +396,6 @@ class UnitreeLowLevelBackend(BaseBackend):
             if hasattr(cmd_msg, "crc"):
                 cmd_msg.crc = self._crc.Crc(cmd_msg)
 
-    def _write_cmd(self) -> None:
-        for topic, publisher in self._publishers.items():
-            cmd_msg = self._cmd_msgs[topic]
-            if hasattr(cmd_msg, "crc"):
-                cmd_msg.crc = self._crc.Crc(cmd_msg)
-            publisher.Write(cmd_msg)
-
     def _assign_robot_state(
         self, topic: str, msg: unitree_hg.msg.dds_.LowState_ | unitree_hg.msg.dds_.HandState_, indices: np.ndarray
     ) -> None:
@@ -424,47 +417,6 @@ class UnitreeLowLevelBackend(BaseBackend):
 
         if self._state_ready.is_set() is False:
             self._state_ready.set()
-            self._start_task.set()  # FIXME: Temporarily enable task start upon first state reception
-
-    def _joystick_loop(self) -> None:
-        last_start = 0
-        last_select = 0
-
-        while True:
-            msg = self._state_msgs.get("rt/low", None)
-
-            if msg is None:
-                time.sleep(0.05)
-                continue
-
-            # Unitree LowState generally has wireless_remote
-            if not hasattr(msg, "wireless_remote"):
-                time.sleep(0.05)
-                continue
-
-            try:
-                self._remote_controller.parse(msg.wireless_remote)
-            except Exception as e:
-                logger.warning(f"Failed to parse remote data: {e}")
-                time.sleep(0.05)
-                continue
-
-            start = self._remote_controller.Start
-            select = self._remote_controller.Select
-
-            # rising edge trigger
-            if start == 1 and last_start == 0:
-                logger.debug("Remote: START pressed -> Start task")
-                self._start_task.set()
-
-            if select == 1 and last_select == 0:
-                logger.debug("Remote: SELECT pressed -> Stop task")
-                self._start_task.clear()
-
-            last_start = start
-            last_select = select
-
-            time.sleep(0.02)  # 50Hz
 
     def _build_dummy_state(self) -> StatesType:
         states = {}
@@ -483,6 +435,42 @@ class UnitreeLowLevelBackend(BaseBackend):
                 states[name].extras = {}
         return states
 
+    def _write_cmd_loop(self) -> None:
+        for topic, publisher in self._publishers.items():
+            cmd_msg = self._cmd_msgs[topic]
+            if hasattr(cmd_msg, "crc"):
+                cmd_msg.crc = self._crc.Crc(cmd_msg)
+            publisher.Write(cmd_msg)
+
+    def _joystick_loop(self) -> None:
+        last_start = 0
+        last_select = 0
+
+        msg = self._state_msgs.get("rt/low", None)
+
+        if msg is None or not hasattr(msg, "wireless_remote"):
+            return
+
+        try:
+            self._remote_controller.parse(msg.wireless_remote)
+        except Exception as e:
+            logger.warning(f"Failed to parse remote data: {e}")
+
+        start = self._remote_controller.Start
+        select = self._remote_controller.Select
+
+        # rising edge trigger
+        if start == 1 and last_start == 0:
+            logger.debug("Remote: START pressed -> Start task")
+            self._start_task.set()
+
+        if select == 1 and last_select == 0:
+            logger.debug("Remote: SELECT pressed -> Stop task")
+            self._start_task.clear()
+
+        last_start = start
+        last_select = select
+
 
 class UnitreeHighLevelBackend(BaseBackend):
     def __init__(self, config: SimulatorConfig, **kwargs):
@@ -494,10 +482,10 @@ class UnitreeFactory:
     @staticmethod
     def create(config: SimulatorConfig, **kwargs) -> BaseBackend:
         spec = config.spec.get("unitree", {})
-        mode = spec.get("mode", "low")
-        if mode == "low":
+        mode = spec.get("mode", "low_level").lower()
+        if mode == "low_level":
             return UnitreeLowLevelBackend(config=config, **kwargs)
-        elif mode == "high":
+        elif mode == "high_level":
             raise NotImplementedError("UnitreeHighLevelBackend is not yet implemented.")
             # return UnitreeHighLevelBackend(config=config, **kwargs)
         else:

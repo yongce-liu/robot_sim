@@ -66,6 +66,8 @@ class BaseEnv(ABC):
 
         # cache
         self._mdp_cache: MDPCache = MDPCache()
+        # determine whether start the task. In general, if haven't started the task, we will send default idle commands.
+        self._task_started: bool = False
         self.__cache: dict[str, Any] = {}
 
     def reset(self, states: StatesType) -> tuple[Any, dict[str, Any]]:
@@ -313,6 +315,19 @@ class BaseEnv(ABC):
             decimation: The number of simulation steps per environment step.
         """
         return self._decimation
+
+    @property
+    def task_started(self) -> bool:
+        """
+        Check if the task is started and not in emergency stop.
+        If has no such attribute, return False by default.
+        """
+        if not self._task_started:
+            self._task_started = getattr(self._backend, "task_started", False)
+        return self._task_started
+
+    def start_task(self) -> None:
+        self._task_started = True
 
     ######################## MDP Cache Properties ########################
     @property

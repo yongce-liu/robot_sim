@@ -43,6 +43,8 @@ def run(cfg: DictConfig) -> None:
     logger.info("Initializing Gr00tEnv...")
     task = gym.make(task_cfg.task, config=task_cfg.simulator, maps=task_cfg.maps, **task_cfg.params)
 
+    # getattr(task.unwrapped, "start_task", lambda: None)()  # Start the task if applicable
+
     # Reset environment
     logger.info("Resetting environment...")
     obs, info = task.reset()
@@ -54,12 +56,12 @@ def run(cfg: DictConfig) -> None:
     logger.info(f"Running {num_steps} simulation steps...")
 
     for step in range(num_steps):
-        # Create a simple random action
-        # For now, just use zeros for all action groups
-        action = task.action_space.sample()
-        for k, v in action.items():
-            action[k] = 0 * v  # Zero action
-        action["action.base_height_command"] = [0.74]
+        action = task.action_space.sample() # it can be replaced with your policy
+        if not getattr(task.unwrapped, "task_started", False):
+            # If task is not started, just use zeros for all action groups
+            for k, v in action.items():
+                action[k] = 0 * v  # Zero action
+            action["action.base_height_command"] = [0.78]
 
         # Step environment
         obs, reward, terminated, truncated, info = task.step(action)

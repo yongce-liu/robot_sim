@@ -259,11 +259,11 @@ class UnitreeLowLevelBackend(BaseBackend):
 
         # Command smoother
         self._command_smoother = CommandSmoother(
-            num_joints=self._robot.num_dofs,
             dt=self._control_dt * self._decimation,  # Each sub-interval: pd control
-            max_velocity=self.cfg_spec.get("max_joint_velocity", 2.0),  # rad/s
-            max_acceleration=self.cfg_spec.get("max_joint_acceleration", 10.0),  # rad/s^2
-            enable=self.cfg_spec.get("enable_command_smoothing", True),
+            enable=self.cfg_spec.get("command_smooth_enabled", True),
+            alpha=self.cfg_spec.get("command_smooth_alpha", 1.0),
+            # velocity is absolute value
+            max_velocity=self._robot.get_joint_limits("velocity", coeff=self.cfg_spec.get("velocity_coeff", 0.9))[1],
             initial_positions=self._default_joint_positions,
         )
 
@@ -312,17 +312,18 @@ class UnitreeLowLevelBackend(BaseBackend):
 
         self._init_cmd_msgs(joint_targets=self._default_joint_positions)
         self._control_thread = RecurrentThread(interval=self._control_dt, target=self._write_cmd_loop, name="unitree")
-        self._control_thread.Start()
-
         self._joystick_thread = RecurrentThread(
             interval=self._control_dt * 10, target=self._joystick_loop, name="unitree_joystick"
         )  # 10 * control dt = 10 * 0.002 = 0.02s
-        self._joystick_thread.Start()
 
         while not self._state_ready.wait(timeout=2.0):
             logger.warning(
                 "UnitreeBackend did not receive initial state in time; commands will be sent after state arrives."
             )
+
+        # start control & joystick thread
+        self._control_thread.Start()
+        self._joystick_thread.Start()
 
     def _render(self) -> None:
         # logger.error("UnitreeBackend does not support rendering.")
@@ -471,6 +472,7 @@ class UnitreeLowLevelBackend(BaseBackend):
         # Check emergency stop
         if self._emergency_stop.is_set():
             logger.warning("Emergency stop active, not sending commands.")
+            time.sleep(2.0)
             return
 
         # Check communication timeout

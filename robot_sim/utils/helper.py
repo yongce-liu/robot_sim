@@ -169,32 +169,30 @@ class CommandSmoother:
 
     def __init__(
         self,
-        num_joints: int,
         dt: float,
-        max_velocity: float = 2.0,
-        max_acceleration: float = 10.0,
         enable: bool = True,
+        alpha: np.ndarray | float = 1.0,
+        max_velocity: np.ndarray | float = float("inf"),
         initial_positions: np.ndarray | None = None,
     ):
         """
         Initialize the command smoother.
 
         Args:
-            num_joints: Number of robot joints
+            alpha: Smoothing factor between 0 and 1 (1 = no smoothing)
+            initial_positions: Initial joint positions array of shape (..., num_joints)
             dt: Control time step in seconds
             max_velocity: Maximum allowed joint velocity in rad/s
-            max_acceleration: Maximum allowed joint acceleration in rad/s^2
             enable: Whether to enable smoothing (if False, commands pass through unchanged)
         """
-        self.num_joints = num_joints
         self.dt = dt
         self.max_velocity = max_velocity
-        self.max_acceleration = max_acceleration
+        self.max_delta_pos = max_velocity * dt
+        self.alpha = alpha
         self.enable = enable
 
         # State tracking
-        self.previous_targets: np.ndarray | None = None
-        self.last_velocity: np.ndarray | None = None
+        self.last_targets: np.ndarray | None = None
         if initial_positions is not None:
             self.reset(initial_positions)
 
@@ -205,8 +203,7 @@ class CommandSmoother:
         Args:
             initial_positions: Initial joint positions array of shape (..., num_joints)
         """
-        self.previous_targets = initial_positions.copy()
-        self.last_velocity = np.zeros_like(initial_positions)
+        self.last_targets = initial_positions.copy()
 
     def smooth(self, target_positions: np.ndarray) -> np.ndarray:
         """
@@ -221,42 +218,14 @@ class CommandSmoother:
         if not self.enable:
             return target_positions
 
-        if self.previous_targets is None:
+        if self.last_targets is None:
             self.reset(target_positions)
             return target_positions
 
-        # Calculate position change
-        delta_pos = target_positions - self.previous_targets
+        target_positions = (1 - self.alpha) * self.last_targets + self.alpha * target_positions
 
-        # Calculate expected velocity
-        expected_vel = delta_pos / self.dt
+        # Calculate position change && expected velocity && clip to max delta position
+        delta_pos = (target_positions - self.last_targets).clip(-self.max_delta_pos, self.max_delta_pos)
+        self.last_targets += delta_pos
 
-        # Apply velocity limits
-        vel_scale = np.ones_like(expected_vel)
-        vel_exceeded = np.abs(expected_vel) > self.max_velocity
-        if vel_exceeded.any():
-            vel_scale[vel_exceeded] = self.max_velocity / np.abs(expected_vel[vel_exceeded])
-            max_violation = np.max(np.abs(expected_vel)) / self.max_velocity
-            logger.warning(f"Joint velocity limit exceeded, scaling commands. Max violation: {max_violation:.2f}x")
-
-        # Calculate expected acceleration
-        expected_acc = (expected_vel - self.last_velocity) / self.dt
-
-        # Apply acceleration limits
-        acc_scale = np.ones_like(expected_acc)
-        acc_exceeded = np.abs(expected_acc) > self.max_acceleration
-        if acc_exceeded.any():
-            acc_scale[acc_exceeded] = self.max_acceleration / np.abs(expected_acc[acc_exceeded])
-            max_violation = np.max(np.abs(expected_acc)) / self.max_acceleration
-            logger.warning(f"Joint acceleration limit exceeded, scaling commands. Max violation: {max_violation:.2f}x")
-
-        # Apply the most restrictive limit
-        scale = np.minimum(vel_scale, acc_scale)
-        smoothed_delta = delta_pos * scale
-        smoothed_targets = self.previous_targets + smoothed_delta
-
-        # Update state
-        self.last_velocity = smoothed_delta / self.dt
-        self.previous_targets = smoothed_targets
-
-        return cast(np.ndarray, smoothed_targets)
+        return cast(np.ndarray, self.last_targets)

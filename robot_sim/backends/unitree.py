@@ -17,6 +17,7 @@ from robot_sim.backends.base import BaseBackend
 from robot_sim.configs import SimulatorConfig
 from robot_sim.configs.types import ActionsType, ArrayType, ObjectState, StatesType
 from robot_sim.controllers import CompositeController
+from robot_sim.utils.helper import CommandSmoother
 
 TopicSpec: TypeAlias = tuple[
     type[IdlStruct],
@@ -214,6 +215,7 @@ class UnitreeLowLevelBackend(BaseBackend):
         self._mode_pr = int(self.cfg_spec.get("mode_pr", 0))
         self._mode_machine = int(self.cfg_spec.get("mode_machine", 0))
         self._state_queue_len = int(self.cfg_spec.get("state_queue_len", 10))
+        self._command_timeout = self.cfg_spec.get("command_timeout", 1.0)  # seconds
 
         self._control_dt = self.cfg_sim.dt
         self._cmd_cnt = 0
@@ -234,7 +236,8 @@ class UnitreeLowLevelBackend(BaseBackend):
         self._action_lock = threading.Lock()
 
         self._state_ready = threading.Event()
-        self._start_task = threading.Event()
+        self._task_start = threading.Event()
+        self._emergency_stop = threading.Event()  # Emergency stop flag
         self._crc = CRC()
 
         self._remote_controller = UnitreeRemoteController()
@@ -245,7 +248,24 @@ class UnitreeLowLevelBackend(BaseBackend):
         self._default_joint_positions = self._robot.default_joint_positions[np.newaxis, :].repeat(self.num_envs, axis=0)
         self._joint_kp, self._joint_kd = self._robot.stiffness, self._robot.damping
         self._pos_limits = self._robot.get_joint_limits("position")
+
+        # State monitoring
         self._next_sim_time = None
+        self._last_state_time = time.monotonic()
+
+        # Remote controller state (thread-safe)
+        self._last_remote_start = 0
+        self._last_remote_select = 0
+
+        # Command smoother
+        self._command_smoother = CommandSmoother(
+            num_joints=self._robot.num_dofs,
+            dt=self._control_dt * self._decimation,  # Each sub-interval: pd control
+            max_velocity=self.cfg_spec.get("max_joint_velocity", 2.0),  # rad/s
+            max_acceleration=self.cfg_spec.get("max_joint_acceleration", 10.0),  # rad/s^2
+            enable=self.cfg_spec.get("enable_command_smoothing", True),
+            initial_positions=self._default_joint_positions,
+        )
 
         self._init_dds(**self.cfg_spec.get("dds", {}))
 
@@ -310,6 +330,9 @@ class UnitreeLowLevelBackend(BaseBackend):
 
     def close(self) -> None:
         """Close the simulation."""
+        logger.info("Closing UnitreeBackend, triggering emergency stop...")
+        self._emergency_stop.set()
+
         if self._control_thread is not None:
             self._control_thread.Wait(1.0)
             self._control_thread = None
@@ -321,6 +344,8 @@ class UnitreeLowLevelBackend(BaseBackend):
             subscriber.Close()
         for publisher in self._publishers.values():
             publisher.Close()
+
+        logger.info("UnitreeBackend closed successfully.")
 
     def _simulate(self):
         """Simulate the environment for one time step."""
@@ -385,8 +410,11 @@ class UnitreeLowLevelBackend(BaseBackend):
                 cmd_msg.crc = self._crc.Crc(cmd_msg)
 
     def _build_cmd_msgs(self, joint_targets: np.ndarray) -> None:
+        # Apply smoothing and safety checks
+        safe_targets = self._command_smoother.smooth(joint_targets)
+
         for topic, cmd_msg in self._cmd_msgs.items():
-            targets = joint_targets[0, self._topic_joint_indices[topic]]
+            targets = safe_targets[0, self._topic_joint_indices[topic]]
             for i, val in enumerate(targets):
                 cmd_msg.motor_cmd[i].q = float(val)
             if hasattr(cmd_msg, "mode_pr"):
@@ -399,12 +427,15 @@ class UnitreeLowLevelBackend(BaseBackend):
     def _assign_robot_state(
         self, topic: str, msg: unitree_hg.msg.dds_.LowState_ | unitree_hg.msg.dds_.HandState_, indices: np.ndarray
     ) -> None:
-        self._latest_robot_state.joint_pos[0, indices] = np.array([msg.motor_state[i].q for i in range(len(indices))])
-        self._latest_robot_state.joint_vel[0, indices] = np.array([msg.motor_state[i].dq for i in range(len(indices))])
+        q = np.array([msg.motor_state[i].q for i in range(len(indices))])
+        dq = np.array([msg.motor_state[i].dq for i in range(len(indices))])
         with self._state_lock:
             # self._latest_robot_state.extras[f"{topic}/raw_msg"] = msg
+            self._latest_robot_state.joint_pos[0, indices] = q
+            self._latest_robot_state.joint_vel[0, indices] = dq
             self._state_msgs[topic] = msg
-            self._latest_robot_state.extras["time_ns"] = time.monotonic_ns()
+            self._last_state_time = time.monotonic()  # Update state reception time
+
             if hasattr(msg, "imu_state"):
                 self._latest_robot_state.root_state[0, 3:] = np.concatenate(
                     [msg.imu_state.quaternion, msg.imu_state.rpy, msg.imu_state.gyroscope]
@@ -413,6 +444,7 @@ class UnitreeLowLevelBackend(BaseBackend):
                 self._latest_robot_state.extras["mode_machine"] = int(msg.mode_machine)
                 self._mode_machine = int(msg.mode_machine)
             if hasattr(msg, "tick"):
+                self._latest_robot_state.extras["time_ns"] = time.monotonic_ns()
                 self._latest_robot_state.extras["tick"] = int(msg.tick)
 
         if self._state_ready.is_set() is False:
@@ -436,16 +468,32 @@ class UnitreeLowLevelBackend(BaseBackend):
         return states
 
     def _write_cmd_loop(self) -> None:
-        for topic, publisher in self._publishers.items():
-            cmd_msg = self._cmd_msgs[topic]
-            if hasattr(cmd_msg, "crc"):
-                cmd_msg.crc = self._crc.Crc(cmd_msg)
-            publisher.Write(cmd_msg)
+        # Check emergency stop
+        if self._emergency_stop.is_set():
+            logger.warning("Emergency stop active, not sending commands.")
+            return
+
+        # Check communication timeout
+        time_since_last_state = time.monotonic() - self._last_state_time
+        if time_since_last_state > self._command_timeout:
+            logger.error(
+                f"Communication timeout: {time_since_last_state:.2f}s since last state update. Stopping commands."
+            )
+            # Send default position as safe stop
+            self._build_cmd_msgs(self._default_joint_positions)
+            self._emergency_stop.set()
+
+        try:
+            for topic, publisher in self._publishers.items():
+                cmd_msg = self._cmd_msgs[topic]
+                if hasattr(cmd_msg, "crc"):
+                    cmd_msg.crc = self._crc.Crc(cmd_msg)
+                publisher.Write(cmd_msg)
+        except Exception as e:
+            logger.error(f"Failed to write command: {e}")
+            self._emergency_stop.set()
 
     def _joystick_loop(self) -> None:
-        last_start = 0
-        last_select = 0
-
         msg = self._state_msgs.get("rt/low", None)
 
         if msg is None or not hasattr(msg, "wireless_remote"):
@@ -455,21 +503,55 @@ class UnitreeLowLevelBackend(BaseBackend):
             self._remote_controller.parse(msg.wireless_remote)
         except Exception as e:
             logger.warning(f"Failed to parse remote data: {e}")
+            return
 
         start = self._remote_controller.Start
         select = self._remote_controller.Select
 
-        # rising edge trigger
-        if start == 1 and last_start == 0:
-            logger.debug("Remote: START pressed -> Start task")
-            self._start_task.set()
+        # Rising edge trigger for START button - starts/resumes task
+        if start == 1 and self._last_remote_start == 0:
+            if self._emergency_stop.is_set():
+                logger.info("Remote: START pressed -> Clearing emergency stop")
+                self._emergency_stop.clear()
+                self._last_state_time = time.monotonic()  # Reset timeout timer
+            logger.info("Remote: START pressed -> Start task")
+            self._task_start.set()
 
-        if select == 1 and last_select == 0:
-            logger.debug("Remote: SELECT pressed -> Stop task")
-            self._start_task.clear()
+        # Rising edge trigger for SELECT button - emergency stop
+        if select == 1 and self._last_remote_select == 0:
+            if self._emergency_stop.is_set():
+                # Already in emergency stop, clear it
+                logger.info("Remote: SELECT pressed -> Clearing emergency stop")
+                self._emergency_stop.clear()
+                self._task_start.clear()
+            else:
+                # Trigger emergency stop
+                logger.critical("Remote: SELECT pressed -> EMERGENCY STOP")
+                self._emergency_stop.set()
+                self._task_start.clear()
 
-        last_start = start
-        last_select = select
+        self._last_remote_start = start
+        self._last_remote_select = select
+
+    def get_safety_status(self) -> dict[str, Any]:
+        """Get comprehensive safety status information."""
+        time_since_last_state = time.monotonic() - self._last_state_time
+        return {
+            "emergency_stop": self._emergency_stop.is_set(),
+            "state_ready": self._state_ready.is_set(),
+            "task_running": self._task_start.is_set(),
+            "task_started": self.task_started,
+            "time_since_last_state": time_since_last_state,
+            "communication_timeout": time_since_last_state > self._command_timeout,
+            "command_smoothing_enabled": self._command_smoother.enable,
+            "max_joint_velocity": self._command_smoother.max_velocity,
+            "max_joint_acceleration": self._command_smoother.max_acceleration,
+        }
+
+    @property
+    def task_started(self) -> bool:
+        """Check if the task is started and not in emergency stop."""
+        return self._task_start.is_set() and not self._emergency_stop.is_set()
 
 
 class UnitreeHighLevelBackend(BaseBackend):

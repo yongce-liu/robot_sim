@@ -491,7 +491,11 @@ sensors:
   #   pose: [0.07555294, 0.02579919, 0.49719054, 0.67876761, 0.20864099, -0.20567003, -0.67338199]
   rs_camera: # actually oak camera
     type: camera
-    series: realsense
+    series: zmq
+    extras:
+      ip: 192.168.123.164
+      port: 5555
+      unit_test: false
     width: 640
     height: 480
     freq: 30.0
@@ -508,6 +512,25 @@ sensors:
         -0.27106013,
         -0.66472446,
       ]
+  # rs_camera: # actually oak camera
+  #   type: camera
+  #   series: realsense
+  #   width: 640
+  #   height: 480
+  #   freq: 30.0
+  #   vertical_fov: 79.5
+  #   mount_to: torso_link
+  #   # position: [0.10209156, -0.00937542, 0.42446595]
+  #   pose:
+  #     [
+  #       0.10209156,
+  #       -0.00937542,
+  #       0.42446595,
+  #       0.64367383,
+  #       0.26523914,
+  #       -0.27106013,
+  #       -0.66472446,
+  #     ]
   tpp_camera:
     type: camera
     width: 640

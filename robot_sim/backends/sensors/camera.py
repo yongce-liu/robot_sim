@@ -1,8 +1,10 @@
 import time
 from collections import defaultdict
 
+import cv2
 import numpy as np
 import torch
+import zmq
 from loguru import logger
 
 from robot_sim.configs import BackendType, CameraConfig
@@ -138,6 +140,102 @@ class Camera(BaseSensor):
         series = self.config.series.lower()
         if series == "realsense":
             self._setup_realsense()
+        elif series == "zmq":
+            extras = self.config.extras or {}
+            client_ip = extras.get("ip", "127.0.0.1")
+            client_port = extras.get("port", 5555)
+            endpoint = extras.get("endpoint", f"tcp://{client_ip}:{client_port}")
+
+            self._zmq_unit_test = bool(extras.get("unit_test", False))
+
+            context = zmq.Context.instance()
+            socket = context.socket(zmq.SUB)
+            socket.setsockopt(zmq.SUBSCRIBE, b"")
+            socket.setsockopt(zmq.CONFLATE, 1)
+            socket.setsockopt(zmq.RCVHWM, 1)
+            socket.connect(endpoint)
+            self._zmq_sub = socket
+        elif series == "ros2":
+            extras = self.config.extras or {}
+            try:
+                import rclpy
+                from rclpy.qos import qos_profile_sensor_data
+                from sensor_msgs.msg import Image
+            except ImportError as exc:
+                raise ImportError("ROS2 dependencies (rclpy, sensor_msgs) are required for ros2 cameras.") from exc
+
+            if not rclpy.ok():
+                rclpy.init(args=None)
+
+            node_name = extras.get(
+                "node_name",
+                f"robot_sim_camera_{self.obj_name}_{self.sensor_name}".replace("/", "_"),
+            )
+            self._ros2_node = rclpy.create_node(node_name)
+            self._ros2_rclpy = rclpy
+            self._ros2_image_dtype_map = {
+                "rgb8": (np.uint8, 3),
+                "bgr8": (np.uint8, 3),
+                "rgba8": (np.uint8, 4),
+                "bgra8": (np.uint8, 4),
+                "mono8": (np.uint8, 1),
+                "mono16": (np.uint16, 1),
+                "16uc1": (np.uint16, 1),
+                "32fc1": (np.float32, 1),
+            }
+
+            def _make_callback(data_key: str):
+                def _callback(msg: Image) -> None:
+                    encoding = msg.encoding.lower()
+                    dtype_channels = self._ros2_image_dtype_map.get(encoding)
+                    if dtype_channels is None:
+                        logger.warning(
+                            f"Unsupported ROS2 image encoding '{msg.encoding}' for camera {self.sensor_name}."
+                        )
+                        return
+                    dtype, channels = dtype_channels
+                    itemsize = np.dtype(dtype).itemsize
+                    if channels == 1:
+                        stride = msg.step // itemsize
+                        frame = np.frombuffer(msg.data, dtype=dtype).reshape((msg.height, stride))[:, : msg.width]
+                    else:
+                        stride = msg.step // (itemsize * channels)
+                        frame = np.frombuffer(msg.data, dtype=dtype).reshape((msg.height, stride, channels))[
+                            :, : msg.width, :
+                        ]
+                    self._data[data_key] = frame
+
+                return _callback
+
+            self._ros2_subs = {}
+            if "rgb" in self.config.data_types:
+                rgb_topic = extras.get("rgb_topic")
+                if rgb_topic:
+                    self._ros2_subs["rgb"] = self._ros2_node.create_subscription(
+                        Image, rgb_topic, _make_callback("rgb"), qos_profile_sensor_data
+                    )
+                else:
+                    logger.warning(f"ROS2 camera {self.sensor_name} missing extras['rgb_topic']; skipping rgb.")
+
+            if "depth" in self.config.data_types:
+                depth_topic = extras.get("depth_topic")
+                if depth_topic:
+                    self._ros2_subs["depth"] = self._ros2_node.create_subscription(
+                        Image, depth_topic, _make_callback("depth"), qos_profile_sensor_data
+                    )
+                else:
+                    logger.warning(f"ROS2 camera {self.sensor_name} missing extras['depth_topic']; skipping depth.")
+
+            if "segmentation" in self.config.data_types:
+                seg_topic = extras.get("segmentation_topic")
+                if seg_topic:
+                    self._ros2_subs["segmentation"] = self._ros2_node.create_subscription(
+                        Image, seg_topic, _make_callback("segmentation"), qos_profile_sensor_data
+                    )
+                else:
+                    logger.warning(
+                        f"ROS2 camera {self.sensor_name} missing extras['segmentation_topic']; skipping segmentation."
+                    )
         else:
             logger.warning(
                 f"Camera {self.sensor_name} series '{self.config.series}' is not supported; this camera is not used."
@@ -195,5 +293,19 @@ class Camera(BaseSensor):
                     if self._rs_depth_scale is not None:
                         depth = depth.astype(np.float32) * self._rs_depth_scale
                     self._data["depth"] = depth
+        elif series == "zmq" and getattr(self, "_zmq_sub", None) is not None:
+            try:
+                msg = self._zmq_sub.recv(flags=zmq.NOBLOCK)
+            except zmq.Again:
+                return
+            if getattr(self, "_zmq_unit_test", False):
+                msg = msg[12:]
+            if not msg:
+                return
+            frame = cv2.imdecode(np.frombuffer(msg, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if frame is not None:
+                self._data["rgb"] = frame
+        elif series == "ros2" and getattr(self, "_ros2_node", None) is not None:
+            self._ros2_rclpy.spin_once(self._ros2_node, timeout_sec=0.0)
         else:
             logger.warning(f"Camera {self.sensor_name} series '{self.config.series}' is not supported for updates.")

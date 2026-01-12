@@ -27,6 +27,11 @@ class SensorConfig:
 class CameraConfig(SensorConfig):
     """Camera sensor for RGB, depth, and segmentation."""
 
+    extras: dict | None = None
+    """
+    Extra configuration parameters for specific camera models or hardware.
+    e.g., you can specify the ros2 topic/network stream for hardware cameras.
+    """
     series: str | None = None
     """Camera series for hardware experiments, e.g., 'realsense', 'opencv'."""
 

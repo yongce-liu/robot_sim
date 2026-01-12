@@ -318,6 +318,13 @@ class ImageServer:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=5555, help="Port number for the image server.")
+    parser.add_argument("--ip", type=str, default="0.0.0.0", help="IP address for the image server.")
+    args = parser.parse_args()
+
     config = {
         "fps": 30,
         "head_camera_type": "realsense",

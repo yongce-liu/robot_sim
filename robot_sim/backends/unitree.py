@@ -459,7 +459,9 @@ class UnitreeLowLevelBackend(BaseBackend):
                 .repeat(self.num_envs, axis=0)
                 .astype(np.float32)
             )
-            states[name] = ObjectState(root_state=root_state)
+            states[name] = ObjectState(
+                root_state=root_state, sensors={k: deepcopy(v.data) for k, v in self._sensors[name].items()}
+            )
             if cfg.joints is not None:
                 states[name].joint_pos = (
                     self.robots[name].default_joint_positions[np.newaxis, :].repeat(self.num_envs, axis=0)

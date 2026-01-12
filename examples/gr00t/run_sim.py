@@ -56,7 +56,7 @@ def run(cfg: DictConfig) -> None:
     logger.info(f"Running {num_steps} simulation steps...")
 
     for step in range(num_steps):
-        action = task.action_space.sample() # it can be replaced with your policy
+        action = task.action_space.sample()  # it can be replaced with your policy
         if not getattr(task.unwrapped, "task_started", False):
             # If task is not started, just use zeros for all action groups
             for k, v in action.items():
